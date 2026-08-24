@@ -1,0 +1,54 @@
+name: 개발 작업 (feat / fix / chore / infra)
+description: 8LISADE 개발 Ground Rule을 따르는 일반 작업 Issue
+title: "[type] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Issue 제목은 `[<type>] <한 줄 설명>` 형식으로 작성해 주세요. (`type`: feat/fix/chore/infra)
+        자세한 정책은 Repository root의 `GROUND-RULE.md`를 참고하세요.
+  - type: textarea
+    id: background
+    attributes:
+      label: 배경 / 목적
+      description: 왜 필요한 작업인지 작성
+    validations:
+      required: true
+  - type: textarea
+    id: requirements
+    attributes:
+      label: 요구사항
+      value: |
+        -
+    validations:
+      required: true
+  - type: textarea
+    id: design
+    attributes:
+      label: 설계
+      description: 개발 시작 전 brainstorming을 통해 구체화합니다. 생성 시점에는 비어 있어도 됩니다.
+      value: |
+        ### 구현 방향
+
+        ### 주요 구성 요소
+
+        ### 데이터 흐름
+
+        ### 고려사항
+  - type: textarea
+    id: tasks
+    attributes:
+      label: 작업 항목
+      value: |
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: 완료 조건
+      value: |
+        -
+    validations:
+      required: true
