@@ -2,20 +2,32 @@ name: iOS CI
 
 on:
   pull_request:
-    branches: [develop]
-    paths:
-      - 'frontend/ios/**'
+    branches: [develop, main]
   push:
     branches: [main]
-    paths:
-      - 'frontend/ios/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      ios: ${{ steps.filter.outputs.ios }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            ios:
+              - 'frontend/ios/**'
+
   build:
+    needs: changes
+    # develop PR: ios 변경 있을 때만. main PR/push: 항상 실행.
+    if: github.event_name == 'push' || github.base_ref == 'main' || needs.changes.outputs.ios == 'true'
     runs-on: macos-latest
     defaults:
       run:

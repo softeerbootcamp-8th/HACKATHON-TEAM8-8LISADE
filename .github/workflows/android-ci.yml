@@ -2,20 +2,32 @@ name: Android CI
 
 on:
   pull_request:
-    branches: [develop]
-    paths:
-      - 'frontend/android/**'
+    branches: [develop, main]
   push:
     branches: [main]
-    paths:
-      - 'frontend/android/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      android: ${{ steps.filter.outputs.android }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            android:
+              - 'frontend/android/**'
+
   build:
+    needs: changes
+    # develop PR: android 변경 있을 때만. main PR/push: 항상 실행.
+    if: github.event_name == 'push' || github.base_ref == 'main' || needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:

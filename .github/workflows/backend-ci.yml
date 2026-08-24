@@ -2,9 +2,7 @@ name: Backend CI
 
 on:
   pull_request:
-    branches: [develop]
-    paths:
-      - 'backend/**'
+    branches: [develop, main]
   push:
     branches: [main]
 
@@ -13,7 +11,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+
   test:
+    needs: changes
+    # develop PR: backend 변경 있을 때만. main PR/push: 항상 실행.
+    if: github.event_name == 'push' || github.base_ref == 'main' || needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:

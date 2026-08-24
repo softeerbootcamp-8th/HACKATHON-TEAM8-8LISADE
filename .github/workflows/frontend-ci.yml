@@ -2,9 +2,7 @@ name: Frontend CI
 
 on:
   pull_request:
-    branches: [develop]
-    paths:
-      - 'frontend/**'
+    branches: [develop, main]
   push:
     branches: [main]
 
@@ -13,7 +11,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+
   test:
+    needs: changes
+    # develop PR: frontend 변경 있을 때만. main PR/push: 항상 실행.
+    if: github.event_name == 'push' || github.base_ref == 'main' || needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
