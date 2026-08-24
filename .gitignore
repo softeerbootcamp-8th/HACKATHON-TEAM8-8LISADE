@@ -1,0 +1,55 @@
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# ---- IDE ----
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# ---- Backend (Gradle/Java) ----
+backend/.gradle/
+backend/build/
+backend/out/
+!backend/gradle/wrapper/gradle-wrapper.jar
+*.class
+*.log
+HELP.md
+
+# ---- Frontend (Node/Vite) ----
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---- Env ----
+.env
+.env.local
+.env.*.local
+
+# ---- Docker ----
+docker-compose.override.yml
+
+# ---- Capacitor ----
+frontend/.capacitor/
+frontend/android/app/build/
+frontend/android/build/
+frontend/android/.gradle/
+frontend/android/local.properties
+frontend/android/app/src/main/assets/public/
+frontend/android/app/src/main/assets/capacitor.config.json
+frontend/android/captures/
+frontend/android/*.iml
+frontend/android/app/*.iml
+frontend/ios/App/Pods/
+frontend/ios/App/build/
+frontend/ios/App/App/public/
+frontend/ios/App/App/capacitor.config.json
+frontend/ios/App/DerivedData/
+frontend/ios/**/*.xcuserstate
+frontend/ios/**/xcuserdata/
