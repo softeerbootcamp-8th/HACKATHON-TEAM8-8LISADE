@@ -1,0 +1,32 @@
+name: iOS CI
+
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - 'frontend/ios/**'
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/ios/**'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: frontend/ios/App
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install CocoaPods dependencies
+        run: pod install
+
+      - name: Build
+        run: |
+          xcodebuild build \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator'
