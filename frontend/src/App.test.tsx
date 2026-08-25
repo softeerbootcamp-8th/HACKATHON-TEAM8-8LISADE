@@ -21,10 +21,21 @@ vi.mock('./api/missionApi', () => ({
   missionApi: missionApiMock,
 }))
 
+const pushNotificationsMock = vi.hoisted(() => ({
+  register: vi.fn(),
+  unregister: vi.fn(),
+}))
+
+vi.mock('./notifications/pushNotifications', () => ({
+  pushNotifications: pushNotificationsMock,
+}))
+
 import App from './App'
 
 describe('App', () => {
   beforeEach(() => {
+    pushNotificationsMock.register.mockReset().mockResolvedValue(undefined)
+    pushNotificationsMock.unregister.mockReset().mockResolvedValue(undefined)
     missionApiMock.getCurrentMissions.mockResolvedValue([
       { id: 11, tripId: 1, title: '서버 사진 미션', description: '서버에서 가져온 미션입니다.', type: 'ACTIVITY', startAt: null, endAt: null },
       { id: 12, tripId: 1, title: '경복궁 출석 체크', description: '교사가 공유한 4자리 PIN을 입력해 주세요.', type: 'CHECK', startAt: null, endAt: null },
@@ -117,6 +128,40 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: '로그인' }))
 
     expect(await screen.findByRole('heading', { name: '교사 홈' })).toBeInTheDocument()
+  })
+
+  it('로그인에 성공하면 이 기기의 push 등록을 시도한다', async () => {
+    renderApp()
+
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+
+    await screen.findByRole('heading', { name: '교사 홈' })
+    expect(pushNotificationsMock.register).toHaveBeenCalled()
+  })
+
+  it('알림 권한을 거부해 push 등록이 실패해도 로그인 흐름을 막지 않는다', async () => {
+    pushNotificationsMock.register.mockRejectedValue(new Error('알림 권한이 거부되었습니다.'))
+    renderApp()
+
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+
+    expect(await screen.findByRole('heading', { name: '교사 홈' })).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('로그인하지 않으면 push를 등록하지 않는다', async () => {
+    renderApp()
+
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'wrong-password' } })
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+
+    await screen.findByRole('alert')
+    expect(pushNotificationsMock.register).not.toHaveBeenCalled()
   })
 
   it('changes the teacher dashboard and shared tab context when the Trip is selected', async () => {
