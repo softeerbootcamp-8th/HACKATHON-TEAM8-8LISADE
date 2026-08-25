@@ -36,11 +36,13 @@ class SseControllerTest {
         jdbcTemplate.update("DELETE FROM users");
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
         jdbcTemplate.update(
-                "INSERT INTO users (login_id, password_hash, role, enabled, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
-                "teacher1", encoder.encode("password123"), "TEACHER", true);
+                "INSERT INTO users (login_id, password_hash, email, name, role, enabled, created_at) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+                "teacher1", encoder.encode("password123"), "teacher1@example.com", "교사1", "TEACHER", true);
         jdbcTemplate.update(
-                "INSERT INTO users (login_id, password_hash, role, enabled, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
-                "student1", encoder.encode("password123"), "STUDENT", true);
+                "INSERT INTO users (login_id, password_hash, email, name, role, enabled, created_at) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+                "student1", encoder.encode("password123"), "student1@example.com", "학생1", "STUDENT", true);
     }
 
     @Test
