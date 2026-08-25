@@ -14,7 +14,7 @@
 - `CookieManager`의 `JSESSIONID`를 네이티브 `java.net.CookieManager`에
   동기화하고 `HttpsURLConnection`이 요청 쿠키를 자동 첨부한다.
 - 위치 수집은 location 타입 Foreground Service와 Fused Location Provider로
-  30초마다 수행한다. 서비스는 `START_NOT_STICKY`이며 최근 앱 목록에서 제거될
+  10초마다 수행한다. 서비스는 `START_NOT_STICKY`이며 최근 앱 목록에서 제거될
   때 중지하므로 강제 종료 후 자동 재개하지 않는다.
 - 401 응답은 세션 만료로 처리해 양쪽 쿠키를 삭제하고 추적을 중지한 뒤 알림을
   표시한다. 다른 네트워크 오류는 다음 위치에서 재시도한다.
