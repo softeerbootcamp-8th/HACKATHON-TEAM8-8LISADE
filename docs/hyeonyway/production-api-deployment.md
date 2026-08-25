@@ -34,6 +34,14 @@ VITE_API_BASE_URL=https://ec2-3-34-148-229.ap-northeast-2.compute.amazonaws.com
 인증서 갱신은 `systemctl list-timers | grep certbot`으로 타이머가 등록됐는지 확인하고,
 갱신 뒤 `nginx` reload가 되는지 한 번 검증한다.
 
+### 현재 EC2 적용 상태 (2026-08-25)
+
+Nginx, Certbot과 Certbot 갱신 타이머는 설치·활성화됐고 bootstrap 설정은 80 포트에서
+실행 중이다. 외부 `http://ec2-3-34-148-229.ap-northeast-2.compute.amazonaws.com:80`
+연결은 현재 타임아웃된다. 인증서 발급 전 AWS Security Group에 TCP 80/443 인바운드를
+추가해야 한다. 80이 열리고 Certbot 연락 이메일이 정해지면 인증서를 발급하고 최종
+Nginx 설정으로 교체한다.
+
 ## 쿠키 및 CORS
 
 `prod` 프로필은 Vercel origin만 허용하고 credentials를 허용한다. `JSESSIONID`는
