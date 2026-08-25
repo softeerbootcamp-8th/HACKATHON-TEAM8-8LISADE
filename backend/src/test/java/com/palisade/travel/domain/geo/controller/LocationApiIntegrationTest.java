@@ -69,11 +69,12 @@ class LocationApiIntegrationTest {
         savePoint(geofenceId, 3, "37.0100000", "127.0000000");
 
         jdbcTemplate.update(
-                "INSERT INTO trip (teacher_id, geofence_id, title, status, created_at) "
-                        + "VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
+                "INSERT INTO trip (teacher_id, geofence_id, title, place, status, created_at) "
+                        + "VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
                 99L,
                 geofenceId,
                 "현장학습",
+                "국립중앙박물관",
                 "ACTIVE"
         );
         tripId = jdbcTemplate.queryForObject(
@@ -81,11 +82,12 @@ class LocationApiIntegrationTest {
                 Long.class
         );
         jdbcTemplate.update(
-                "INSERT INTO trip (teacher_id, geofence_id, title, status, created_at) "
-                        + "VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO trip (teacher_id, geofence_id, title, place, status, created_at) "
+                        + "VALUES (?, ?, ?, ?, ?, ?)",
                 99L,
                 geofenceId,
                 "지난 현장학습",
+                "국립중앙박물관",
                 "FINISHED",
                 java.time.LocalDateTime.of(2025, 12, 1, 0, 0)
         );
@@ -94,15 +96,17 @@ class LocationApiIntegrationTest {
                 Long.class
         );
         jdbcTemplate.update(
-                "INSERT INTO trip_participant (trip_id, user_id, created_at) VALUES (?, ?, ?)",
+                "INSERT INTO trip_participant (trip_id, user_id, participant_type, created_at) VALUES (?, ?, ?, ?)",
                 oldTripId,
                 userId,
+                "APP",
                 java.time.LocalDateTime.of(2025, 12, 1, 0, 0)
         );
         jdbcTemplate.update(
-                "INSERT INTO trip_participant (trip_id, user_id, created_at) VALUES (?, ?, CURRENT_TIMESTAMP)",
+                "INSERT INTO trip_participant (trip_id, user_id, participant_type, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
                 tripId,
-                userId
+                userId,
+                "APP"
         );
     }
 

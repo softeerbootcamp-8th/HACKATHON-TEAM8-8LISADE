@@ -12,6 +12,7 @@ import com.palisade.travel.domain.geo.repository.GeofencePointRepository;
 import com.palisade.travel.domain.geo.repository.LocationLogRepository;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
+import com.palisade.travel.domain.trip.entity.TripParticipantType;
 import com.palisade.travel.domain.trip.entity.TripStatus;
 import com.palisade.travel.domain.trip.repository.TripParticipantRepository;
 import com.palisade.travel.domain.trip.repository.TripRepository;
@@ -268,6 +269,8 @@ class LocationServiceTest {
                         100L + userId,
                         TRIP_ID,
                         userId,
+                        null,
+                        TripParticipantType.APP,
                         LocalDateTime.of(2026, 1, 1, 0, 0)
                 )));
         given(tripRepository.findById(TRIP_ID)).willReturn(Optional.of(trip(TripStatus.ACTIVE)));
@@ -276,7 +279,14 @@ class LocationServiceTest {
     }
 
     private TripParticipant participant() {
-        return new TripParticipant(1L, TRIP_ID, USER_ID, LocalDateTime.of(2026, 1, 1, 0, 0));
+        return new TripParticipant(
+                1L,
+                TRIP_ID,
+                USER_ID,
+                null,
+                TripParticipantType.APP,
+                LocalDateTime.of(2026, 1, 1, 0, 0)
+        );
     }
 
     private Trip trip(TripStatus status) {
@@ -285,6 +295,7 @@ class LocationServiceTest {
                 99L,
                 GEOFENCE_ID,
                 "현장학습",
+                null,
                 null,
                 LocalDateTime.of(2026, 1, 1, 9, 0),
                 LocalDateTime.of(2026, 1, 1, 18, 0),
