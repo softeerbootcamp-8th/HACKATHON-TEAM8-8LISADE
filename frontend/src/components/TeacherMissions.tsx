@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from 'react'
-import { mockTeacherMissionApi, mockTeacherMissionStore } from '../api/missionApi'
-import type { MissionStatusBoard, MissionType, RosterStudent, TeacherMission } from '../types/mission'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { teacherMissionApi } from '../api/missionApi'
+import type { MissionStatusBoard, MissionType, NotSubmittedStudent, TeacherMission } from '../types/mission'
 
 type View = { name: 'LIST' } | { name: 'REGISTER' } | { name: 'STATUS'; missionId: number }
 
@@ -8,6 +8,8 @@ type View = { name: 'LIST' } | { name: 'REGISTER' } | { name: 'STATUS'; missionI
 type MissionFormInput = { title: string; type: MissionType; startAt: string | null; endAt: string | null }
 
 const emptyFormInput: MissionFormInput = { title: '', type: 'ACTIVITY', startAt: null, endAt: null }
+
+type MissionProgress = { completed: number; total: number }
 
 function missionDispatchStatus(mission: TeacherMission): '대기' | '진행중' {
   return mission.startAt && new Date(mission.startAt) > new Date() ? '대기' : '진행중'
@@ -21,29 +23,63 @@ function formatCountdown(endAt: string | null): string {
   return `${String(Math.floor(totalMinutes / 60)).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`
 }
 
+/** The backend returns submittedAt as a full LocalDateTime string (e.g. "2026-08-25T20:49:42.115219"); the design only calls for a clock time. */
+function formatSubmittedAt(submittedAt: string | null): string {
+  if (!submittedAt) return ''
+  const date = new Date(submittedAt)
+  if (Number.isNaN(date.getTime())) return submittedAt
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
 export default function TeacherMissions({ tripId }: { tripId: string }) {
   const [view, setView] = useState<View>({ name: 'LIST' })
-  const [missions, setMissions] = useState<TeacherMission[]>(() => mockTeacherMissionStore.missionsSnapshot(tripId))
+  const [missions, setMissions] = useState<TeacherMission[] | null>(null)
+  const [progressByMissionId, setProgressByMissionId] = useState<Record<number, MissionProgress>>({})
+  const [loadError, setLoadError] = useState('')
   const [notice, setNotice] = useState('')
 
-  const reloadMissions = async () => setMissions(await mockTeacherMissionApi.listMissions(tripId))
+  const fetchMissionsWithProgress = useCallback(async () => {
+    const loaded = await teacherMissionApi.listMissions(tripId)
+    const boards = await Promise.all(loaded.map((mission) => teacherMissionApi.getStatusBoard(mission.id).catch(() => null)))
+    const progress = Object.fromEntries(loaded.map((mission, index) => {
+      const board = boards[index]
+      return [mission.id, board ? { completed: board.totalStudentCount - board.notSubmitted.length, total: board.totalStudentCount } : { completed: 0, total: 0 }]
+    }))
+    return { missions: loaded, progress }
+  }, [tripId])
+
+  const loadMissions = useCallback(async () => {
+    const { missions: loaded, progress } = await fetchMissionsWithProgress()
+    setMissions(loaded)
+    setProgressByMissionId(progress)
+  }, [fetchMissionsWithProgress])
+
+  useEffect(() => {
+    let active = true
+    fetchMissionsWithProgress()
+      .then(({ missions: loaded, progress }) => { if (active) { setMissions(loaded); setProgressByMissionId(progress) } })
+      .catch((caught) => { if (active) setLoadError(caught instanceof Error ? caught.message : '미션 목록을 불러오지 못했습니다.') })
+    return () => { active = false }
+  }, [fetchMissionsWithProgress])
 
   if (view.name === 'REGISTER') return <MissionRegisterForm tripId={tripId} onCancel={() => setView({ name: 'LIST' })} onCreated={async (mission) => {
-    await reloadMissions()
+    await loadMissions()
     setNotice(mission.type === 'CHECK' ? `출석체크 미션이 등록되었습니다. 출석 코드: ${mission.pin}` : '활동 미션이 등록되었습니다.')
     setView({ name: 'LIST' })
   }} />
 
-  if (view.name === 'STATUS') return <MissionStatusScreen missionId={view.missionId} onBack={() => setView({ name: 'LIST' })} onDeleted={async () => { await reloadMissions(); setView({ name: 'LIST' }) }} />
+  if (view.name === 'STATUS') return <MissionStatusScreen missionId={view.missionId} onBack={() => setView({ name: 'LIST' })} onDeleted={async () => { await loadMissions(); setView({ name: 'LIST' }) }} />
+
+  if (loadError) return <section aria-label="미션 관리"><h2>미션 리스트</h2><p className="error" role="alert">{loadError}</p></section>
+  if (missions === null) return <section aria-label="미션 관리"><h2>미션 리스트</h2><p className="hint" role="status">미션 목록을 불러오는 중입니다.</p></section>
 
   return <section aria-label="미션 관리">
     {notice && <p className="notice" role="status">{notice}</p>}
     <h2>미션 리스트</h2>
     {missions.length === 0 ? <p className="hint">등록된 미션이 없습니다.</p> : <ul className="mission-list">
       {missions.map((mission) => {
-        const board = mockTeacherMissionStore.statusBoardSnapshot(mission.id)
-        const completedCount = board.totalStudentCount - board.notSubmitted.length
-        const percent = board.totalStudentCount === 0 ? 0 : Math.round((completedCount / board.totalStudentCount) * 100)
+        const progress = progressByMissionId[mission.id] ?? { completed: 0, total: 0 }
+        const percent = progress.total === 0 ? 0 : Math.round((progress.completed / progress.total) * 100)
         return <li key={mission.id}>
           <button className="mission-list-card" onClick={() => setView({ name: 'STATUS', missionId: mission.id })}>
             <div className="mission-list-card-badges">
@@ -52,7 +88,7 @@ export default function TeacherMissions({ tripId }: { tripId: string }) {
             </div>
             <p className="mission-list-card-title">{mission.title}</p>
             <div className="progress-bar" aria-hidden="true"><div className="progress-bar-fill" style={{ width: `${percent}%` }} /></div>
-            <p className="hint">{completedCount}/{board.totalStudentCount}명 완료</p>
+            <p className="hint">{progress.completed}/{progress.total}명 완료</p>
           </button>
         </li>
       })}
@@ -69,8 +105,9 @@ function MissionRegisterForm({ tripId, onCancel, onCreated }: { tripId: string; 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError('')
+    if (!input.title.trim()) { setError('미션 제목을 입력해 주세요.'); return }
     try {
-      const mission = await mockTeacherMissionApi.createMission(tripId, {
+      const mission = await teacherMissionApi.createMission(tripId, {
         title: input.title,
         description: '',
         type: input.type,
@@ -101,16 +138,26 @@ function MissionRegisterForm({ tripId, onCancel, onCreated }: { tripId: string; 
 }
 
 function MissionStatusScreen({ missionId, onBack, onDeleted }: { missionId: number; onBack: () => void; onDeleted: () => Promise<void> }) {
-  const [board, setBoard] = useState<MissionStatusBoard>(() => mockTeacherMissionStore.statusBoardSnapshot(missionId))
+  const [board, setBoard] = useState<MissionStatusBoard | null>(null)
+  const [loadError, setLoadError] = useState('')
   const [rejectingStudentId, setRejectingStudentId] = useState<number | null>(null)
   const [reason, setReason] = useState('')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [error, setError] = useState('')
 
-  const reload = async () => setBoard(await mockTeacherMissionApi.getStatusBoard(missionId))
+  const fetchBoard = useCallback(() => teacherMissionApi.getStatusBoard(missionId), [missionId])
+  const reload = useCallback(async () => setBoard(await fetchBoard()), [fetchBoard])
 
-  const completeOnBehalf = async (student: RosterStudent) => {
-    await mockTeacherMissionApi.completeOnBehalf(missionId, student.id)
+  useEffect(() => {
+    let active = true
+    fetchBoard()
+      .then((loaded) => { if (active) setBoard(loaded) })
+      .catch((caught) => { if (active) setLoadError(caught instanceof Error ? caught.message : '현황판을 불러오지 못했습니다.') })
+    return () => { active = false }
+  }, [fetchBoard])
+
+  const completeOnBehalf = async (student: NotSubmittedStudent) => {
+    await teacherMissionApi.completeOnBehalf(missionId, student.studentId)
     await reload()
   }
 
@@ -118,8 +165,9 @@ function MissionStatusScreen({ missionId, onBack, onDeleted }: { missionId: numb
     event.preventDefault()
     setError('')
     if (rejectingStudentId === null) return
+    if (!reason.trim()) { setError('반려 사유를 입력해 주세요.'); return }
     try {
-      await mockTeacherMissionApi.rejectSubmission(missionId, rejectingStudentId, reason)
+      await teacherMissionApi.rejectSubmission(missionId, rejectingStudentId, reason)
       await reload()
       setRejectingStudentId(null)
       setReason('')
@@ -129,9 +177,12 @@ function MissionStatusScreen({ missionId, onBack, onDeleted }: { missionId: numb
   }
 
   const confirmDelete = async () => {
-    await mockTeacherMissionApi.deleteMission(missionId)
+    await teacherMissionApi.deleteMission(missionId)
     await onDeleted()
   }
+
+  if (loadError) return <section aria-label="미션 현황판"><button className="text-button back-button" onClick={onBack}>‹ 목록으로</button><p className="error" role="alert">{loadError}</p></section>
+  if (board === null) return <section aria-label="미션 현황판"><p className="hint" role="status">현황판을 불러오는 중입니다.</p></section>
 
   const { mission } = board
   const notSubmittedLabel = mission.type === 'CHECK' ? '출석하지 않은 학생' : '제출하지 않은 학생'
@@ -154,9 +205,9 @@ function MissionStatusScreen({ missionId, onBack, onDeleted }: { missionId: numb
 
     <h3>{notSubmittedLabel} {board.notSubmitted.length}</h3>
     {board.notSubmitted.length === 0 ? <p className="hint">전원 완료했습니다.</p> : <ul className="roster-list">
-      {board.notSubmitted.map((student, index) => <li key={student.id}>
+      {board.notSubmitted.map((student, index) => <li key={student.studentId}>
         <span className="roster-index">{String(index + 1).padStart(2, '0')}</span>
-        <span>{student.name}</span>
+        <span>{student.studentName}</span>
         <button className="text-button" onClick={() => completeOnBehalf(student)}>대리 완료</button>
       </li>)}
     </ul>}
@@ -166,7 +217,7 @@ function MissionStatusScreen({ missionId, onBack, onDeleted }: { missionId: numb
     {board.submitted.length > 0 && mission.type === 'ACTIVITY' && <ul className="photo-grid">
       {board.submitted.map((submission) => <li key={submission.studentId} className="photo-tile">
         <div className="photo-placeholder" aria-hidden="true" />
-        <p>{submission.studentName} <span className="hint">{submission.submittedAt}</span></p>
+        <p>{submission.studentName} <span className="hint">{formatSubmittedAt(submission.submittedAt)}</span></p>
         {rejectingStudentId === submission.studentId ? <form className="auth-form" onSubmit={submitRejection}>
           <label className="field" htmlFor={`reject-reason-${submission.studentId}`}>반려 사유<input id={`reject-reason-${submission.studentId}`} value={reason} onChange={(event) => setReason(event.target.value)} required /></label>
           <button type="submit">반려 확정</button>
@@ -177,7 +228,7 @@ function MissionStatusScreen({ missionId, onBack, onDeleted }: { missionId: numb
       {board.submitted.map((submission, index) => <li key={submission.studentId}>
         <span className="roster-index">{String(index + 1).padStart(2, '0')}</span>
         <span>{submission.studentName}</span>
-        <span className="hint">{submission.submittedAt}</span>
+        <span className="hint">{formatSubmittedAt(submission.submittedAt)}</span>
       </li>)}
     </ul>}
 

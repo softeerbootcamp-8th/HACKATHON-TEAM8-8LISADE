@@ -1,13 +1,51 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
-import { resetMockTeacherMissionStore } from '../api/missionApi'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import TeacherMissions from './TeacherMissions'
 
-describe('TeacherMissions', () => {
-  beforeEach(() => { resetMockTeacherMissionStore() })
+type FetchResult = { success: boolean; data?: unknown; message?: string }
+type RouteResponse = { status?: number; body?: FetchResult }
 
+function apiResponse(body: FetchResult, status = 200): Response {
+  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+}
+
+/** Routes fetch calls by `METHOD path`. Each route holds a queue of responses — while more
+ * than one remains, each call consumes the next; once only one is left, it repeats. This lets a
+ * test express "list returns X, then after a mutation returns Y" while still letting incidental
+ * repeat calls (e.g. PIN lookups) reuse a single stubbed value. */
+function createFetchRouter(routes: Record<string, RouteResponse[]>) {
+  const queues = new Map(Object.entries(routes).map(([key, list]) => [key, [...list]]))
+  const fetchMock = vi.fn((path: string, init?: RequestInit) => {
+    const key = `${init?.method ?? 'GET'} ${path}`
+    const queue = queues.get(key)
+    if (!queue || queue.length === 0) return Promise.reject(new Error(`Unhandled fetch: ${key}`))
+    const next = queue.length > 1 ? queue.shift()! : queue[0]
+    if (next.body === undefined) return Promise.resolve(new Response(null, { status: next.status ?? 204 }))
+    return Promise.resolve(apiResponse(next.body, next.status))
+  })
+  return fetchMock
+}
+
+const csrf: RouteResponse = { body: { success: true, data: { token: 'csrf-token', headerName: 'X-CSRF-TOKEN' } } }
+
+const activityMission = { id: 1, tripId: 1, title: '첨성대 앞에서 사진 찍기', description: '', type: 'ACTIVITY', startAt: null, endAt: null }
+const checkMission = { id: 2, tripId: 1, title: '15시 출발 버스 출석체크', description: '', type: 'CHECK', startAt: null, endAt: null }
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
+describe('TeacherMissions', () => {
   it('lists the seeded missions with type/status badges and progress', async () => {
-    render(<TeacherMissions tripId="trip-1" />)
+    vi.stubGlobal('fetch', createFetchRouter({
+      'GET /api/auth/csrf': [csrf],
+      'GET /api/teacher/trips/1/missions': [{ body: { success: true, data: [activityMission, checkMission] } }],
+      'GET /api/teacher/missions/2/pin': [{ body: { success: true, data: '3423' } }],
+      'GET /api/teacher/missions/1/status-board': [{ body: { success: true, data: { mission: activityMission, totalStudentCount: 5, submitted: [{ studentId: 101, studentName: '김학생', imageKey: 'a.jpg', submittedAt: '14:34' }, { studentId: 102, studentName: '이학생', imageKey: 'b.jpg', submittedAt: '14:32' }], notSubmitted: [{ studentId: 103, studentName: '박서준', rejectionReason: null }, { studentId: 104, studentName: '최지우', rejectionReason: null }, { studentId: 105, studentName: '정민준', rejectionReason: null }] } } }],
+      'GET /api/teacher/missions/2/status-board': [{ body: { success: true, data: { mission: checkMission, totalStudentCount: 5, submitted: [], notSubmitted: [{ studentId: 101, studentName: '김학생', rejectionReason: null }, { studentId: 102, studentName: '이학생', rejectionReason: null }, { studentId: 103, studentName: '박서준', rejectionReason: null }, { studentId: 104, studentName: '최지우', rejectionReason: null }, { studentId: 105, studentName: '정민준', rejectionReason: null }] } } }],
+    }))
+
+    render(<TeacherMissions tripId="1" />)
 
     expect(await screen.findByRole('button', { name: /첨성대 앞에서 사진 찍기/ })).toBeInTheDocument()
     expect(screen.getByText('2/5명 완료')).toBeInTheDocument()
@@ -16,7 +54,16 @@ describe('TeacherMissions', () => {
   })
 
   it('creates an activity mission and shows the end-time field only for activity missions', async () => {
-    render(<TeacherMissions tripId="trip-1" />)
+    const createdMission = { id: 3, tripId: 1, title: '불국사 앞 출석체크', description: '', type: 'CHECK', startAt: null, endAt: null }
+    vi.stubGlobal('fetch', createFetchRouter({
+      'GET /api/auth/csrf': [csrf],
+      'GET /api/teacher/trips/1/missions': [{ body: { success: true, data: [] } }, { body: { success: true, data: [createdMission] } }],
+      'POST /api/teacher/trips/1/missions': [{ body: { success: true, data: createdMission } }],
+      'GET /api/teacher/missions/3/pin': [{ body: { success: true, data: '5566' } }],
+      'GET /api/teacher/missions/3/status-board': [{ body: { success: true, data: { mission: createdMission, totalStudentCount: 0, submitted: [], notSubmitted: [] } } }],
+    }))
+
+    render(<TeacherMissions tripId="1" />)
 
     fireEvent.click(await screen.findByRole('button', { name: '+ 미션 추가하기' }))
     expect(screen.getByLabelText('미션 마감 시간')).toBeInTheDocument()
@@ -32,7 +79,16 @@ describe('TeacherMissions', () => {
   })
 
   it('opens a mission status board from its card and shows submitted photos with a reject action', async () => {
-    render(<TeacherMissions tripId="trip-1" />)
+    const initialBoard = { mission: activityMission, totalStudentCount: 5, submitted: [{ studentId: 101, studentName: '김학생', imageKey: 'a.jpg', submittedAt: '14:34' }, { studentId: 102, studentName: '이학생', imageKey: 'b.jpg', submittedAt: '14:32' }], notSubmitted: [{ studentId: 103, studentName: '박서준', rejectionReason: null }, { studentId: 104, studentName: '최지우', rejectionReason: null }, { studentId: 105, studentName: '정민준', rejectionReason: null }] }
+    const afterRejectBoard = { mission: activityMission, totalStudentCount: 5, submitted: [{ studentId: 102, studentName: '이학생', imageKey: 'b.jpg', submittedAt: '14:32' }], notSubmitted: [{ studentId: 103, studentName: '박서준', rejectionReason: null }, { studentId: 104, studentName: '최지우', rejectionReason: null }, { studentId: 105, studentName: '정민준', rejectionReason: null }, { studentId: 101, studentName: '김학생', rejectionReason: '사진이 흐릿합니다.' }] }
+    vi.stubGlobal('fetch', createFetchRouter({
+      'GET /api/auth/csrf': [csrf],
+      'GET /api/teacher/trips/1/missions': [{ body: { success: true, data: [activityMission] } }],
+      'GET /api/teacher/missions/1/status-board': [{ body: { success: true, data: initialBoard } }, { body: { success: true, data: initialBoard } }, { body: { success: true, data: afterRejectBoard } }],
+      'POST /api/teacher/missions/1/submissions/101/reject': [{ body: { success: true, data: null } }],
+    }))
+
+    render(<TeacherMissions tripId="1" />)
 
     fireEvent.click(await screen.findByRole('button', { name: /첨성대 앞에서 사진 찍기/ }))
 
@@ -49,7 +105,17 @@ describe('TeacherMissions', () => {
   })
 
   it('lets the teacher complete an attendance mission on behalf of a student without the app', async () => {
-    render(<TeacherMissions tripId="trip-1" />)
+    const initialBoard = { mission: checkMission, totalStudentCount: 5, submitted: [], notSubmitted: [{ studentId: 101, studentName: '김학생', rejectionReason: null }, { studentId: 102, studentName: '이학생', rejectionReason: null }, { studentId: 103, studentName: '박서준', rejectionReason: null }, { studentId: 104, studentName: '최지우', rejectionReason: null }, { studentId: 105, studentName: '정민준', rejectionReason: null }] }
+    const afterCompleteBoard = { mission: checkMission, totalStudentCount: 5, submitted: [{ studentId: 101, studentName: '김학생', imageKey: null, submittedAt: '14:40' }], notSubmitted: [{ studentId: 102, studentName: '이학생', rejectionReason: null }, { studentId: 103, studentName: '박서준', rejectionReason: null }, { studentId: 104, studentName: '최지우', rejectionReason: null }, { studentId: 105, studentName: '정민준', rejectionReason: null }] }
+    vi.stubGlobal('fetch', createFetchRouter({
+      'GET /api/auth/csrf': [csrf],
+      'GET /api/teacher/trips/1/missions': [{ body: { success: true, data: [checkMission] } }],
+      'GET /api/teacher/missions/2/pin': [{ body: { success: true, data: '3423' } }],
+      'GET /api/teacher/missions/2/status-board': [{ body: { success: true, data: initialBoard } }, { body: { success: true, data: initialBoard } }, { body: { success: true, data: afterCompleteBoard } }],
+      'POST /api/teacher/missions/2/submissions/101/complete': [{ body: { success: true, data: null } }],
+    }))
+
+    render(<TeacherMissions tripId="1" />)
 
     fireEvent.click(await screen.findByRole('button', { name: /15시 출발 버스 출석체크/ }))
 
@@ -64,7 +130,16 @@ describe('TeacherMissions', () => {
   })
 
   it('deletes a mission after confirmation and returns to the list', async () => {
-    render(<TeacherMissions tripId="trip-1" />)
+    const board = { mission: checkMission, totalStudentCount: 5, submitted: [], notSubmitted: [{ studentId: 101, studentName: '김학생', rejectionReason: null }] }
+    vi.stubGlobal('fetch', createFetchRouter({
+      'GET /api/auth/csrf': [csrf],
+      'GET /api/teacher/trips/1/missions': [{ body: { success: true, data: [checkMission] } }, { body: { success: true, data: [] } }],
+      'GET /api/teacher/missions/2/pin': [{ body: { success: true, data: '3423' } }],
+      'GET /api/teacher/missions/2/status-board': [{ body: { success: true, data: board } }, { body: { success: true, data: board } }],
+      'DELETE /api/teacher/missions/2': [{}],
+    }))
+
+    render(<TeacherMissions tripId="1" />)
 
     fireEvent.click(await screen.findByRole('button', { name: /15시 출발 버스 출석체크/ }))
     fireEvent.click(await screen.findByRole('button', { name: '삭제하기' }))

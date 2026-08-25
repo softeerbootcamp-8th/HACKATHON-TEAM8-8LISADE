@@ -1,5 +1,4 @@
 export type MissionType = 'ACTIVITY' | 'CHECK'
-export type SubmissionStatus = 'WAITING' | 'COMPLETED' | 'REJECTED' | 'EXPIRED'
 export type DispatchTiming = 'IMMEDIATE' | 'SCHEDULED'
 
 export interface TeacherMission {
@@ -22,32 +21,22 @@ export interface MissionCreateInput {
   endAt: string | null
 }
 
-export interface RosterStudent {
-  id: number
-  name: string
-}
-
-export interface TeacherSubmission {
-  submissionId: number
-  missionId: number
+export interface SubmittedStudent {
   studentId: number
   studentName: string
-  status: SubmissionStatus
   imageKey: string | null
-  rejectionReason: string | null
   submittedAt: string | null
 }
 
-/** Cross-mission matrix (student x mission). Not shown by the current screen designs; kept for a future 학생별 현황판 matrix screen. */
-export interface StudentMissionProgress {
+export interface NotSubmittedStudent {
   studentId: number
   studentName: string
-  statusByMissionId: Record<number, SubmissionStatus>
+  rejectionReason: string | null
 }
 
 export interface MissionStatusBoard {
   mission: TeacherMission
   totalStudentCount: number
-  submitted: TeacherSubmission[]
-  notSubmitted: RosterStudent[]
+  submitted: SubmittedStudent[]
+  notSubmitted: NotSubmittedStudent[]
 }
