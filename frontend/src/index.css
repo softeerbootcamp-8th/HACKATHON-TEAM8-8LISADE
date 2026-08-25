@@ -23,3 +23,8 @@ h1 { font-size: 28px; margin: 0 0 24px; }
 .notice { background: #eef7f0; color: #1b6d34; }
 .hint { color: #6b778c; font-size: 13px; margin: 0; text-align: center; }
 .home-card { min-height: 240px; }
+.home-card > p { line-height: 1.6; }
+.trip-summary { display: grid; gap: 12px; margin: 20px 0; }
+.trip-summary div { background: #f4f7fb; border-radius: 10px; padding: 12px; }
+.trip-summary dt { color: #6b778c; font-size: 13px; }
+.trip-summary dd { font-weight: 700; margin: 4px 0 0; }

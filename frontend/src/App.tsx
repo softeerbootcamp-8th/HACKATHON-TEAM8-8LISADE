@@ -1,8 +1,11 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { mockAuthApi } from './api/authApi'
+import { mockLocationTrackingAdapter } from './api/locationTrackingApi'
+import { mockStudentTripApi } from './api/studentTripApi'
 import type { SignUpInput } from './types/auth'
+import type { LocationTrackingState, StudentTrip } from './types/studentTrip'
 
-type Screen = 'LOGIN' | 'SIGN_UP' | 'STUDENT_HOME' | 'TEACHER_HOME'
+type Screen = 'LOGIN' | 'SIGN_UP' | 'STUDENT_INVITE' | 'STUDENT_PERMISSION' | 'STUDENT_PERMISSION_BLOCKED' | 'STUDENT_HOME' | 'TEACHER_HOME'
 
 const initialSignUpInput: SignUpInput = { role: 'STUDENT', name: '', loginId: '', password: '', phoneNumber: '', parentNumber: '', guardianConsent: false }
 
@@ -13,6 +16,8 @@ export default function App() {
   const [signUpInput, setSignUpInput] = useState<SignUpInput>(initialSignUpInput)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [studentTrip, setStudentTrip] = useState<StudentTrip | null>(null)
+  const [locationState, setLocationState] = useState<LocationTrackingState | null>(null)
 
   const showLogin = () => { setError(''); setScreen('LOGIN') }
   const showSignUp = () => { setError(''); setNotice(''); setScreen('SIGN_UP') }
@@ -22,7 +27,11 @@ export default function App() {
     setError('')
     try {
       const user = await mockAuthApi.login({ loginId, password })
-      setScreen(user.role === 'TEACHER' ? 'TEACHER_HOME' : 'STUDENT_HOME')
+      if (user.role === 'TEACHER') { setScreen('TEACHER_HOME'); return }
+      const [trip, tracking] = await Promise.all([mockStudentTripApi.getActiveTrip(user.id), mockLocationTrackingAdapter.getState()])
+      setStudentTrip(trip)
+      setLocationState(tracking)
+      setScreen(trip ? (tracking.permission === 'GRANTED' ? 'STUDENT_HOME' : 'STUDENT_PERMISSION_BLOCKED') : 'STUDENT_INVITE')
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : '로그인에 실패했습니다.')
     }
@@ -41,7 +50,17 @@ export default function App() {
     setScreen('LOGIN')
   }
 
-  if (screen === 'STUDENT_HOME') return <Home title="학생 홈" description="참여 중인 Trip을 확인 중입니다." />
+  const joinTrip = async (code: string) => {
+    const trip = await mockStudentTripApi.joinWithInviteCode(code)
+    setStudentTrip(trip)
+    setScreen('STUDENT_PERMISSION')
+  }
+  const allowLocation = async () => { const tracking = await mockLocationTrackingAdapter.requestPermission(); setLocationState(tracking); setScreen('STUDENT_HOME') }
+
+  if (screen === 'STUDENT_INVITE') return <InviteCodeScreen onSubmit={joinTrip} />
+  if (screen === 'STUDENT_PERMISSION') return <LocationPermissionScreen onAllow={allowLocation} onDeny={() => setScreen('STUDENT_PERMISSION_BLOCKED')} />
+  if (screen === 'STUDENT_PERMISSION_BLOCKED') return <LocationBlockedScreen onOpenSettings={() => mockLocationTrackingAdapter.openSettings()} />
+  if (screen === 'STUDENT_HOME' && studentTrip && locationState) return <StudentHome trip={studentTrip} location={locationState} />
   if (screen === 'TEACHER_HOME') return <Home title="교사 홈" description="진행 중인 Trip을 확인 중입니다." />
 
   return <main className="app-shell"><section className="auth-card" aria-labelledby="auth-title">
@@ -71,3 +90,14 @@ function SignUpForm({ input, onChange, onSubmit, onCancel }: { input: SignUpInpu
 
 function Field({ label, id, children }: { label: string; id: string; children: ReactNode }) { return <label className="field" htmlFor={id}>{label}{children}</label> }
 function Home({ title, description }: { title: string; description: string }) { return <main className="app-shell"><section className="auth-card home-card"><p className="brand">현장체험학습 안전관리</p><h1>{title}</h1><p>{description}</p><p className="hint">다음 이슈에서 Trip 기능과 하단 탭을 연결합니다.</p></section></main> }
+
+function InviteCodeScreen({ onSubmit }: { onSubmit: (code: string) => Promise<void> }) {
+  const [code, setCode] = useState(''); const [error, setError] = useState('')
+  const submit = async (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); setError(''); try { await onSubmit(code) } catch (caught) { setError(caught instanceof Error ? caught.message : '초대 코드 확인에 실패했습니다.') } }
+  return <ScreenCard title="Trip 참여"><p>교사가 공유한 6자리 초대 코드를 입력해 주세요.</p>{error && <p className="error" role="alert">{error}</p>}<form className="auth-form" onSubmit={submit}><Field label="초대 코드" id="invite-code"><input id="invite-code" maxLength={6} value={code} onChange={(event) => setCode(event.target.value.toUpperCase())} required /></Field><button type="submit">참여하기</button></form></ScreenCard>
+}
+
+function LocationPermissionScreen({ onAllow, onDeny }: { onAllow: () => Promise<void>; onDeny: () => void }) { return <ScreenCard title="위치 권한"><p>안전 확인을 위해 백그라운드 위치 권한이 필요합니다.</p><div className="auth-form"><button onClick={onAllow}>위치 권한 허용</button><button className="text-button" onClick={onDeny}>지금은 허용하지 않기</button></div></ScreenCard> }
+function LocationBlockedScreen({ onOpenSettings }: { onOpenSettings: () => Promise<void> }) { return <ScreenCard title="위치 권한 필요"><p>위치 권한을 허용해야 Trip과 미션 기능을 이용할 수 있습니다.</p><button onClick={onOpenSettings}>설정으로 이동</button></ScreenCard> }
+function StudentHome({ trip, location }: { trip: StudentTrip; location: LocationTrackingState }) { const status = location.sendStatus === 'NORMAL' ? '정상' : location.sendStatus === 'FAILED' ? '전송 실패' : location.sendStatus === 'STOPPED' ? '중지' : '권한 없음'; return <ScreenCard title="학생 홈"><p className="brand">{trip.status === 'ACTIVE' ? '진행 중' : '예정'}</p><h2>{trip.title}</h2><p>{trip.place} · {trip.period}</p><dl className="trip-summary"><div><dt>위치 전송</dt><dd>{status} {location.lastSentAt && `· ${location.lastSentAt}`}</dd></div><div><dt>미션 진행률</dt><dd>{trip.missionCompleted} / {trip.missionTotal}</dd></div></dl>{trip.hasSafetyWarning && <p className="error">안전 구역 이탈이 감지되었습니다.</p>}</ScreenCard> }
+function ScreenCard({ title, children }: { title: string; children: ReactNode }) { return <main className="app-shell"><section className="auth-card home-card"><p className="brand">현장체험학습 안전관리</p><h1>{title}</h1>{children}</section></main> }
