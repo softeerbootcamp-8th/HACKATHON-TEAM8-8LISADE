@@ -37,3 +37,23 @@ Figma `T-07 알림`(node 76-554 디자인 / 92-858 설명)을 리팩터된 `feat
 - `npm run build`(tsc -b + vite build), `npm run lint`, `npx vitest run`(전체 44개) 통과.
 - 브라우저 프리뷰로 종 아이콘 진입 → 6개 카드(배지/메시지/시각) 시안대로 렌더 확인,
   콘솔 에러 없음.
+
+## 조회 API + 프론트 실연동 (#57 확장)
+
+mock 시드로만 렌더하던 화면을 실제 조회 API에 연동했다.
+
+- 백엔드 `GET /api/teacher/notifications`(교사 세션): 인증 사용자의 `Notification`
+  전체를 `createdAt` 최신순으로 반환한다. **유형을 가리지 않으므로**, 이후 미완료·
+  확인불가 등 다른 유형을 저장하는 코드가 생기면 목록에 자동으로 함께 표시된다.
+  - `NotificationRepository.findAllByUserIdOrderByCreatedAtDesc`, `NotificationQueryService`,
+    `NotificationResponse` DTO, `NotificationController` + 서비스 단위 테스트.
+- 프론트 `teacherNotificationApi.list()`가 실제 `fetch`로 조회(ApiResponse 언랩),
+  `TeacherNotifications`는 마운트 시 조회 + 로딩/에러/빈상태 처리. `createdAt`→상대 시각
+  라벨, 백엔드 `type`→배지 매핑(미지원 유형은 fallback). 딥링크는 `type` 기준.
+
+### 의존성 / 한계
+
+- 실제로 데이터가 뜨려면 저장하는 코드가 있어야 한다. 현재 저장은 안전구역 이탈
+  (RANGE_EXIT)뿐이며 그것도 PR #53(#51, 미머지)에 있다 → #53 머지 전에는 목록이 비어 있다.
+- `NotificationRepository`는 #53에도 있어(빈 인터페이스) add/add 겹침이 생긴다. 둘 중
+  먼저 머지되는 쪽 기준으로 나머지를 rebase하면 되며, 본 브랜치 버전이 조회 메서드를 포함한 상위집합이다.
