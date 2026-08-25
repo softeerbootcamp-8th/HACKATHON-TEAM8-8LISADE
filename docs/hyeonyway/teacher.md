@@ -6,6 +6,6 @@
 - 홈 탭에는 참여 학생 수, 정상/이탈/위치 확인 필요 수, 미션 완료율, 미확인 제출 수와 마지막 갱신 시각을 mock 데이터로 표시한다.
 - 실제 API 조회와 SSE 구독·재연결은 #7 endpoint 계약이 준비되면 선택 Trip 상태에 연결한다.
 
-검증: `npm test -- src/App.test.tsx` (12 passed), `npm run lint` 통과.
+검증: `npm test` (2 test files, 14 passed), `npm run lint`, `npm run build` 통과.
 
-알려진 선행 문제: 전체 `npm test`, `npm run build`는 develop에 포함된 `src/native/backgroundLocation.ts`가 `@capacitor/core` 의존성을 찾지 못해 실패한다. #17 변경과 무관하다.
+`@capacitor/core`는 develop에 이미 선언돼 있으며, 새 의존성 추가가 아니라 로컬 `npm install`로 설치 상태를 동기화해 백그라운드 위치 모듈의 build 문제를 해소했다.
