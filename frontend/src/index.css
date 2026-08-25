@@ -76,7 +76,7 @@ h2 { font-size: 17px; margin: 0; }
 .hint { color: var(--color-text-muted); font-size: 13px; margin: 0; }
 
 /* Header with logo (student/teacher app shell) */
-.app-header { align-items: center; background: var(--color-bg); border-bottom: 1px solid var(--color-border); display: flex; height: 96px; justify-content: space-between; padding: 0 16px; }
+.app-header { align-items: center; background: var(--color-bg); border-bottom: 1px solid var(--color-border); display: flex; height: 96px; justify-content: space-between; padding: 48px 16px 10px; }
 .app-header-brand { align-items: center; display: flex; gap: 6px; }
 .app-header-brand img { display: block; height: 26px; width: 30px; }
 .app-header-brand span { font-size: 19px; font-weight: 700; }
@@ -113,7 +113,8 @@ h2 { font-size: 17px; margin: 0; }
 .trip-summary dd { display: inline; font-weight: 700; margin: 0 0 0 6px; }
 
 /* Bottom nav (teacher) */
-.teacher-tabs { background: var(--color-surface); border-top: 1px solid var(--color-border); bottom: 0; display: flex; gap: 4px; left: 0; padding: 8px 10px; position: sticky; right: 0; width: 100%; }
+.screen:has(.teacher-tabs) { padding-bottom: 0; }
+.teacher-tabs { align-items: center; background: var(--color-surface); border-top: 1px solid var(--color-border); bottom: 0; display: flex; gap: 4px; height: 74px; left: 0; padding: 8px 10px 0; position: sticky; right: 0; width: 100%; }
 .teacher-tabs button { align-items: center; background: transparent; border-radius: 14px; box-shadow: none; color: var(--color-text-muted); display: flex; flex: 1 0 0; flex-direction: column; font-size: 10px; gap: 2px; min-height: auto; padding: 5px; }
 .teacher-tabs button[aria-pressed="true"] { background: var(--color-accent-soft); color: var(--color-text); }
 .teacher-tabs button img { height: 24px; width: 24px; }
@@ -234,35 +235,21 @@ h2 { font-size: 17px; margin: 0; }
 .map-undo:hover { background: #fff8e8; }
 .map-undo:disabled { color: #aaa391; cursor: not-allowed; opacity: .72; }
 
-.teacher-shell { background: var(--color-bg); color: var(--color-text); display: flex; flex-direction: column; margin: 0 auto; max-width: 568px; min-height: 100svh; width: 100%; }
-
-.management-tab { display: flex; flex: 1; flex-direction: column; min-height: 0; padding: 28px 24px 30px; }
-.teacher-profile { background: #fff; border-radius: 25px; display: flex; flex: 0 0 102px; flex-direction: column; justify-content: center; padding: 0 25px; }
-.teacher-profile strong { font-size: 20px; letter-spacing: -.5px; line-height: 1.35; }
-.teacher-profile span { color: #65728b; font-size: 16px; line-height: 1.4; }
-.management-tab > h1 { font-size: 25px; letter-spacing: -.8px; margin: 56px 0 25px; }
-.management-list { display: grid; gap: 24px; }
-.management-card { align-items: center; background: #fff; border-radius: 25px; box-shadow: 0 8px 13px rgb(78 58 20 / 10%); display: flex; justify-content: space-between; min-height: 108px; padding: 22px 24px 22px 25px; }
-.management-card h2 { font-size: 20px; letter-spacing: -.45px; line-height: 1.35; margin: 0; }
-.management-card p { color: #65728b; font-size: 16px; line-height: 1.5; margin: 2px 0 0; }
-.trip-status { border-radius: 12px; flex: 0 0 auto; font-size: 14px; font-weight: 700; margin-left: 14px; padding: 4px 11px; }
-.trip-status-active { background: #dff2e7; color: #2e9d69; }
-.trip-status-ready, .trip-status-finished { background: #f1f3f6; color: #8c98aa; }
+.management-tab { display: flex; flex: 1; flex-direction: column; min-height: 0; padding: 20px 16px 22px; }
+.teacher-profile { background: #fff; border-radius: 18px; display: flex; flex: 0 0 72px; flex-direction: column; justify-content: center; padding: 0 18px; }
+.teacher-profile strong { font-size: 15px; line-height: normal; }
+.teacher-profile span { color: #65728b; font-size: 12px; font-weight: 500; line-height: normal; }
+.management-tab > h1 { font-size: 18px; letter-spacing: normal; margin: 40px 0 19px; }
+.management-list { display: grid; gap: 18px; }
+.management-card { align-items: center; background: #fff; border-radius: 18px; box-shadow: var(--shadow-card); display: flex; justify-content: space-between; min-height: 76px; padding: 16px 16px 16px 18px; }
+.management-card h2 { font-size: 15px; letter-spacing: normal; line-height: normal; margin: 0; }
+.management-card p { color: #65728b; font-size: 12px; font-weight: 500; line-height: normal; margin: 4px 0 0; }
+.trip-status { border-radius: 8px; flex: 0 0 auto; font-size: 11px; font-weight: 700; margin-left: 12px; padding: 3px 8px; }
+.trip-status-active { background: var(--color-success-soft); color: var(--color-success); }
+.trip-status-ready, .trip-status-finished { background: rgb(152 162 179 / 13%); color: #98a2b3; }
 .management-state { background: #fff; border-radius: 20px; color: #65728b; margin: 0; padding: 28px 20px; text-align: center; }
 .management-state.error { color: #b4232a; }
 .add-notice { color: #65728b; font-size: 14px; margin: auto 0 12px; text-align: center; }
-.add-trip-button { align-items: center; background: #ffc83d; border-radius: 22px; color: #23303b; display: flex; flex: 0 0 74px; font-size: 18px; justify-content: center; margin-top: auto; width: 100%; }
+.add-trip-button { align-items: center; background: var(--color-accent); border-radius: 16px; box-shadow: var(--shadow-card); color: var(--color-text); display: flex; flex: 0 0 52px; font-size: 15px; justify-content: center; margin-top: auto; min-height: 52px; width: 100%; }
 .add-trip-button:hover { background: #f4b922; }
 .add-notice + .add-trip-button { margin-top: 0; }
-
-@media (min-width: 569px) {
-  .teacher-shell { box-shadow: 0 12px 36px rgb(59 47 24 / 10%); }
-}
-
-@media (max-width: 420px) {
-  .management-tab { padding-inline: 18px; }
-  .management-tab > h1 { margin-top: 42px; }
-  .management-card { padding-inline: 20px; }
-  .management-card h2 { font-size: 18px; }
-  .management-card p { font-size: 14px; }
-}
