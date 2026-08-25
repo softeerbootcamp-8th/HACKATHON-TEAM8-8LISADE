@@ -1,5 +1,5 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
-import { getMessaging, getToken, type Messaging } from 'firebase/messaging'
+import { deleteToken, getMessaging, getToken, type Messaging } from 'firebase/messaging'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -40,4 +40,12 @@ export async function requestFcmToken(): Promise<string | null> {
   await navigator.serviceWorker.register('/firebase-messaging-sw.js')
   const registration = await navigator.serviceWorker.ready
   return getToken(messagingInstance, { vapidKey, serviceWorkerRegistration: registration })
+}
+
+export async function deleteFcmToken(): Promise<void> {
+  const messagingInstance = getFirebaseMessaging()
+  if (!messagingInstance) {
+    return
+  }
+  await deleteToken(messagingInstance)
 }
