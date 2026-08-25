@@ -25,7 +25,7 @@ public class Device {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "fcm_token", nullable = false, length = 512)
+    @Column(name = "fcm_token", nullable = false, unique = true, length = 512)
     private String fcmToken;
 
     @Enumerated(EnumType.STRING)
@@ -48,6 +48,12 @@ public class Device {
 
     public static Device create(Long userId, String fcmToken, DevicePlatform platform) {
         return new Device(null, userId, fcmToken, platform, LocalDateTime.now());
+    }
+
+    public void reassignTo(Long userId, DevicePlatform platform) {
+        this.userId = userId;
+        this.platform = platform;
+        this.updatedAt = LocalDateTime.now();
     }
 
 }

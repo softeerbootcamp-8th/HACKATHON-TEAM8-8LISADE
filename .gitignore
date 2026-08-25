@@ -35,6 +35,10 @@ pnpm-debug.log*
 # ---- Docker ----
 docker-compose.override.yml
 
+# ---- Firebase (FCM) secrets ----
+backend/src/main/resources/firebase-service-account.json
+frontend/android/app/google-services.json
+
 # ---- Capacitor ----
 frontend/.capacitor/
 frontend/android/app/build/
