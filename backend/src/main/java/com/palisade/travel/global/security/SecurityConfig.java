@@ -31,7 +31,7 @@ public class SecurityConfig {
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         // Android 네이티브 요청은 JSESSIONID만 공유하므로 위치 API만 CSRF 검사에서 제외한다.
                         // 세션 인증과 STUDENT 역할 검사는 아래 인가 규칙에서 그대로 수행된다.
-                        .ignoringRequestMatchers("/api/student/locations"))
+                        .ignoringRequestMatchers("/api/student/locations", "/mock-storage/**"))
                 .cors(Customizer.withDefaults())
                 .securityContext(securityContext -> securityContext
                         .securityContextRepository(securityContextRepository)
@@ -40,7 +40,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/health", "/api/examples/**", "/api/auth/login", "/api/auth/signup", "/api/auth/csrf").permitAll()
+                        .requestMatchers("/api/health", "/api/examples/**", "/api/auth/login", "/api/auth/signup", "/api/auth/csrf", "/mock-storage/**").permitAll()
                         .requestMatchers("/api/student/**").hasRole("STUDENT")
                         .requestMatchers("/api/teacher/**").hasRole("TEACHER")
                         .anyRequest().authenticated())

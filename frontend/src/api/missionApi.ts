@@ -2,11 +2,91 @@ import type { MissionCreateInput, MissionStatusBoard, RosterStudent, StudentMiss
 
 export interface MissionApi { verifyAttendancePin(pin: string): Promise<void>; uploadPhoto(uri: string): Promise<void> }
 
-export const mockMissionApi: MissionApi = {
-  async verifyAttendancePin(pin) {
-    if (pin !== '1234') throw new Error('PIN 번호를 확인해 주세요.')
+export type MissionType = 'ACTIVITY' | 'CHECK'
+export type SubmissionStatus = 'WAITING' | 'COMPLETED' | 'REJECTED' | 'EXPIRED'
+
+export interface StudentMission {
+  id: number
+  tripId: number
+  title: string
+  description: string | null
+  type: MissionType
+  startAt: string | null
+  endAt: string | null
+}
+
+export interface MissionSubmission {
+  submissionId: number | null
+  status: SubmissionStatus
+  imageKey: string | null
+}
+
+type ApiResponse<T> = {
+  success: boolean
+  data: T
+  message?: string
+}
+
+type CsrfToken = {
+  token: string
+  headerName: string
+}
+
+type PresignedUpload = {
+  objectKey: string
+  uploadUrl: string
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, { credentials: 'include', ...init })
+  const body = await response.json().catch(() => null) as ApiResponse<T> | null
+
+  if (!response.ok || !body?.success) {
+    throw new Error(body?.message ?? '미션 요청 처리에 실패했습니다.')
+  }
+
+  return body.data
+}
+
+async function post<T>(path: string, payload?: unknown): Promise<T> {
+  const csrfToken = await request<CsrfToken>('/api/auth/csrf')
+
+  return request<T>(path, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      [csrfToken.headerName]: csrfToken.token,
+    },
+    ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
+  })
+}
+
+async function uploadToStorage(uploadUrl: string, photo: Blob): Promise<void> {
+  const response = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': photo.type || 'image/jpeg' },
+    body: photo,
+  })
+
+  if (!response.ok) {
+    throw new Error('사진 업로드에 실패했습니다.')
+  }
+}
+
+export const missionApi = {
+  getCurrentMissions(tripId: number) {
+    return request<StudentMission[]>(`/api/trips/${tripId}/missions/current`)
   },
-  async uploadPhoto() { return Promise.resolve() },
+
+  async submitPhoto(missionId: number, photo: Blob): Promise<MissionSubmission> {
+    const upload = await post<PresignedUpload>(`/api/missions/${missionId}/photo-upload`)
+    await uploadToStorage(upload.uploadUrl, photo)
+    return post<MissionSubmission>(`/api/missions/${missionId}/submissions/photo`, { objectKey: upload.objectKey })
+  },
+
+  verifyPin(missionId: number, pin: string) {
+    return post<MissionSubmission>(`/api/missions/${missionId}/submissions/pin`, { pin })
+  },
 }
 
 export interface TeacherMissionApi {
