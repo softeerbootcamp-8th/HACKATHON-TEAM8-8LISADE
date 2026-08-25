@@ -16,6 +16,7 @@ import icPin from '../../assets/icons/ic-pin.svg'
 import icSliders from '../../assets/icons/ic-sliders.svg'
 import { TripCreationFlow } from './TripCreationFlow'
 import { AddStudentForm, TripDetail } from './TripDetail'
+import { TeacherLocationMap } from './TeacherLocationMap'
 
 type TeacherTab = 'HOME' | 'STUDENTS' | 'MISSIONS' | 'LOCATION' | 'MANAGE'
 type ManageView = { name: 'LIST' } | { name: 'CREATE' } | { name: 'DETAIL'; tripId: number } | { name: 'ADD_STUDENT'; tripId: number }
@@ -119,6 +120,12 @@ export function TeacherDashboard({ user }: { user: CurrentUser }) {
         onAdd={() => setManageView({ name: 'CREATE' })}
         onSelect={(selectedTripId) => setManageView({ name: 'DETAIL', tripId: selectedTripId })}
       />
+      : tab === 'LOCATION'
+        ? tripError
+          ? <p className="management-state error" role="alert">{tripError}</p>
+          : trips === null
+            ? <p className="management-state" role="status">체험학습 목록을 불러오는 중입니다.</p>
+            : <TeacherLocationMap trips={trips} />
       : <div className="teacher-body">
         <Field label="기준 Trip" id="teacher-trip"><select id="teacher-trip" className="teacher-trip-select" value={tripId} onChange={(event) => setTripId(event.target.value)}>{teacherTrips.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.title} · {candidate.status}</option>)}</select></Field>
         <div className="teacher-status-row"><h2>{trip.title}</h2><span className={`status-pill ${trip.status === '진행 중' ? 'status-pill--success' : 'status-pill--neutral'}`}>{trip.status}</span></div>
