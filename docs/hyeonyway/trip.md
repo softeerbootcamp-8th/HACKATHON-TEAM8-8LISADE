@@ -19,3 +19,20 @@
 - 실제 기기 카메라, Activity 복구, S3 CORS 및 백엔드 API 연동은 #27에서 수행한다.
 
 검증: `npm test` (11 passed), `npm run lint`, `npm run build`
+
+## Trip 초대 코드·참여 API (#5)
+
+- `Trip`에 장소를 추가하고 `InviteCode`를 별도 엔티티로 도입했다. 교사 Trip 생성 시 영문 2자리+숫자 4자리 초대 코드를 발급하며, 모든 코드는 5분 뒤 만료된다.
+- `POST /api/teacher/trips/{tripId}/invite-code`는 담당 교사만 호출할 수 있고, 현재 코드를 폐기한 뒤 한 번도 사용되지 않은 새 코드를 발급한다.
+- 학생은 `POST /api/student/trips/join`으로 활성 Trip에 한 번만 앱 참가할 수 있으며 `GET /api/student/trips/active`로 현재 참여 Trip을 조회한다. 만료·폐기 코드는 거부한다.
+- 교사는 참가자 목록을 조회하고 앱을 쓰지 않는 학생을 직접 확인 참가자로 추가할 수 있다. `TripParticipantType`으로 앱 참가자와 직접 확인 참가자를 구분한다.
+
+검증: `./gradlew test` (전체 백엔드 테스트 통과)
+
+## 학생 Trip API 프론트엔드 연동 (#5)
+
+- 학생 로그인 뒤 활성 Trip 확인은 세션 기반 `GET /api/student/trips/active`를 사용한다. 활성 Trip이 없으면 기존 초대 코드 입력 화면으로 이동한다.
+- 초대 코드 참여는 `POST /api/student/trips/join`에 CSRF 토큰을 포함해 요청한다. 학생 식별은 요청 본문의 `userId`가 아니라 로그인 세션에서 처리한다.
+- 현재 서버 계약에 없는 일정 기간·미션 진행률·안전 경고는 기존 화면 mock 값을 유지한다. 해당 데이터가 포함된 학생 Trip 조회 계약이 추가되면 이 매핑을 교체한다.
+
+검증: `npm test` (16 passed), `npm run lint`, `npm run build`, `cd backend && ./gradlew test`
