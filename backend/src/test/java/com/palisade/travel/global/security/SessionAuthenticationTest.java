@@ -74,7 +74,20 @@ class SessionAuthenticationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.loginId").value("student1"))
+                .andExpect(jsonPath("$.data.name").value("학생1"))
                 .andExpect(jsonPath("$.data.role").value("STUDENT"));
+    }
+
+    @Test
+    void disabledAccountCannotLogIn() throws Exception {
+        jdbcTemplate.update("UPDATE users SET enabled = false WHERE login_id = ?", "student1");
+
+        mockMvc.perform(post("/api/auth/login")
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content("{\"loginId\":\"student1\",\"password\":\"password123\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test

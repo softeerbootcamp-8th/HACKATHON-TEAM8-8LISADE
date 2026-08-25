@@ -40,7 +40,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/health", "/api/examples/**", "/api/auth/login", "/api/auth/csrf").permitAll()
+                        .requestMatchers("/api/health", "/api/examples/**", "/api/auth/login", "/api/auth/signup", "/api/auth/csrf").permitAll()
                         .requestMatchers("/api/student/**").hasRole("STUDENT")
                         .requestMatchers("/api/teacher/**").hasRole("TEACHER")
                         .anyRequest().authenticated())

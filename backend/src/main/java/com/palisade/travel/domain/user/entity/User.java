@@ -28,7 +28,7 @@ public class User {
     @Column(name = "password_hash", nullable = false, length = 100)
     private String passwordHash;
 
-    @Column(name = "email", nullable = false, length = 255)
+    @Column(name = "email", length = 255)
     private String email;
 
     @Column(name = "name", nullable = false, length = 100)
@@ -44,6 +44,9 @@ public class User {
     @Column(name = "parent_number", length = 20)
     private String parentNumber;
 
+    @Column(name = "guardian_consent")
+    private Boolean guardianConsent;
+
     @Column(name = "enabled", nullable = false)
     private boolean enabled;
 
@@ -54,7 +57,7 @@ public class User {
     }
 
     public User(Long id, String loginId, String passwordHash, String email, String name, UserRole role,
-                String phoneNumber, String parentNumber, boolean enabled, LocalDateTime createdAt) {
+                String phoneNumber, String parentNumber, Boolean guardianConsent, boolean enabled, LocalDateTime createdAt) {
         this.id = id;
         this.loginId = loginId;
         this.passwordHash = passwordHash;
@@ -63,13 +66,14 @@ public class User {
         this.role = role;
         this.phoneNumber = phoneNumber;
         this.parentNumber = parentNumber;
+        this.guardianConsent = guardianConsent;
         this.enabled = enabled;
         this.createdAt = createdAt;
     }
 
-    public static User create(String loginId, String passwordHash, String email, String name, UserRole role,
-                              String phoneNumber, String parentNumber) {
-        return new User(null, loginId, passwordHash, email, name, role, phoneNumber, parentNumber,
+    public static User create(String loginId, String passwordHash, String name, UserRole role,
+                              String phoneNumber, String parentNumber, Boolean guardianConsent) {
+        return new User(null, loginId, passwordHash, null, name, role, phoneNumber, parentNumber, guardianConsent,
                 true, LocalDateTime.now());
     }
 }
