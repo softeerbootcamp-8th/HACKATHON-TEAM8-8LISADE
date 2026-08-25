@@ -18,4 +18,11 @@ public class TrackingResponsePolicyTest {
 
         assertEquals(TrackingResponsePolicy.CONTINUE, policy);
     }
+
+    @Test
+    public void Given_410응답_When_전송정책판단_Then_위치전송만종료한다() {
+        TrackingResponsePolicy policy = TrackingResponsePolicy.fromStatus(410);
+
+        assertEquals(TrackingResponsePolicy.STOP_TRACKING, policy);
+    }
 }

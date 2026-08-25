@@ -31,14 +31,14 @@ describe('백그라운드 위치 브리지', () => {
     expect(plugin.startTracking).not.toHaveBeenCalled()
   })
 
-  it('Given 네이티브 환경 When 세션을 동기화하면 Then 쿠키가 아닌 위치 API 주소만 전달한다', async () => {
+  it('Given 네이티브 환경 When 세션을 동기화하면 Then 학생 위치 API 주소만 전달한다', async () => {
     const plugin = createPlugin()
     const bridge = createBackgroundLocation(plugin, true)
 
-    await bridge.syncSession({ locationEndpoint: 'https://api.example.com/api/locations' })
+    await bridge.syncSession({ apiBaseUrl: 'https://api.example.com' })
 
     expect(plugin.syncSession).toHaveBeenCalledWith({
-      locationEndpoint: 'https://api.example.com/api/locations',
+      locationEndpoint: 'https://api.example.com/api/student/locations',
     })
   })
 })
