@@ -1,11 +1,13 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { mockAuthApi } from './api/authApi'
+import { mockCameraAdapter } from './api/cameraAdapter'
 import { mockLocationTrackingAdapter } from './api/locationTrackingApi'
+import { mockMissionApi } from './api/missionApi'
 import { mockStudentTripApi } from './api/studentTripApi'
 import type { SignUpInput } from './types/auth'
 import type { LocationTrackingState, StudentTrip } from './types/studentTrip'
 
-type Screen = 'LOGIN' | 'SIGN_UP' | 'STUDENT_INVITE' | 'STUDENT_PERMISSION' | 'STUDENT_PERMISSION_BLOCKED' | 'STUDENT_HOME' | 'TEACHER_HOME'
+type Screen = 'LOGIN' | 'SIGN_UP' | 'STUDENT_INVITE' | 'STUDENT_PERMISSION' | 'STUDENT_PERMISSION_BLOCKED' | 'STUDENT_HOME' | 'STUDENT_MISSIONS' | 'TEACHER_HOME'
 
 const initialSignUpInput: SignUpInput = { role: 'STUDENT', name: '', loginId: '', password: '', phoneNumber: '', parentNumber: '', guardianConsent: false }
 
@@ -60,7 +62,8 @@ export default function App() {
   if (screen === 'STUDENT_INVITE') return <InviteCodeScreen onSubmit={joinTrip} />
   if (screen === 'STUDENT_PERMISSION') return <LocationPermissionScreen onAllow={allowLocation} onDeny={() => setScreen('STUDENT_PERMISSION_BLOCKED')} />
   if (screen === 'STUDENT_PERMISSION_BLOCKED') return <LocationBlockedScreen onOpenSettings={() => mockLocationTrackingAdapter.openSettings()} />
-  if (screen === 'STUDENT_HOME' && studentTrip && locationState) return <StudentHome trip={studentTrip} location={locationState} />
+  if (screen === 'STUDENT_HOME' && studentTrip && locationState) return <StudentHome trip={studentTrip} location={locationState} onMissions={() => setScreen('STUDENT_MISSIONS')} />
+  if (screen === 'STUDENT_MISSIONS') return <MissionScreen />
   if (screen === 'TEACHER_HOME') return <Home title="교사 홈" description="진행 중인 Trip을 확인 중입니다." />
 
   return <main className="app-shell"><section className="auth-card" aria-labelledby="auth-title">
@@ -99,5 +102,6 @@ function InviteCodeScreen({ onSubmit }: { onSubmit: (code: string) => Promise<vo
 
 function LocationPermissionScreen({ onAllow, onDeny }: { onAllow: () => Promise<void>; onDeny: () => void }) { return <ScreenCard title="위치 권한"><p>안전 확인을 위해 백그라운드 위치 권한이 필요합니다.</p><div className="auth-form"><button onClick={onAllow}>위치 권한 허용</button><button className="text-button" onClick={onDeny}>지금은 허용하지 않기</button></div></ScreenCard> }
 function LocationBlockedScreen({ onOpenSettings }: { onOpenSettings: () => Promise<void> }) { return <ScreenCard title="위치 권한 필요"><p>위치 권한을 허용해야 Trip과 미션 기능을 이용할 수 있습니다.</p><button onClick={onOpenSettings}>설정으로 이동</button></ScreenCard> }
-function StudentHome({ trip, location }: { trip: StudentTrip; location: LocationTrackingState }) { const status = location.sendStatus === 'NORMAL' ? '정상' : location.sendStatus === 'FAILED' ? '전송 실패' : location.sendStatus === 'STOPPED' ? '중지' : '권한 없음'; return <ScreenCard title="학생 홈"><p className="brand">{trip.status === 'ACTIVE' ? '진행 중' : '예정'}</p><h2>{trip.title}</h2><p>{trip.place} · {trip.period}</p><dl className="trip-summary"><div><dt>위치 전송</dt><dd>{status} {location.lastSentAt && `· ${location.lastSentAt}`}</dd></div><div><dt>미션 진행률</dt><dd>{trip.missionCompleted} / {trip.missionTotal}</dd></div></dl>{trip.hasSafetyWarning && <p className="error">안전 구역 이탈이 감지되었습니다.</p>}</ScreenCard> }
+function StudentHome({ trip, location, onMissions }: { trip: StudentTrip; location: LocationTrackingState; onMissions: () => void }) { const status = location.sendStatus === 'NORMAL' ? '정상' : location.sendStatus === 'FAILED' ? '전송 실패' : location.sendStatus === 'STOPPED' ? '중지' : '권한 없음'; return <ScreenCard title="학생 홈"><p className="brand">{trip.status === 'ACTIVE' ? '진행 중' : '예정'}</p><h2>{trip.title}</h2><p>{trip.place} · {trip.period}</p><dl className="trip-summary"><div><dt>위치 전송</dt><dd>{status} {location.lastSentAt && `· ${location.lastSentAt}`}</dd></div><div><dt>미션 진행률</dt><dd>{trip.missionCompleted} / {trip.missionTotal}</dd></div></dl>{trip.hasSafetyWarning && <p className="error">안전 구역 이탈이 감지되었습니다.</p>}<button onClick={onMissions}>미션 보기</button></ScreenCard> }
+function MissionScreen() { const [pin, setPin] = useState(''); const [error, setError] = useState(''); const [open, setOpen] = useState(false); const [photoNotice, setPhotoNotice] = useState(''); const submit = async (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); setError(''); try { await mockMissionApi.verifyAttendancePin(pin); setOpen(false) } catch (caught) { setError(caught instanceof Error ? caught.message : 'PIN 검증에 실패했습니다.') } }; const submitPhoto = async () => { const photo = await mockCameraAdapter.takePhoto(); await mockMissionApi.uploadPhoto(photo.uri); setPhotoNotice('사진 미션을 제출했습니다.') }; return <ScreenCard title="미션"><h2>경복궁 출석 체크</h2><p>교사가 공유한 4자리 PIN을 입력해 주세요.</p>{open ? <form className="auth-form" onSubmit={submit}>{error && <p className="error" role="alert">{error}</p>}<Field label="출석 PIN" id="attendance-pin"><input id="attendance-pin" inputMode="numeric" maxLength={4} value={pin} onChange={(event) => setPin(event.target.value)} required /></Field><button type="submit">확인</button></form> : <button onClick={() => setOpen(true)}>출석 체크</button>}<section><h2>전통 문화 사진 미션</h2><p>카메라로 촬영한 사진만 제출할 수 있습니다.</p><button onClick={submitPhoto}>사진 촬영 후 제출</button>{photoNotice && <p className="notice">{photoNotice}</p>}</section><section><h2>반려된 사진 미션</h2><p>사진이 반려되었습니다. 다시 촬영해 제출해 주세요.</p><button onClick={submitPhoto}>재제출하기</button></section><section className="locked-mission"><h2>다음 미션</h2><p>다음 미션은 이전 미션을 완료하면 열립니다.</p></section></ScreenCard> }
 function ScreenCard({ title, children }: { title: string; children: ReactNode }) { return <main className="app-shell"><section className="auth-card home-card"><p className="brand">현장체험학습 안전관리</p><h1>{title}</h1>{children}</section></main> }
