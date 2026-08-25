@@ -19,3 +19,14 @@
 - 대리 완료(`completeOnBehalf`)는 대상 학생이 해당 trip의 roster(APP 참가자)에 없으면 400을 던진다. 제출 내역이 없으면 빈 이미지 키로 `COMPLETED` 제출을 새로 만들고, 있으면 상태만 갱신한다.
 
 검증: `./gradlew test`(백엔드 전체 스위트, `MissionServiceTest` 10/10·`MissionSubmissionTest` 3/3 포함 전부 통과), `./gradlew build` 통과.
+
+## 교사 미션 관리 화면 실 API 연동 (#43)
+
+- `missionApi.ts`의 `mockTeacherMissionApi`를 `teacherMissionApi`(실 `fetch` 구현)로 교체했다. `TeacherMissionApi` 인터페이스는 유지하되 `rejectSubmission`의 반환 타입은 `Promise<TeacherSubmission>`에서 `Promise<void>`로 바꿨다 — 실제 reject API가 바디 없는 성공 응답만 주고, 호출부(`TeacherMissions.tsx`)도 반환값을 쓰지 않았기 때문이다. `getStudentProgress`는 대응 API가 없어 인터페이스에서 제거했다.
+- `MissionResponse`(미션 생성/목록/현황판 공통 응답)에는 `pin` 필드가 없다(교사가 별도로 `GET /api/teacher/missions/{missionId}/pin`을 호출해야 함 — 보안상 의도된 설계). `missionApi.ts` 내부 `attachPinIfCheckMission`이 CHECK 타입 미션을 반환할 때마다(목록 조회/생성/현황판 조회) 자동으로 PIN을 추가 조회해 붙여줘서, 컴포넌트 코드는 `mission.pin`을 그대로 쓸 수 있게 했다. 단, 이 때문에 미션 목록 화면에서 CHECK 미션 하나당 PIN 조회가 매번(현황판 fetch 포함 최대 2번) 추가로 나간다 — 트립당 미션 수가 적어서 감수했다.
+- `types/mission.ts`의 `TeacherSubmission`/`RosterStudent`/`StudentMissionProgress`를 지우고, 백엔드 `MissionStatusBoardResponse`의 `SubmittedEntry`/`NotSubmittedEntry`와 1:1로 대응하는 `SubmittedStudent`/`NotSubmittedStudent`로 교체했다(안 쓰던 `submissionId`/`status`/`missionId` 필드 제거).
+- `TeacherMissions.tsx`를 mock 동기 스냅샷(`useState(() => store.snapshot(...))`) 방식에서 `useEffect` 기반 비동기 로딩으로 전환하면서, `react-hooks/set-state-in-effect` 린트를 다시 마주쳤다(#19 기록 참고). 이번엔 `useEffect`를 아예 피하지 않고, "setState 없이 데이터만 반환하는 fetch 함수"와 "그 함수를 부르고 setState까지 하는 wrapper"를 분리해서, effect 본문에는 항상 `.then(setState)`/`.catch(setState)` 형태로만 호출이 오도록 구성했다 — PR #52(`TeacherDashboard.tsx`)가 먼저 쓴 것과 같은 패턴이다. effect 안에서 로컬로 정의된 async 함수를 직접 호출하면(그 함수가 내부에서 setState를 하더라도) eslint가 그 함수 내부까지 추적해서 걸리므로, "effect 콜백이 직접 부르는 것"과 "setState 실행"을 분리하는 게 핵심이다.
+- 백엔드 `submittedAt`이 `"14:34"` 같은 짧은 문자열이 아니라 전체 `LocalDateTime` 문자열(`"2026-08-25T20:49:42.115219"`)로 내려오는 걸 실 백엔드로 검증하다 발견해서, `formatSubmittedAt`으로 `HH:mm`으로 변환해 표시하도록 추가했다.
+- tripId 배선: PR #52(#47)가 이미 만든 `teacherTripApi.getTrips()`로 로드한 실제 trip 목록 중 첫 번째를 미션 탭의 `tripId`로 사용하도록 `TeacherDashboard.tsx`를 수정했다. 홈 탭 상단의 "기준 Trip" 선택기와 통계 카드(참여 학생/정상 위치/미션 완료율 등)는 대응하는 실 API가 아직 없어서 기존 mock(`teacherTrips` 배열)을 그대로 뒀다 — 미션 탭의 `tripId`만 그 mock 선택과 독립적으로 실제 trip을 쓴다. 트립이 아직 없으면(신규 교사) "체험학습을 먼저 만들어 주세요." 안내만 보여준다.
+
+검증: `npm test`(vitest, 68개 전체 통과 — 교체된 `TeacherMissions.test.tsx` 5개, 신규 `teacherMissionApi.test.ts` 5개 포함), `npm run lint`, `npm run build` 모두 통과. 로컬 MySQL + 백엔드(local 프로필)를 직접 띄우고 curl로 교사 가입/로그인 → trip 생성 → 미션 생성(ACTIVITY/CHECK)/목록/PIN → 학생 가입/참여/PIN 제출 → 교사 현황판 조회/반려/대리완료/삭제까지 전 구간을 검증해 응답 모양이 프론트 가정과 정확히 일치함을 확인했다. 이어서 브라우저로 실제 로그인 후 미션 탭 → 현황판 → 반려 → 대리 완료까지 직접 클릭해 눈으로 확인했다.

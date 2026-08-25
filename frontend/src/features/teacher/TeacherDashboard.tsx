@@ -40,6 +40,7 @@ export function TeacherDashboard({ user }: { user: CurrentUser }) {
   const [trips, setTrips] = useState<TeacherTrip[] | null>(null)
   const [tripError, setTripError] = useState('')
   const trip = teacherTrips.find((candidate) => candidate.id === tripId) ?? teacherTrips[0]
+  const missionTripId = trips && trips.length > 0 ? String(trips[0].id) : null
 
   useEffect(() => {
     let active = true
@@ -71,7 +72,9 @@ export function TeacherDashboard({ user }: { user: CurrentUser }) {
             <div className="stat-card"><p>미션 완료율 {trip.missionRate}%</p><p>미확인 제출 {trip.pendingSubmissions}건</p></div>
           </div>
           <p className="hint">마지막 갱신: {trip.updatedAt}</p>
-        </> : tab === 'MISSIONS' ? <TeacherMissions key={tripId} tripId={tripId} /> : <section className="stat-card"><p className="hint">{tabs.find((item) => item.id === tab)?.label}</p><p>{trip.title} 기준 화면입니다.</p></section>}
+        </> : tab === 'MISSIONS'
+          ? (missionTripId ? <TeacherMissions key={missionTripId} tripId={missionTripId} /> : <section className="stat-card"><p className="hint">체험학습을 먼저 만들어 주세요.</p></section>)
+          : <section className="stat-card"><p className="hint">{tabs.find((item) => item.id === tab)?.label}</p><p>{trip.title} 기준 화면입니다.</p></section>}
       </div>}
     <nav aria-label="교사 하단 탭" className="teacher-tabs">{tabs.map((item) => <button key={item.id} onClick={() => setTab(item.id)} aria-pressed={tab === item.id}><img src={item.icon} alt="" />{item.label}</button>)}</nav>
   </ScreenCard>
