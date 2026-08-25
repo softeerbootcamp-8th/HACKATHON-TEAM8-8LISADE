@@ -7,3 +7,6 @@ spring:
     hibernate:
       ddl-auto: update
     open-in-view: false
+
+firebase:
+  credentials-path: ${FIREBASE_CREDENTIALS_PATH:}
