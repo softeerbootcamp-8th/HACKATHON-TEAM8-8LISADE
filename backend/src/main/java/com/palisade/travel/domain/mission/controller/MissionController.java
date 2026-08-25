@@ -36,7 +36,11 @@ public class MissionController {
     @GetMapping("/missions/{missionId}/submission")
     public ApiResponse<SubmissionResponse> mySubmission(@PathVariable Long missionId, @AuthenticationPrincipal UserPrincipal user) { return ApiResponse.success(SubmissionResponse.from(missionService.getSubmission(missionId,user.userId()))); }
     @PostMapping("/teacher/missions/{missionId}/submissions/{studentId}/reject")
-    public ApiResponse<Void> reject(@PathVariable Long missionId,@PathVariable Long studentId,@AuthenticationPrincipal UserPrincipal user) { missionService.reject(missionId,studentId,user.userId()); return ApiResponse.success(null); }
+    public ApiResponse<Void> reject(@PathVariable Long missionId,@PathVariable Long studentId,@AuthenticationPrincipal UserPrincipal user, @Valid @RequestBody RejectRequest request) { missionService.reject(missionId,studentId,user.userId(),request.reason()); return ApiResponse.success(null); }
     @DeleteMapping("/teacher/missions/{missionId}") @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long missionId,@AuthenticationPrincipal UserPrincipal user) { missionService.delete(missionId,user.userId()); }
+    @GetMapping("/teacher/missions/{missionId}/status-board")
+    public ApiResponse<MissionStatusBoardResponse> statusBoard(@PathVariable Long missionId, @AuthenticationPrincipal UserPrincipal user) { return ApiResponse.success(MissionStatusBoardResponse.from(missionService.getStatusBoard(missionId,user.userId()))); }
+    @PostMapping("/teacher/missions/{missionId}/submissions/{studentId}/complete")
+    public ApiResponse<Void> completeOnBehalf(@PathVariable Long missionId,@PathVariable Long studentId,@AuthenticationPrincipal UserPrincipal user) { missionService.completeOnBehalf(missionId,user.userId(),studentId); return ApiResponse.success(null); }
 }

@@ -10,3 +10,12 @@
 - `description`(미션 설명), `dispatchTiming`(즉시/예약 발송 라디오), `StudentMissionProgress`(학생×미션 매트릭스 타입/`getStudentProgress` API)는 Figma 시안에는 없어서 화면에는 안 보이지만, 타입과 mock API에서는 지우지 않고 남겨뒀다 — 실연동(#43)과 향후 매트릭스 현황판 화면에서 필요할 수 있어서다. 등록 폼은 시안에 있는 필드(제목/유형/발송 일시/마감 시간)만 받고, 제출 시 `description: ''`, `dispatchTiming: startAt ? 'SCHEDULED' : 'IMMEDIATE'`로 채워 `MissionCreateInput` 전체를 만족시킨다.
 
 검증: `npm test`(vitest, 31개 전체 통과), `npm run lint`, `npm run build`(tsc + vite) 모두 통과. 실 백엔드(로컬 MySQL + `local` 프로필)를 띄우고 브라우저에서 교사 계정으로 로그인해 미션 리스트 → 활동 미션 현황판 화면까지 직접 확인했다(로그인 자체는 실 `authApi`를 쓰지만 미션 기능 자체는 mock).
+
+## 미션 현황판 / 대리완료 / 반려사유 백엔드 API (#54)
+
+- `#19`(PR #49) mock 프론트가 요구하지만 PR #35의 `MissionController`에는 없던 API 3종을 추가했다: `GET /api/teacher/missions/{missionId}/status-board`, `POST /api/teacher/missions/{missionId}/submissions/{studentId}/complete`, 그리고 기존 `.../reject`에 `reason` 바디 추가. 학생별/미션별 현황 매트릭스(mock의 `getStudentProgress`에 대응)는 이번 스코프에서 제외했다 — 현재 어떤 화면도 호출하지 않는 예비 API였다.
+- 현황판은 `TripParticipantRepository.findAllByTripIdOrderByCreatedAtAsc`로 trip roster를 가져오되 `participantType=APP`(즉 `userId != null`)인 참가자만 대상으로 한다. `MANUAL` 참가자는 로그인 계정이 없어 애초에 미션을 제출할 수 없기 때문이다. 학생 이름은 `UserRepository.findAllById`로 일괄 조회해 붙인다.
+- `MissionSubmission`에 `rejection_reason` 컬럼을 추가했다(`ddl-auto: update`라 별도 마이그레이션 스크립트는 불필요). `resubmit()`과 `completeByTeacher()`는 재제출/대리완료 시 이전 반려 사유를 초기화한다. 현황판의 `notSubmitted` 목록에서, 최근 상태가 `REJECTED`인 학생 항목에만 `rejectionReason`이 채워지고 나머지는 `null`이다.
+- 대리 완료(`completeOnBehalf`)는 대상 학생이 해당 trip의 roster(APP 참가자)에 없으면 400을 던진다. 제출 내역이 없으면 빈 이미지 키로 `COMPLETED` 제출을 새로 만들고, 있으면 상태만 갱신한다.
+
+검증: `./gradlew test`(백엔드 전체 스위트, `MissionServiceTest` 10/10·`MissionSubmissionTest` 3/3 포함 전부 통과), `./gradlew build` 통과.
