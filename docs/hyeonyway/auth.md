@@ -10,3 +10,13 @@
 - 보호 API는 세션이 없으면 기존 JSON 401 응답을 반환한다.
 
 검증: `./gradlew clean test build`
+
+## 인증 화면 및 mock 경계 (#14)
+
+- `frontend/src/types/auth.ts`에 로그인·회원가입 입력값과 현재 사용자 역할 타입을 정의했다.
+- `frontend/src/api/authApi.ts`의 `AuthApi` 인터페이스와 `mockAuthApi`를 통해 화면이 HTTP 구현에 직접 의존하지 않도록 분리했다. 실 세션 API 연결 시 이 구현체만 교체한다.
+- 로그인 화면은 인증 실패 메시지를 표시하고, mock 결과의 역할에 따라 학생/교사 임시 홈으로 분기한다.
+- 회원가입 화면은 역할 직접 선택을 제공한다. 학생은 학생·학부모 전화번호와 보호자 동의를 필수로 받고, 교사는 전화번호를 받는다.
+- 기존 예제 CRUD 화면·타입·API는 인증 화면으로 교체하면서 제거했다.
+
+검증: `npm test` (4 passed), `npm run lint`, `npm run build`
