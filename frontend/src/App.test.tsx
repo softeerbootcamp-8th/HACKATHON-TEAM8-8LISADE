@@ -36,8 +36,16 @@ describe('App', () => {
     })
   })
 
-  it('shows the login screen before a session is established', () => {
+  it('shows the start screen before a session is established', () => {
     render(<App />)
+
+    expect(screen.getByRole('heading', { name: '두리번' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '로그인' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '회원가입' })).toBeInTheDocument()
+  })
+
+  it('shows the login form after choosing to log in from the start screen', () => {
+    renderApp()
 
     expect(screen.getByRole('heading', { name: '로그인' })).toBeInTheDocument()
     expect(screen.getByLabelText('아이디')).toBeInTheDocument()
@@ -46,7 +54,7 @@ describe('App', () => {
   })
 
   it('requires a guardian consent before a student can complete sign-up', () => {
-    render(<App />)
+    renderApp()
 
     fireEvent.click(screen.getByRole('button', { name: '회원가입' }))
     fireEvent.click(screen.getByRole('radio', { name: '학생' }))
@@ -62,7 +70,7 @@ describe('App', () => {
   })
 
   it('blocks sign-up when password confirmation does not match', () => {
-    render(<App />)
+    renderApp()
 
     fireEvent.click(screen.getByRole('button', { name: '회원가입' }))
     fireEvent.change(screen.getByLabelText('이름'), { target: { value: '학생' } })
@@ -77,7 +85,7 @@ describe('App', () => {
   })
 
   it('blocks sign-up when a phone number is not a Korean mobile number', () => {
-    render(<App />)
+    renderApp()
 
     fireEvent.click(screen.getByRole('button', { name: '회원가입' }))
     fireEvent.click(screen.getByRole('radio', { name: '교사' }))
@@ -92,7 +100,7 @@ describe('App', () => {
   })
 
   it('shows an authentication error when the password is incorrect', async () => {
-    render(<App />)
+    renderApp()
 
     fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'student01' } })
     fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'wrong-password' } })
@@ -102,7 +110,7 @@ describe('App', () => {
   })
 
   it('routes a logged-in teacher to the teacher home', async () => {
-    render(<App />)
+    renderApp()
 
     fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
     fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
@@ -112,7 +120,7 @@ describe('App', () => {
   })
 
   it('changes the teacher dashboard and shared tab context when the Trip is selected', async () => {
-    render(<App />)
+    renderApp()
 
     fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
     fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
@@ -133,7 +141,7 @@ describe('App', () => {
   })
 
   it('takes a student without a Trip to the invite code screen after login', async () => {
-    render(<App />)
+    renderApp()
 
     fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'student01' } })
     fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
@@ -144,7 +152,7 @@ describe('App', () => {
   })
 
   it('shows an error for an invalid Trip invite code', async () => {
-    render(<App />)
+    renderApp()
 
     fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'student01' } })
     fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
@@ -157,7 +165,7 @@ describe('App', () => {
   })
 
   it('blocks student home when location permission is denied', async () => {
-    render(<App />)
+    renderApp()
 
     fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'student01' } })
     fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
@@ -221,8 +229,13 @@ describe('App', () => {
   })
 })
 
-async function openStudentHome() {
+function renderApp() {
   render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+}
+
+async function openStudentHome() {
+  renderApp()
   fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'student01' } })
   fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
   fireEvent.click(screen.getByRole('button', { name: '로그인' }))
