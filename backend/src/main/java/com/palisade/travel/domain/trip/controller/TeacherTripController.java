@@ -4,6 +4,7 @@ import com.palisade.travel.domain.trip.dto.CreateTripRequest;
 import com.palisade.travel.domain.trip.dto.InviteCodeResponse;
 import com.palisade.travel.domain.trip.dto.ManualParticipantRequest;
 import com.palisade.travel.domain.trip.dto.TripParticipantResponse;
+import com.palisade.travel.domain.trip.dto.TeacherTripSummaryResponse;
 import com.palisade.travel.domain.trip.service.TripService;
 import com.palisade.travel.global.api.ApiResponse;
 import com.palisade.travel.global.security.UserPrincipal;
@@ -34,6 +35,12 @@ public class TeacherTripController {
     public ApiResponse<InviteCodeResponse> create(@AuthenticationPrincipal UserPrincipal teacher,
                                                    @Valid @RequestBody CreateTripRequest request) {
         return ApiResponse.success(tripService.create(teacher.userId(), request));
+    }
+
+    @GetMapping
+    public ApiResponse<List<TeacherTripSummaryResponse>> getTrips(
+            @AuthenticationPrincipal UserPrincipal teacher) {
+        return ApiResponse.success(tripService.getTrips(teacher.userId()));
     }
 
     @PostMapping("/{tripId}/invite-code")
