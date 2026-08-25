@@ -22,4 +22,6 @@ public interface TripParticipantRepository extends JpaRepository<TripParticipant
 
     @Query("select t from TripParticipant p join Trip t on p.tripId = t.id where p.userId = :userId and t.status = :status")
     Optional<Trip> findTripByUserIdAndTripStatus(Long userId, TripStatus status);
+
+    boolean existsByTripIdAndUserId(Long tripId, Long userId);
 }
