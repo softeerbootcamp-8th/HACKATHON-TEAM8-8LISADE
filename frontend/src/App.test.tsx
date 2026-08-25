@@ -43,6 +43,21 @@ describe('App', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('비밀번호가 일치하지 않습니다.')
   })
 
+  it('blocks sign-up when a phone number is not a Korean mobile number', () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: '회원가입' }))
+    fireEvent.click(screen.getByRole('radio', { name: '교사' }))
+    fireEvent.change(screen.getByLabelText('이름'), { target: { value: '교사' } })
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+    fireEvent.change(screen.getByLabelText('비밀번호 확인'), { target: { value: 'password1234' } })
+    fireEvent.change(screen.getByLabelText('전화번호'), { target: { value: '020-1111-2222' } })
+    fireEvent.click(screen.getByRole('button', { name: '가입하기' }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('올바른 휴대폰 번호를 입력해 주세요.')
+  })
+
   it('shows an authentication error when the password is incorrect', async () => {
     render(<App />)
 

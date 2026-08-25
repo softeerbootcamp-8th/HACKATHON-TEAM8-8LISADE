@@ -17,6 +17,11 @@ const teacherTrips = [
 ]
 
 const initialSignUpInput: SignUpInput = { role: 'STUDENT', name: '', loginId: '', password: '', passwordConfirmation: '', phoneNumber: '', parentNumber: '', guardianConsent: false }
+const koreanMobileNumber = /^01[016789]\d{7,8}$/
+
+function normalizePhoneNumber(value?: string) {
+  return value?.replace(/[-\s]/g, '') ?? ''
+}
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('LOGIN')
@@ -56,12 +61,18 @@ export default function App() {
       setError('비밀번호가 일치하지 않습니다.')
       return
     }
+    const phoneNumber = normalizePhoneNumber(signUpInput.phoneNumber)
+    const parentNumber = normalizePhoneNumber(signUpInput.parentNumber)
+    if (!koreanMobileNumber.test(phoneNumber) || (signUpInput.role === 'STUDENT' && !koreanMobileNumber.test(parentNumber))) {
+      setError('올바른 휴대폰 번호를 입력해 주세요.')
+      return
+    }
     if (signUpInput.role === 'STUDENT' && !signUpInput.guardianConsent) {
       setError('보호자 동의가 필요합니다.')
       return
     }
     try {
-      await authApi.signUp(signUpInput)
+      await authApi.signUp({ ...signUpInput, phoneNumber, parentNumber: signUpInput.role === 'STUDENT' ? parentNumber : undefined })
       setNotice('회원가입이 완료되었습니다. 로그인해 주세요.')
       setPassword('')
       setScreen('LOGIN')
