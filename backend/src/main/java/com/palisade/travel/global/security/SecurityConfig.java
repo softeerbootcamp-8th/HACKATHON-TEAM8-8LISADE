@@ -27,7 +27,11 @@ public class SecurityConfig {
                                             RestAccessDeniedHandler accessDeniedHandler,
                                             SecurityContextRepository securityContextRepository) throws Exception {
         return http
-                .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        // Android 네이티브 요청은 JSESSIONID만 공유하므로 위치 API만 CSRF 검사에서 제외한다.
+                        // 세션 인증과 STUDENT 역할 검사는 아래 인가 규칙에서 그대로 수행된다.
+                        .ignoringRequestMatchers("/api/student/locations"))
                 .cors(Customizer.withDefaults())
                 .securityContext(securityContext -> securityContext
                         .securityContextRepository(securityContextRepository)
