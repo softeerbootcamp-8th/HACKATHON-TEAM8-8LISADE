@@ -28,3 +28,11 @@
 - 교사는 참가자 목록을 조회하고 앱을 쓰지 않는 학생을 직접 확인 참가자로 추가할 수 있다. `TripParticipantType`으로 앱 참가자와 직접 확인 참가자를 구분한다.
 
 검증: `./gradlew test` (전체 백엔드 테스트 통과)
+
+## 학생 Trip API 프론트엔드 연동 (#5)
+
+- 학생 로그인 뒤 활성 Trip 확인은 세션 기반 `GET /api/student/trips/active`를 사용한다. 활성 Trip이 없으면 기존 초대 코드 입력 화면으로 이동한다.
+- 초대 코드 참여는 `POST /api/student/trips/join`에 CSRF 토큰을 포함해 요청한다. 학생 식별은 요청 본문의 `userId`가 아니라 로그인 세션에서 처리한다.
+- 현재 서버 계약에 없는 일정 기간·미션 진행률·안전 경고는 기존 화면 mock 값을 유지한다. 해당 데이터가 포함된 학생 Trip 조회 계약이 추가되면 이 매핑을 교체한다.
+
+검증: `npm test` (16 passed), `npm run lint`, `npm run build`, `cd backend && ./gradlew test`
