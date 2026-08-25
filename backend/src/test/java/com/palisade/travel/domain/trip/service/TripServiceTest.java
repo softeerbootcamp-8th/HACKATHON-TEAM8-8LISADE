@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -42,8 +43,9 @@ class TripServiceTest {
 
     @BeforeEach
     void setUp() {
+        AtomicInteger generated = new AtomicInteger();
         tripService = new TripService(tripRepository, inviteCodeRepository, participantRepository, clock,
-                () -> "AB1234");
+                () -> generated.getAndIncrement() == 0 ? "AB1234" : "CD5678");
         given(inviteCodeRepository.save(any(InviteCode.class))).willAnswer(invocation -> invocation.getArgument(0));
     }
 
@@ -70,11 +72,13 @@ class TripServiceTest {
         InviteCode previous = new InviteCode(3L, 1L, "AB1234", LocalDateTime.of(2026, 8, 25, 9, 5), null);
         given(tripRepository.findById(1L)).willReturn(Optional.of(trip));
         given(inviteCodeRepository.findByTripIdAndRevokedAtIsNull(1L)).willReturn(Optional.of(previous));
+        given(inviteCodeRepository.existsByCode("AB1234")).willReturn(true);
+        given(inviteCodeRepository.existsByCode("CD5678")).willReturn(false);
 
         InviteCodeResponse response = tripService.reissueInviteCode(10L, 1L);
 
         assertThat(previous.getRevokedAt()).isEqualTo(LocalDateTime.of(2026, 8, 25, 9, 0));
-        assertThat(response.code()).isEqualTo("AB1234");
+        assertThat(response.code()).isEqualTo("CD5678");
         verify(inviteCodeRepository).save(any(InviteCode.class));
     }
 

@@ -3,6 +3,7 @@ package com.palisade.travel.domain.trip.service;
 import com.palisade.travel.domain.trip.dto.CreateTripRequest;
 import com.palisade.travel.domain.trip.dto.InviteCodeResponse;
 import com.palisade.travel.domain.trip.dto.JoinTripResponse;
+import com.palisade.travel.domain.trip.dto.TripParticipantResponse;
 import com.palisade.travel.domain.trip.entity.InviteCode;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Locale;
+import java.util.List;
 
 @Service
 @Transactional(readOnly = true)
@@ -73,9 +75,39 @@ public class TripService {
         return JoinTripResponse.from(trip);
     }
 
+    public JoinTripResponse getActiveTrip(Long studentId) {
+        return participantRepository.findTripByUserIdAndTripStatus(studentId, TripStatus.ACTIVE)
+                .map(JoinTripResponse::from)
+                .orElse(null);
+    }
+
+    public List<TripParticipantResponse> getParticipants(Long teacherId, Long tripId) {
+        findOwnedTrip(teacherId, tripId);
+        return participantRepository.findAllByTripIdOrderByCreatedAtAsc(tripId).stream()
+                .map(TripParticipantResponse::from)
+                .toList();
+    }
+
+    @Transactional
+    public TripParticipantResponse addManualParticipant(Long teacherId, Long tripId, String name) {
+        findOwnedTrip(teacherId, tripId);
+        return TripParticipantResponse.from(participantRepository.save(TripParticipant.manual(tripId, name)));
+    }
+
     private InviteCode issueCode(Long tripId) {
-        InviteCode inviteCode = InviteCode.create(tripId, inviteCodeGenerator.generate(), now().plusMinutes(INVITE_CODE_EXPIRES_MINUTES));
+        String code = nextUnusedCode();
+        InviteCode inviteCode = InviteCode.create(tripId, code, now().plusMinutes(INVITE_CODE_EXPIRES_MINUTES));
         return inviteCodeRepository.save(inviteCode);
+    }
+
+    private String nextUnusedCode() {
+        for (int attempts = 0; attempts < 10; attempts++) {
+            String candidate = inviteCodeGenerator.generate();
+            if (!inviteCodeRepository.existsByCode(candidate)) {
+                return candidate;
+            }
+        }
+        throw new IllegalStateException("Could not generate an unused invite code.");
     }
 
     private Trip findOwnedTrip(Long teacherId, Long tripId) {
