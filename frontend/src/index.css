@@ -159,6 +159,33 @@ h2 { font-size: 17px; margin: 0; }
 .stat-card p:first-child { font-size: 15px; font-weight: 700; margin: 0; }
 .stat-card p:last-child { color: var(--color-text-muted); font-size: 13px; margin: 4px 0 0; }
 
+.teacher-location-tab { background: #f4efe2; display: flex; flex: 1; flex-direction: column; min-height: 0; position: relative; }
+.teacher-location-controls { left: 16px; position: absolute; right: 16px; top: 14px; z-index: 5; }
+.teacher-location-controls .teacher-trip-select { display: block; }
+.teacher-location-filters { display: flex; gap: 8px; margin-top: 10px; }
+.teacher-location-filter { background: #fff; border: 1px solid #eee6d4; border-radius: 999px; box-shadow: 0 3px 10px rgb(75 64 40 / 12%); font-size: 12px; min-height: 32px; padding: 0 12px; }
+.teacher-location-filter::before { background: currentcolor; border-radius: 50%; content: ''; display: inline-block; height: 7px; margin-right: 5px; width: 7px; }
+.teacher-location-filter--normal { color: var(--color-success); }
+.teacher-location-filter--outside { color: var(--color-danger); }
+.teacher-location-filter--unavailable { color: #8b95a7; }
+.teacher-location-filter[aria-pressed="true"] { box-shadow: 0 0 0 2px currentcolor, 0 3px 10px rgb(75 64 40 / 12%); }
+.teacher-location-map-frame { flex: 1; min-height: 420px; overflow: hidden; position: relative; }
+.teacher-live-map { background: #f4efe2; height: 100%; inset: 0; position: absolute; touch-action: pan-x pan-y pinch-zoom; width: 100%; }
+.teacher-location-message { background: rgb(255 253 246 / 94%); border-radius: 12px; color: var(--color-text-muted); font-size: 13px; left: 50%; margin: 0; max-width: calc(100% - 36px); padding: 10px 12px; position: absolute; text-align: center; top: 110px; transform: translateX(-50%); width: max-content; z-index: 5; }
+.teacher-location-error { color: var(--color-danger); }
+.teacher-location-overlay { height: 30px; position: relative; width: 30px; }
+.teacher-location-marker { border: 3px solid #fff; border-radius: 50%; box-shadow: 0 3px 9px rgb(39 48 58 / 28%); height: 30px; min-height: 30px; padding: 0; width: 30px; }
+.teacher-location-marker--normal { background: var(--color-success); }
+.teacher-location-marker--outside { background: var(--color-danger); }
+.teacher-location-marker--unavailable { background: #98a2b3; }
+.teacher-location-callout { align-items: center; background: #fff; border: 1px solid #eee6d4; border-radius: 12px; bottom: 42px; box-shadow: 0 4px 14px rgb(39 48 58 / 18%); display: flex; font-size: 12px; gap: 7px; left: 50%; padding: 8px 10px; position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.teacher-location-callout::after { background: #fff; bottom: -5px; box-shadow: 1px 1px 0 #eee6d4; content: ''; height: 9px; left: 50%; position: absolute; transform: translateX(-50%) rotate(45deg); width: 9px; }
+.teacher-location-callout-badge { border-radius: 7px; font-size: 11px; padding: 3px 7px; }
+.teacher-location-callout-badge--normal { background: var(--color-success-soft); color: var(--color-success); }
+.teacher-location-callout-badge--outside { background: var(--color-danger-soft); color: var(--color-danger); }
+.teacher-location-callout-badge--unavailable { background: rgb(152 162 179 / 16%); color: #7c879a; }
+.teacher-location-recenter { background: #fff; border: 1px solid #e7decb; border-radius: 999px; bottom: 18px; box-shadow: 0 4px 14px rgb(39 48 58 / 20%); font-size: 13px; left: 50%; min-height: 42px; padding: 0 18px; position: absolute; transform: translateX(-50%); z-index: 5; }
+
 /* Segmented code / PIN boxes */
 .code-boxes-wrap { position: relative; display: inline-block; margin: 0 24px; }
 .code-boxes { display: flex; gap: 8px; }

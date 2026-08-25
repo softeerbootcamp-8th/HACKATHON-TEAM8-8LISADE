@@ -6,12 +6,21 @@ export type KakaoLatLng = {
 export type KakaoMap = {
   setCenter(position: KakaoLatLng): void
   setLevel(level: number): void
+  setBounds(bounds: KakaoLatLngBounds, paddingTop?: number, paddingRight?: number, paddingBottom?: number, paddingLeft?: number): void
   relayout(): void
+}
+
+export type KakaoLatLngBounds = {
+  extend(position: KakaoLatLng): void
 }
 
 export type KakaoPolygon = {
   setMap(map: KakaoMap | null): void
   setPath(path: KakaoLatLng[]): void
+}
+
+export type KakaoCustomOverlay = {
+  setMap(map: KakaoMap | null): void
 }
 
 export type KakaoMouseEvent = { latLng: KakaoLatLng }
@@ -26,11 +35,13 @@ export type KakaoPlace = {
 export type KakaoMapsApi = {
   load(callback: () => void): void
   LatLng: new (latitude: number, longitude: number) => KakaoLatLng
+  LatLngBounds: new () => KakaoLatLngBounds
   Map: new (container: HTMLElement, options: Record<string, unknown>) => KakaoMap
   Polygon: new (options: Record<string, unknown>) => KakaoPolygon
+  CustomOverlay: new (options: Record<string, unknown>) => KakaoCustomOverlay
   event: {
-    addListener(target: object, name: string, listener: (event: KakaoMouseEvent) => void): void
-    removeListener(target: object, name: string, listener: (event: KakaoMouseEvent) => void): void
+    addListener<T = KakaoMouseEvent>(target: object, name: string, listener: (event: T) => void): void
+    removeListener<T = KakaoMouseEvent>(target: object, name: string, listener: (event: T) => void): void
   }
   services: {
     Places: new () => {
