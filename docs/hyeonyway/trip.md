@@ -8,3 +8,12 @@
 - 권한을 허용하면 학생 홈에서 Trip 기본 정보, 위치 전송 상태, 미션 진행률, 안전 경고를 표시한다.
 
 검증: `npm test` (7 passed), `npm run lint`, `npm run build`
+
+## 학생 미션 mock 화면 (#16)
+
+- 학생 홈에서 미션 목록으로 진입하도록 연결했다. 점검 미션의 4자리 PIN 검증과 잠긴 다음 미션 안내를 제공한다.
+- 활동·반려 미션은 `CameraAdapter`와 `MissionApi` mock을 거쳐 촬영 결과를 업로드·제출하는 흐름을 재현한다.
+- `CameraAdapter`와 `MissionApi` 인터페이스는 실제 Capacitor Camera·Presigned URL·S3 직접 업로드 구현으로 교체할 지점이다.
+- 실제 기기 카메라, Activity 복구, S3 CORS 및 백엔드 API 연동은 #27에서 수행한다.
+
+검증: `npm test` (11 passed), `npm run lint`, `npm run build`
