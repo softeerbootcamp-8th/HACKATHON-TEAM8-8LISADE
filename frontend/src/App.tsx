@@ -7,7 +7,7 @@ import { resolvePostLoginScreen, type Screen } from './features/app/appFlow'
 import { LoginScreen, SignUpScreen, StartScreen } from './features/auth/AuthScreens'
 import { ActivityConfirmation, ActivityMissionScreen, CheckMissionScreen, InviteCodeScreen, LocationBlockedScreen, LocationPermissionScreen, StudentHome, type CurrentMission } from './features/student/StudentScreens'
 import { TeacherDashboard } from './features/teacher/TeacherDashboard'
-import type { SignUpInput } from './types/auth'
+import type { CurrentUser, SignUpInput } from './types/auth'
 import type { LocationTrackingState, StudentTrip } from './types/studentTrip'
 
 const initialSignUpInput: SignUpInput = { role: 'STUDENT', name: '', loginId: '', password: '', passwordConfirmation: '', phoneNumber: '', parentNumber: '', guardianConsent: false }
@@ -19,6 +19,7 @@ export default function App() {
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
   const [signUpInput, setSignUpInput] = useState<SignUpInput>(initialSignUpInput)
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [studentTrip, setStudentTrip] = useState<StudentTrip | null>(null)
@@ -36,6 +37,7 @@ export default function App() {
     event.preventDefault(); setError('')
     try {
       const user = await authApi.login({ loginId, password })
+      setCurrentUser(user)
       if (user.role === 'TEACHER') { setScreen(resolvePostLoginScreen({ role: user.role })); return }
       const [trip, tracking] = await Promise.all([studentTripApi.getActiveTrip(), mockLocationTrackingAdapter.getState()])
       setStudentTrip(trip); setLocationState(tracking)
@@ -93,7 +95,7 @@ export default function App() {
     setMissionNotice('출석 체크를 완료했습니다.')
     setScreen('STUDENT_HOME')
   }} />
-  if (screen === 'TEACHER_HOME') return <TeacherDashboard />
+  if (screen === 'TEACHER_HOME' && currentUser) return <TeacherDashboard user={currentUser} />
   if (screen === 'SIGN_UP') return <SignUpScreen input={signUpInput} error={error} onChange={setSignUpInput} onSubmit={handleSignUp} onCancel={showLogin} />
   if (screen === 'LOGIN') return <LoginScreen loginId={loginId} password={password} notice={notice} error={error} onLoginIdChange={setLoginId} onPasswordChange={setPassword} onSubmit={handleLogin} onShowSignUp={showSignUp} />
   return <StartScreen onShowLogin={showLogin} onShowSignUp={showSignUp} />
