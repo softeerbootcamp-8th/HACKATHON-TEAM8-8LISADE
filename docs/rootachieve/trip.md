@@ -22,7 +22,7 @@
 ### 검증
 
 - `cd backend && ./gradlew test`: 통과
-- `cd frontend && npm test -- --run`: 9개 파일, 44개 테스트 통과
+- `cd frontend && npm test -- --run`: 10개 파일, 48개 테스트 통과
 - `cd frontend && npm run lint`: 통과
 - `cd frontend && npm run build`: 통과
 - 인앱 브라우저 568 × 1236 비교: console error/warn 0건, `design-qa.md` 최종 결과 `passed`
