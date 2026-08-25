@@ -197,7 +197,7 @@ h2 { font-size: 17px; margin: 0; }
 .danger-button { background: #fff; border: 1px solid #f0b3b6; color: #b4232a; width: 100%; }
 .danger-button:hover { background: #fff0f1; }
 .sr-only { height: 1px; margin: -1px; overflow: hidden; padding: 0; position: absolute; width: 1px; clip: rect(0, 0, 0, 0); white-space: nowrap; }
-.trip-create-shell { background: #fffdf6; color: #27303a; display: grid; grid-template-rows: 96px 1fr auto; margin: 0 auto; min-height: 100dvh; width: min(100%, 402px); }
+.trip-create-shell { background: var(--color-bg); color: #27303a; display: grid; grid-template-rows: 96px 1fr auto; margin: 0 auto; max-width: 440px; min-height: 100dvh; width: 100%; }
 .trip-create-header { align-items: center; border: 1px solid #efe9da; display: flex; gap: 8px; min-height: 96px; padding: 48px 16px 10px; }
 .trip-create-header button { align-items: center; background: transparent; box-shadow: none; color: #27303a; display: inline-flex; justify-content: center; margin: -3px -12px; min-height: 44px; padding: 12px; width: 44px; }
 .trip-create-header button img { height: 20px; width: 20px; }
@@ -233,6 +233,3 @@ h2 { font-size: 17px; margin: 0; }
 .map-undo { align-items: center; background: #fff; border: 1px solid #e7decb; border-radius: 50%; bottom: 16px; box-shadow: 0 4px 14px rgb(32 41 52 / 16%); color: #26313c; display: flex; justify-content: center; min-height: 48px; padding: 0; position: absolute; right: 16px; width: 48px; z-index: 2; }
 .map-undo:hover { background: #fff8e8; }
 .map-undo:disabled { color: #aaa391; cursor: not-allowed; opacity: .72; }
-@media (min-width: 403px) {
-  .trip-create-shell { box-shadow: 0 16px 50px rgb(23 32 51 / 12%); }
-}
