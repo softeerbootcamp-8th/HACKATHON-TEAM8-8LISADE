@@ -1,5 +1,7 @@
+export type DevicePlatform = 'WEB' | 'ANDROID'
+
 export interface NotificationApi {
-  registerDevice(token: string, platform: 'WEB'): Promise<void>
+  registerDevice(token: string, platform: DevicePlatform): Promise<void>
   unregisterDevice(token: string): Promise<void>
 }
 
