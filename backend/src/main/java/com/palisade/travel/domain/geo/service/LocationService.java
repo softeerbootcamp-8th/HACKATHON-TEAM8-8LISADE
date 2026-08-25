@@ -6,6 +6,7 @@ import com.palisade.travel.domain.geo.exception.LocationErrorCode;
 import com.palisade.travel.domain.geo.exception.LocationException;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
+import com.palisade.travel.domain.trip.entity.TripStatus;
 import com.palisade.travel.domain.trip.repository.TripParticipantRepository;
 import com.palisade.travel.domain.trip.repository.TripRepository;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,10 @@ public class LocationService {
                 .orElseThrow(() -> new LocationException(LocationErrorCode.PARTICIPATING_TRIP_NOT_FOUND));
         Trip trip = tripRepository.findById(participant.getTripId())
                 .orElseThrow(() -> new LocationException(LocationErrorCode.TRIP_NOT_FOUND));
+
+        if (trip.getStatus() != TripStatus.ACTIVE) {
+            throw new LocationException(LocationErrorCode.TRIP_INACTIVE);
+        }
 
         return new LocationUpdateResponse(trip.getId(), false, 0);
     }

@@ -48,7 +48,7 @@ class LocationServiceTest {
         // given
         given(tripParticipantRepository.findFirstByUserIdOrderByCreatedAtDescIdDesc(USER_ID))
                 .willReturn(Optional.of(participant()));
-        given(tripRepository.findById(TRIP_ID)).willReturn(Optional.of(trip()));
+        given(tripRepository.findById(TRIP_ID)).willReturn(Optional.of(trip(TripStatus.ACTIVE)));
 
         // when
         LocationUpdateResponse response = locationService.update(USER_ID, request());
@@ -84,6 +84,20 @@ class LocationServiceTest {
                         .isEqualTo(LocationErrorCode.TRIP_NOT_FOUND));
     }
 
+    @Test
+    void 비활성_여행은_위치_전송_종료_오류를_반환한다() {
+        // given
+        given(tripParticipantRepository.findFirstByUserIdOrderByCreatedAtDescIdDesc(USER_ID))
+                .willReturn(Optional.of(participant()));
+        given(tripRepository.findById(TRIP_ID)).willReturn(Optional.of(trip(TripStatus.FINISHED)));
+
+        // when & then
+        assertThatThrownBy(() -> locationService.update(USER_ID, request()))
+                .isInstanceOf(LocationException.class)
+                .satisfies(exception -> assertThat(((LocationException) exception).getErrorCode())
+                        .isEqualTo(LocationErrorCode.TRIP_INACTIVE));
+    }
+
     private LocationUpdateRequest request() {
         return new LocationUpdateRequest(
                 new BigDecimal("37.0050000"),
@@ -97,7 +111,7 @@ class LocationServiceTest {
         return new TripParticipant(1L, TRIP_ID, USER_ID, LocalDateTime.of(2026, 1, 1, 0, 0));
     }
 
-    private Trip trip() {
+    private Trip trip(TripStatus status) {
         return new Trip(
                 TRIP_ID,
                 99L,
@@ -106,7 +120,7 @@ class LocationServiceTest {
                 null,
                 LocalDateTime.of(2026, 1, 1, 9, 0),
                 LocalDateTime.of(2026, 1, 1, 18, 0),
-                TripStatus.ACTIVE,
+                status,
                 LocalDateTime.of(2025, 12, 1, 0, 0)
         );
     }

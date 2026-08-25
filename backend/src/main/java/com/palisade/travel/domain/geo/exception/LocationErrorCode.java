@@ -9,7 +9,8 @@ public enum LocationErrorCode implements ErrorCode {
             "PARTICIPATING_TRIP_NOT_FOUND",
             "Participating trip was not found."
     ),
-    TRIP_NOT_FOUND(HttpStatus.NOT_FOUND, "TRIP_NOT_FOUND", "Trip was not found.");
+    TRIP_NOT_FOUND(HttpStatus.NOT_FOUND, "TRIP_NOT_FOUND", "Trip was not found."),
+    TRIP_INACTIVE(HttpStatus.GONE, "TRIP_INACTIVE", "Trip is no longer active.");
 
     private final HttpStatus status;
     private final String code;
