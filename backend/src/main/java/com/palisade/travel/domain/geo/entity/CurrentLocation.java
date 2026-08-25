@@ -58,4 +58,11 @@ public class CurrentLocation {
         return new CurrentLocation(null, userId, tripId, latitude, longitude, isOutside, updatedAt);
     }
 
+    public void update(BigDecimal latitude, BigDecimal longitude, boolean isOutside, LocalDateTime updatedAt) {
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.isOutside = isOutside;
+        this.updatedAt = updatedAt;
+    }
+
 }

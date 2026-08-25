@@ -2,9 +2,11 @@ package com.palisade.travel.domain.geo.service;
 
 import com.palisade.travel.domain.geo.dto.LocationUpdateRequest;
 import com.palisade.travel.domain.geo.dto.LocationUpdateResponse;
+import com.palisade.travel.domain.geo.entity.CurrentLocation;
 import com.palisade.travel.domain.geo.entity.GeofencePoint;
 import com.palisade.travel.domain.geo.exception.LocationErrorCode;
 import com.palisade.travel.domain.geo.exception.LocationException;
+import com.palisade.travel.domain.geo.repository.CurrentLocationRepository;
 import com.palisade.travel.domain.geo.repository.GeofencePointRepository;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
@@ -43,11 +45,19 @@ class LocationServiceTest {
     @Mock
     private GeofencePointRepository geofencePointRepository;
 
+    @Mock
+    private CurrentLocationRepository currentLocationRepository;
+
     private LocationService locationService;
 
     @BeforeEach
     void setUp() {
-        locationService = new LocationService(tripParticipantRepository, tripRepository, geofencePointRepository);
+        locationService = new LocationService(
+                tripParticipantRepository,
+                tripRepository,
+                geofencePointRepository,
+                currentLocationRepository
+        );
     }
 
     @Test
@@ -58,6 +68,16 @@ class LocationServiceTest {
         given(tripRepository.findById(TRIP_ID)).willReturn(Optional.of(trip(TripStatus.ACTIVE)));
         given(geofencePointRepository.findAllByGeofenceIdOrderBySequenceAsc(GEOFENCE_ID))
                 .willReturn(square());
+        CurrentLocation currentLocation = CurrentLocation.create(
+                USER_ID,
+                TRIP_ID,
+                new BigDecimal("37.0200000"),
+                new BigDecimal("127.0200000"),
+                true,
+                LocalDateTime.of(2026, 1, 1, 0, 0)
+        );
+        given(currentLocationRepository.findByUserIdAndTripId(USER_ID, TRIP_ID))
+                .willReturn(Optional.of(currentLocation));
 
         // when
         LocationUpdateResponse response = locationService.update(USER_ID, request());
@@ -65,6 +85,10 @@ class LocationServiceTest {
         // then
         assertThat(response.tripId()).isEqualTo(TRIP_ID);
         assertThat(response.outside()).isFalse();
+        assertThat(currentLocation.getLatitude()).isEqualByComparingTo("37.0050000");
+        assertThat(currentLocation.getLongitude()).isEqualByComparingTo("127.0050000");
+        assertThat(currentLocation.isOutside()).isFalse();
+        assertThat(currentLocation.getUpdatedAt()).isEqualTo(LocalDateTime.of(2026, 8, 25, 8, 55, 30));
     }
 
     @Test
