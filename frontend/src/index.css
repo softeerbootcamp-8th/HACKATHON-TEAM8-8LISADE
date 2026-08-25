@@ -251,9 +251,8 @@ h2 { font-size: 17px; margin: 0; }
 .management-state { background: #fff; border-radius: 20px; color: #65728b; margin: 0; padding: 28px 20px; text-align: center; }
 .management-state.error { color: #b4232a; }
 .add-notice { color: #65728b; font-size: 14px; margin: auto 0 12px; text-align: center; }
-.add-trip-button { align-items: center; background: #ffc83d; border-radius: 22px; color: #23303b; display: flex; flex: 0 0 74px; font-size: 18px; gap: 5px; justify-content: center; margin-top: auto; width: 100%; }
+.add-trip-button { align-items: center; background: #ffc83d; border-radius: 22px; color: #23303b; display: flex; flex: 0 0 74px; font-size: 18px; justify-content: center; margin-top: auto; width: 100%; }
 .add-trip-button:hover { background: #f4b922; }
-.add-trip-button span { font-size: 22px; line-height: 1; transform: translateY(-2px); }
 .add-notice + .add-trip-button { margin-top: 0; }
 
 @media (min-width: 569px) {
