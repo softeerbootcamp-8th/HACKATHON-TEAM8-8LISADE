@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('./api/studentTripApi', () => ({
   studentTripApi: {
@@ -11,9 +11,31 @@ vi.mock('./api/studentTripApi', () => ({
   },
 }))
 
+const missionApiMock = vi.hoisted(() => ({
+  getCurrentMissions: vi.fn(),
+  submitPhoto: vi.fn(),
+  verifyPin: vi.fn(),
+}))
+
+vi.mock('./api/missionApi', () => ({
+  missionApi: missionApiMock,
+}))
+
 import App from './App'
 
 describe('App', () => {
+  beforeEach(() => {
+    missionApiMock.getCurrentMissions.mockResolvedValue([
+      { id: 11, tripId: 1, title: '서버 사진 미션', description: '서버에서 가져온 미션입니다.', type: 'ACTIVITY', startAt: null, endAt: null },
+      { id: 12, tripId: 1, title: '경복궁 출석 체크', description: '교사가 공유한 4자리 PIN을 입력해 주세요.', type: 'CHECK', startAt: null, endAt: null },
+    ])
+    missionApiMock.submitPhoto.mockResolvedValue({ submissionId: 1, status: 'WAITING', imageKey: 'missions/11/students/2/photo.jpg' })
+    missionApiMock.verifyPin.mockImplementation(async (_missionId: number, pin: string) => {
+      if (pin !== '1234') throw new Error('PIN 번호를 확인해 주세요.')
+      return { submissionId: 2, status: 'COMPLETED', imageKey: '' }
+    })
+  })
+
   it('shows the login screen before a session is established', () => {
     render(<App />)
 
@@ -154,7 +176,8 @@ describe('App', () => {
   it('shows only the current mission and does not expose future missions', async () => {
     await openStudentHome()
 
-    expect(screen.getByRole('heading', { name: '전통 문화 사진 미션' })).toBeInTheDocument()
+    expect(missionApiMock.getCurrentMissions).toHaveBeenCalledWith(1)
+    expect(screen.getByRole('heading', { name: '서버 사진 미션' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '현재 미션 수행' })).toBeInTheDocument()
     expect(screen.getByText('미완료 미션을 먼저 진행해 주세요.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '전체 미션 보기' })).not.toBeInTheDocument()
