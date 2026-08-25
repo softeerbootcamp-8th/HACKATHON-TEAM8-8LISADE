@@ -27,9 +27,21 @@ public class User {
     @Column(name = "password_hash", nullable = false, length = 100)
     private String passwordHash;
 
+    @Column(nullable = false, length = 255)
+    private String email;
+
+    @Column(nullable = false, length = 100)
+    private String name;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private UserRole role;
+
+    @Column(name = "phone_number", length = 20)
+    private String phoneNumber;
+
+    @Column(name = "parent_number", length = 20)
+    private String parentNumber;
 
     @Column(nullable = false)
     private boolean enabled;
@@ -40,11 +52,16 @@ public class User {
     protected User() {
     }
 
-    public User(Long id, String loginId, String passwordHash, UserRole role, boolean enabled, LocalDateTime createdAt) {
+    public User(Long id, String loginId, String passwordHash, String email, String name, UserRole role,
+                String phoneNumber, String parentNumber, boolean enabled, LocalDateTime createdAt) {
         this.id = id;
         this.loginId = loginId;
         this.passwordHash = passwordHash;
+        this.email = email;
+        this.name = name;
         this.role = role;
+        this.phoneNumber = phoneNumber;
+        this.parentNumber = parentNumber;
         this.enabled = enabled;
         this.createdAt = createdAt;
     }
