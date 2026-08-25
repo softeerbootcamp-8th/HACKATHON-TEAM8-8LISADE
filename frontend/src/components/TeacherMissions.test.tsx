@@ -1,77 +1,76 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { resetMockTeacherMissionStore } from '../api/missionApi'
 import TeacherMissions from './TeacherMissions'
 
-Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } })
-
 describe('TeacherMissions', () => {
-  beforeEach(() => {
-    vi.restoreAllMocks()
-    Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } })
-    resetMockTeacherMissionStore()
-  })
+  beforeEach(() => { resetMockTeacherMissionStore() })
 
-  it('lists the seeded missions for a Trip', async () => {
+  it('lists the seeded missions with type/status badges and progress', async () => {
     render(<TeacherMissions tripId="trip-1" />)
 
-    expect(await screen.findByText('전통 문화 사진 미션 · 활동 미션')).toBeInTheDocument()
-    expect(screen.getByText('경복궁 출석 체크 · 점검 미션')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /첨성대 앞에서 사진 찍기/ })).toBeInTheDocument()
+    expect(screen.getByText('2/5명 완료')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /15시 출발 버스 출석체크/ })).toBeInTheDocument()
+    expect(screen.getByText('0/5명 완료')).toBeInTheDocument()
   })
 
-  it('reveals and copies the PIN for a check mission', async () => {
+  it('creates an activity mission and shows the end-time field only for activity missions', async () => {
     render(<TeacherMissions tripId="trip-1" />)
 
-    fireEvent.click(await screen.findByRole('button', { name: 'PIN 확인' }))
-    expect(screen.getByText('PIN:')).toBeInTheDocument()
-    expect(screen.getByText('1234')).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: '+ 미션 추가하기' }))
+    expect(screen.getByLabelText('미션 마감 시간')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: '복사' }))
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('1234')
-    expect(await screen.findByRole('button', { name: '복사됨' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '출석 체크' }))
+    expect(screen.queryByLabelText('미션 마감 시간')).not.toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('제목'), { target: { value: '불국사 앞 출석체크' } })
+    fireEvent.click(screen.getByRole('button', { name: '추가하기' }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('출석체크 미션이 등록되었습니다. 출석 코드:')
+    expect(screen.getByRole('button', { name: /불국사 앞 출석체크/ })).toBeInTheDocument()
   })
 
-  it('requires a scheduled dispatch time before creating a mission', async () => {
+  it('opens a mission status board from its card and shows submitted photos with a reject action', async () => {
     render(<TeacherMissions tripId="trip-1" />)
 
-    fireEvent.click(await screen.findByRole('button', { name: '새 미션 등록' }))
-    fireEvent.change(screen.getByLabelText('미션 제목'), { target: { value: '박물관 사진 미션' } })
-    fireEvent.click(screen.getByRole('radio', { name: '예약 발송' }))
-    fireEvent.click(screen.getByRole('button', { name: '등록하기' }))
+    fireEvent.click(await screen.findByRole('button', { name: /첨성대 앞에서 사진 찍기/ }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('예약 발송 시각을 입력해 주세요.')
-  })
+    expect(await screen.findByRole('button', { name: /‹ 첨성대 앞에서 사진 찍기/ })).toBeInTheDocument()
+    expect(screen.getByText('제출한 학생 2')).toBeInTheDocument()
+    expect(screen.getByText('제출하지 않은 학생 3')).toBeInTheDocument()
 
-  it('creates a check mission and shows the issued PIN in a notice', async () => {
-    render(<TeacherMissions tripId="trip-1" />)
-
-    fireEvent.click(await screen.findByRole('button', { name: '새 미션 등록' }))
-    fireEvent.change(screen.getByLabelText('미션 제목'), { target: { value: '두 번째 출석 체크' } })
-    fireEvent.click(screen.getByRole('radio', { name: '점검 미션' }))
-    fireEvent.click(screen.getByRole('button', { name: '등록하기' }))
-
-    expect(await screen.findByRole('status')).toHaveTextContent('점검 미션이 등록되었습니다. PIN:')
-    expect(screen.getByText('두 번째 출석 체크 · 점검 미션')).toBeInTheDocument()
-  })
-
-  it('rejects a completed submission with a reason', async () => {
-    render(<TeacherMissions tripId="trip-1" />)
-
-    fireEvent.click((await screen.findAllByRole('button', { name: '제출함 보기' }))[0])
-    fireEvent.click(await screen.findByRole('button', { name: '반려하기' }))
+    fireEvent.click(screen.getAllByRole('button', { name: '반려' })[0])
     fireEvent.change(screen.getByLabelText('반려 사유'), { target: { value: '사진이 흐릿합니다.' } })
     fireEvent.click(screen.getByRole('button', { name: '반려 확정' }))
 
-    expect(await screen.findByText('김학생 · 반려')).toBeInTheDocument()
-    expect(screen.getByText('반려 사유: 사진이 흐릿합니다.')).toBeInTheDocument()
+    expect(await screen.findByText('제출한 학생 1')).toBeInTheDocument()
+    expect(screen.getByText('제출하지 않은 학생 4')).toBeInTheDocument()
   })
 
-  it('shows the student-by-mission progress board', async () => {
+  it('lets the teacher complete an attendance mission on behalf of a student without the app', async () => {
     render(<TeacherMissions tripId="trip-1" />)
 
-    fireEvent.click(await screen.findByRole('button', { name: '학생별 현황판 보기' }))
+    fireEvent.click(await screen.findByRole('button', { name: /15시 출발 버스 출석체크/ }))
 
-    expect(await screen.findByRole('columnheader', { name: '전통 문화 사진 미션' })).toBeInTheDocument()
-    expect(screen.getByRole('row', { name: /김학생/ })).toBeInTheDocument()
+    expect(await screen.findByText('출석 코드')).toBeInTheDocument()
+    expect(screen.getByText('3423')).toBeInTheDocument()
+    expect(screen.getByText('출석하지 않은 학생 5')).toBeInTheDocument()
+
+    fireEvent.click(screen.getAllByRole('button', { name: '대리 완료' })[0])
+
+    expect(await screen.findByText('출석한 학생 1')).toBeInTheDocument()
+    expect(screen.getByText('출석하지 않은 학생 4')).toBeInTheDocument()
+  })
+
+  it('deletes a mission after confirmation and returns to the list', async () => {
+    render(<TeacherMissions tripId="trip-1" />)
+
+    fireEvent.click(await screen.findByRole('button', { name: /15시 출발 버스 출석체크/ }))
+    fireEvent.click(await screen.findByRole('button', { name: '삭제하기' }))
+    fireEvent.click(screen.getByRole('button', { name: '삭제 확정' }))
+
+    expect(await screen.findByRole('heading', { name: '미션 리스트' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /15시 출발 버스 출석체크/ })).not.toBeInTheDocument()
   })
 })
