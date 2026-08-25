@@ -29,7 +29,7 @@
 ### 스코프 밖
 
 - 정확히 12회 연속 이탈 시 알림 전송(FCM)은 별도 알림 이슈에서 처리한다
-  (`LocationService`의 해당 TODO는 유지).
+  (`LocationService`의 해당 TODO는 유지). → 아래 #45에서 구현.
 - 모든 위치 지점의 시간 범위 이력 조회는 이번 PR에서 제외한다. `location_log`가
   이탈 좌표만 적재하므로 전체 트랙 이력은 write-path/저장량 정책이 따로 필요하고
   교사 지도 실시간에는 불필요하다.
@@ -41,3 +41,36 @@
   교사/미존재 Trip), `TeacherLocationQueryApiIntegrationTest`(200·403·학생 403)
   통과
 - `git diff --check develop...HEAD`: 통과
+
+## Issue #45: 안전 구역 연속 12회 이탈 시 담당 교사 FCM push 발행
+
+PR #38(#13)에서 `LocationService`에 TODO로 남겨 두었던 이탈 알림 발행 지점(위
+#6 "스코프 밖"에서 별도 이슈로 미룬 항목)을 구현했다. FCM 발송 인프라
+(`PushNotificationService`)는 #10에서, Android 수신 연동은 #29(PR #39)에서 이미
+마련되어 있어, 서버 이탈 이벤트를 실제 push로 연결하는 마지막 결선만 추가했다.
+
+### 구현 구조
+
+- `LocationService`에 `PushNotificationService`, `UserRepository`를 주입.
+- `update()`의 연속 외부 카운트가 정확히 `DEPARTURE_ALERT_THRESHOLD`(12)에
+  도달하는 순간 `sendDepartureAlert()` 호출. (같은 흐름의 SSE 전송(#6)과 공존)
+- `sendDepartureAlert()`는 `trip.teacherId`를 대상으로
+  `PushNotificationService.sendToUser(teacherId, title, body)` 발행.
+  - title: `안전 구역 이탈 알림`
+  - body: `{학생이름} 학생이 안전 구역을 벗어났습니다.`
+    (학생 조회 실패 시 `학생이 안전 구역을 벗어났습니다.`로 대체)
+
+### 설계 판단
+
+- 알림 수신자는 **담당 교사**다. `RANGE_EXIT`는 학생을 모니터링하는 교사용
+  경보이고, `Trip`이 보유한 인물 식별자는 `teacherId`뿐이다.
+- "정확히 12회" 조건이므로 이탈이 지속돼도 알림은 12회 시점 1회만 발행된다
+  (13회 이상에서는 재발행하지 않음 — 스팸 방지).
+- `PushNotificationService`가 Firebase 미초기화 시 스킵하므로 로컬/CI 빌드에
+  영향이 없고, mock 기반 단위 테스트로 발송 호출을 검증한다.
+
+### 검증
+
+- `./gradlew build` — BUILD SUCCESSFUL, 백엔드 전체 테스트 통과.
+- `LocationServiceTest`에 추가한 시나리오: 12회 도달 시 교사 대상 1회 발송
+  (본문에 학생 이름 포함), 11회까지 미발송, 15회까지 반복해도 1회만 발송.
