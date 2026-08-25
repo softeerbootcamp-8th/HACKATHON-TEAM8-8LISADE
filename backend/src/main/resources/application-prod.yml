@@ -10,3 +10,8 @@ spring:
 
 firebase:
   credentials-path: ${FIREBASE_CREDENTIALS_PATH:}
+
+storage:
+  s3:
+    bucket: ${S3_BUCKET}
+    region: ${AWS_REGION:ap-northeast-2}

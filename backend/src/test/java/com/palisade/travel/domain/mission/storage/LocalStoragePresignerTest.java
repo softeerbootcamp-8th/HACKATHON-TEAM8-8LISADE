@@ -1,0 +1,18 @@
+package com.palisade.travel.domain.mission.storage;
+
+import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class LocalStoragePresignerTest {
+
+    @Test
+    void returnsALocalPutEndpointForTheIssuedObjectKey() {
+        LocalStoragePresigner presigner = new LocalStoragePresigner();
+
+        StoragePresigner.PresignedUpload upload = presigner.presignPut("missions/12/students/3/photo.jpg");
+
+        assertThat(upload.objectKey()).isEqualTo("missions/12/students/3/photo.jpg");
+        assertThat(upload.uploadUrl()).isEqualTo("http://localhost:8080/mock-storage/missions/12/students/3/photo.jpg");
+    }
+}

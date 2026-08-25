@@ -13,6 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -110,6 +111,14 @@ class SessionAuthenticationTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.token").isNotEmpty())
                 .andExpect(jsonPath("$.data.headerName").value("X-CSRF-TOKEN"));
+    }
+
+    @Test
+    void localMockStorageAcceptsAPhotoPutWithoutSessionOrCsrf() throws Exception {
+        mockMvc.perform(put("/mock-storage/missions/2/students/10/photo.jpg")
+                        .contentType("image/jpeg")
+                        .content("photo"))
+                .andExpect(status().isNoContent());
     }
 
     private org.springframework.test.web.servlet.ResultActions login() throws Exception {
