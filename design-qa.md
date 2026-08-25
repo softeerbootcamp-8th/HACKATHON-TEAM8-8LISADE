@@ -13,7 +13,9 @@
 - 관리 탭 → 현장체험학습 생성 → 기본 정보 입력 → 지오펜스 단계 전환
 - Figma 원본 에셋을 사용한 뒤로가기 버튼
 - 402 × 874에서 헤더, 안내 문구, 검색창, 지도 영역, 하단 버튼의 위치와 크기 비교
+- 키워드 검색 결과의 장소명·주소 목록과 선택 위치 이동
 - Kakao SDK 실패 상태의 안내와 생성 버튼 비활성 상태
+- 허용 도메인과 카카오맵 서비스 활성화 후 실제 지도 렌더링
 
 ## 비교 결과
 
@@ -24,17 +26,18 @@
 
 ## 자동 검증
 
-- `cd frontend && npm test -- --run`: 10 files, 42 tests passed
+- `cd frontend && npm test -- --run`: 10 files, 43 tests passed
 - `cd frontend && npm run lint`: passed
 - `cd frontend && npm run build`: passed
 - `cd backend && ./gradlew test`: passed
 - `git diff --check`: passed
 
-## 차단 항목
+## 실제 연동 검증
 
-- Kakao SDK 요청이 HTTP 401 `domain mismatched`로 거부됐다. Kakao Developers의 JavaScript SDK 사이트 도메인에 `http://localhost:5173`을 등록한 뒤 실제 지도 타일, 키워드 검색, 두 손가락 확대/축소, 지도 클릭, 다각형 오버레이를 다시 시각 검증해야 한다.
-- SDK 계약 동작은 테스트 대역으로 검색 첫 결과 중심 이동, 마커 미생성, 지도 클릭 좌표 추가, 3점 이상 다각형, 3점 미만 다각형 제거까지 검증했다.
+- Kakao Developers에 `http://localhost:5173` 허용 도메인을 등록하고 카카오맵 서비스를 활성화한 뒤 SDK 요청이 HTTP 200으로 응답했다.
+- 실제 지도 렌더링은 사용자 브라우저에서 확인했다.
+- 검색 결과의 이름·주소 표시, 선택 위치 이동, 마커 미생성, 지도 클릭 좌표 추가, 3점 이상 다각형, 3점 미만 다각형 제거는 행동 테스트로 검증했다.
 
 ## 최종 결과
 
-blocked
+pass
