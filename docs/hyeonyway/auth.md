@@ -30,3 +30,11 @@
 - `/api/auth/me` 응답에는 사용자 이름을 포함해 클라이언트가 세션 사용자 정보를 완성할 수 있도록 했다. 기존 비활성 계정의 로그인 거부와 로그아웃 세션 무효화 동작은 유지한다.
 
 검증: `./gradlew test`
+
+## 프론트 세션 인증 API 연동 (#4)
+
+- `frontend/src/api/authApi.ts`의 mock 구현을 실제 HTTP 클라이언트로 교체했다. 변경 요청 전마다 `/api/auth/csrf`에서 받은 토큰과 헤더명을 사용하고, 모든 요청에 `credentials: 'include'`를 지정한다.
+- 로그인·회원가입 화면은 각각 `/api/auth/login`, `/api/auth/signup`을 호출한다. API 오류 메시지를 그대로 화면에 표시하고, 로그인 응답의 역할로 기존 학생·교사 분기를 유지한다.
+- 테스트에서는 CSRF 발급과 세션 요청 헤더, 서버 오류 메시지 표시를 검증한다. 화면에서 실제 계정과 무관한 데모 비밀번호 안내는 제거했다.
+
+검증: `npm test` (16 passed), `npm run lint`, `npm run build`; 로컬 서버에서 회원가입 → 로그인 → `/api/auth/me` 세션 확인
