@@ -57,11 +57,12 @@ class TeacherLocationQueryApiIntegrationTest {
         );
 
         jdbcTemplate.update(
-                "INSERT INTO trip (teacher_id, geofence_id, title, status, created_at) "
-                        + "VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
+                "INSERT INTO trip (teacher_id, geofence_id, title, place, status, created_at) "
+                        + "VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
                 ownerTeacherId,
                 geofenceId,
                 "현장학습",
+                "서울숲",
                 "ACTIVE"
         );
         tripId = jdbcTemplate.queryForObject("SELECT id FROM trip WHERE title = '현장학습'", Long.class);

@@ -90,6 +90,7 @@ class LocationQueryServiceTest {
                 teacherId,
                 20L,
                 "현장학습",
+                "서울숲",
                 null,
                 LocalDateTime.of(2026, 1, 1, 9, 0),
                 LocalDateTime.of(2026, 1, 1, 18, 0),
