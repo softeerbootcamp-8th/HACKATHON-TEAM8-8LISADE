@@ -10,6 +10,7 @@ import com.palisade.travel.domain.geo.exception.LocationException;
 import com.palisade.travel.domain.geo.repository.CurrentLocationRepository;
 import com.palisade.travel.domain.geo.repository.GeofencePointRepository;
 import com.palisade.travel.domain.geo.repository.LocationLogRepository;
+import com.palisade.travel.domain.notification.service.PushNotificationService;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
 import com.palisade.travel.domain.trip.entity.TripParticipantType;
@@ -17,6 +18,9 @@ import com.palisade.travel.domain.trip.entity.TripStatus;
 import com.palisade.travel.domain.geo.dto.StudentLocationResponse;
 import com.palisade.travel.domain.trip.repository.TripParticipantRepository;
 import com.palisade.travel.domain.trip.repository.TripRepository;
+import com.palisade.travel.domain.user.entity.User;
+import com.palisade.travel.domain.user.entity.UserRole;
+import com.palisade.travel.domain.user.repository.UserRepository;
 import com.palisade.travel.global.sse.SseConnectionService;
 import com.palisade.travel.global.sse.SseEventType;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,9 +38,12 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.never;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
 class LocationServiceTest {
@@ -44,6 +51,7 @@ class LocationServiceTest {
     private static final Long USER_ID = 1L;
     private static final Long TRIP_ID = 10L;
     private static final Long GEOFENCE_ID = 20L;
+    private static final Long TEACHER_ID = 99L;
 
     @Mock
     private TripParticipantRepository tripParticipantRepository;
@@ -63,6 +71,12 @@ class LocationServiceTest {
     @Mock
     private SseConnectionService sseConnectionService;
 
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private PushNotificationService pushNotificationService;
+
     private LocationService locationService;
 
     @BeforeEach
@@ -73,7 +87,9 @@ class LocationServiceTest {
                 geofencePointRepository,
                 currentLocationRepository,
                 locationLogRepository,
-                sseConnectionService
+                sseConnectionService,
+                userRepository,
+                pushNotificationService
         );
     }
 
@@ -218,6 +234,53 @@ class LocationServiceTest {
     }
 
     @Test
+    void 연속_외부_12회에_도달하면_담당_교사에게_이탈_push를_발행한다() {
+        // given
+        givenActiveTrip(USER_ID);
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(student("김철수")));
+        ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
+
+        // when
+        for (int count = 0; count < 12; count++) {
+            locationService.update(USER_ID, outsideRequest());
+        }
+
+        // then
+        then(pushNotificationService).should(times(1))
+                .sendToUser(eq(TEACHER_ID), any(), bodyCaptor.capture());
+        assertThat(bodyCaptor.getValue()).contains("김철수");
+    }
+
+    @Test
+    void 연속_외부_11회까지는_push를_발행하지_않는다() {
+        // given
+        givenActiveTrip(USER_ID);
+
+        // when
+        for (int count = 0; count < 11; count++) {
+            locationService.update(USER_ID, outsideRequest());
+        }
+
+        // then
+        then(pushNotificationService).should(never()).sendToUser(any(), any(), any());
+    }
+
+    @Test
+    void 연속_외부가_12회를_넘어도_push는_한_번만_발행한다() {
+        // given
+        givenActiveTrip(USER_ID);
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(student("김철수")));
+
+        // when
+        for (int count = 0; count < 15; count++) {
+            locationService.update(USER_ID, outsideRequest());
+        }
+
+        // then
+        then(pushNotificationService).should(times(1)).sendToUser(eq(TEACHER_ID), any(), any());
+    }
+
+    @Test
     void 참여_여행이_없으면_위치_대상을_찾을_수_없다는_오류를_반환한다() {
         // given
         given(tripParticipantRepository.findFirstByUserIdOrderByCreatedAtDescIdDesc(USER_ID))
@@ -318,10 +381,26 @@ class LocationServiceTest {
         );
     }
 
+    private User student(String name) {
+        return new User(
+                USER_ID,
+                "student01",
+                "hash",
+                null,
+                name,
+                UserRole.STUDENT,
+                null,
+                null,
+                null,
+                true,
+                LocalDateTime.of(2025, 12, 1, 0, 0)
+        );
+    }
+
     private Trip trip(TripStatus status) {
         return new Trip(
                 TRIP_ID,
-                99L,
+                TEACHER_ID,
                 GEOFENCE_ID,
                 "현장학습",
                 null,
