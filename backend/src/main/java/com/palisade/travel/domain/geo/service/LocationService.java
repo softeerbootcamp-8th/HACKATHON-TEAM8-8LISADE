@@ -6,6 +6,7 @@ import com.palisade.travel.domain.geo.entity.GeofencePoint;
 import com.palisade.travel.domain.geo.exception.LocationErrorCode;
 import com.palisade.travel.domain.geo.exception.LocationException;
 import com.palisade.travel.domain.geo.repository.GeofencePointRepository;
+import com.palisade.travel.domain.geo.util.GeofenceUtils;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
 import com.palisade.travel.domain.trip.entity.TripStatus;
@@ -42,8 +43,9 @@ public class LocationService {
             throw new LocationException(LocationErrorCode.TRIP_INACTIVE);
         }
 
-        findGeofencePoints(trip);
-        return new LocationUpdateResponse(trip.getId(), false, 0);
+        List<GeofencePoint> geofencePoints = findGeofencePoints(trip);
+        boolean outside = !GeofenceUtils.contains(geofencePoints, request.latitude(), request.longitude());
+        return new LocationUpdateResponse(trip.getId(), outside, 0);
     }
 
     private List<GeofencePoint> findGeofencePoints(Trip trip) {
