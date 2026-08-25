@@ -150,13 +150,70 @@ describe('App', () => {
 
     // when
     fireEvent.click(screen.getByRole('button', { name: '관리' }))
-    fireEvent.click(screen.getByRole('button', { name: '현장체험학습 생성' }))
+    fireEvent.click(await screen.findByRole('button', { name: '현장체험학습 추가하기' }))
 
     // then
     expect(screen.getByRole('heading', { name: '현장체험학습 등록' })).toBeInTheDocument()
     expect(screen.getByLabelText('제목')).toBeInTheDocument()
     expect(screen.getByLabelText('일자')).toHaveAttribute('type', 'date')
     expect(screen.getByLabelText('장소')).toBeInTheDocument()
+  })
+
+  it('교사가_관리_탭을_열면_자신의_정보와_체험학습_목록을_본다', async () => {
+    // given
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+
+    // when
+    fireEvent.click(await screen.findByRole('button', { name: '관리' }))
+
+    // then
+    expect(await screen.findByRole('heading', { name: '현장체험학습 관리' })).toBeInTheDocument()
+    expect(screen.getByText('고심 선생님')).toBeInTheDocument()
+    expect(screen.getByText('010-1234-1234')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '26년 5학년 2반' })).toBeInTheDocument()
+    expect(screen.getByText('2026. 09. 12 · 국립중앙박물관')).toBeInTheDocument()
+    expect(screen.getByText('진행 중')).toBeInTheDocument()
+    expect(screen.getByText('대기')).toBeInTheDocument()
+    expect(screen.getByText('완료')).toBeInTheDocument()
+  })
+
+  it('교사_체험학습_목록_조회가_실패하면_오류를_안내한다', async () => {
+    // given
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = input.toString()
+      if (path === '/api/auth/csrf') return apiResponse({ success: true, data: { token: 'csrf', headerName: 'X-CSRF-TOKEN' } })
+      if (path === '/api/auth/login') return apiResponse({ success: true, data: { id: 1, loginId: 'teacher01', name: '고심', phoneNumber: '01012341234', role: 'TEACHER' } })
+      if (path === '/api/teacher/trips') return apiResponse({ success: false, message: '체험학습 목록을 불러오지 못했습니다.' }, 500)
+      throw new Error(`Unexpected request: ${path} ${init?.method ?? 'GET'}`)
+    })
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+
+    // when
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+    fireEvent.click(await screen.findByRole('button', { name: '관리' }))
+
+    // then
+    expect(await screen.findByRole('alert')).toHaveTextContent('체험학습 목록을 불러오지 못했습니다.')
+  })
+
+  it('생성한_체험학습이_없으면_빈_목록을_안내한다', async () => {
+    // given
+    vi.stubGlobal('fetch', teacherFetch({ success: true, data: [] }))
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+
+    // when
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+    fireEvent.click(await screen.findByRole('button', { name: '관리' }))
+
+    // then
+    expect(await screen.findByText('아직 생성한 현장체험학습이 없습니다.')).toBeInTheDocument()
   })
 
   it('takes a student without a Trip to the invite code screen after login', async () => {
@@ -271,4 +328,18 @@ async function completePhotoMission() {
   fireEvent.click(await screen.findByRole('button', { name: '촬영하기' }))
   fireEvent.click(await screen.findByRole('button', { name: '제출하기' }))
   await screen.findByText('사진 미션을 제출했습니다.')
+}
+
+function apiResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+}
+
+function teacherFetch(tripsResponse: unknown) {
+  return async (input: RequestInfo | URL) => {
+    const path = input.toString()
+    if (path === '/api/auth/csrf') return apiResponse({ success: true, data: { token: 'csrf', headerName: 'X-CSRF-TOKEN' } })
+    if (path === '/api/auth/login') return apiResponse({ success: true, data: { id: 1, loginId: 'teacher01', name: '고심', phoneNumber: '01012341234', role: 'TEACHER' } })
+    if (path === '/api/teacher/trips') return apiResponse(tripsResponse)
+    throw new Error(`Unexpected request: ${path}`)
+  }
 }
