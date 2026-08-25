@@ -144,11 +144,23 @@ describe('KakaoGeofenceMap', () => {
     await waitFor(() => expect(sdk.polygonInstances[0].setMap).toHaveBeenCalledWith(null))
   })
 
-  it('장소 검색 첫 결과로 지도만 중앙 정렬하고 마커는 만들지 않는다', async () => {
+  it('장소 검색 결과를 장소명과 주소 목록으로 표시한다', async () => {
     // given
     sdk.keywordSearch.mockImplementation((_keyword, callback) => callback([
-      { y: '37.5238506', x: '126.9804702' },
-      { y: '37.5000000', x: '127.0000000' },
+      {
+        place_name: '국립중앙박물관',
+        road_address_name: '서울 용산구 서빙고로 137',
+        address_name: '서울 용산구 용산동6가 168-6',
+        y: '37.5238506',
+        x: '126.9804702',
+      },
+      {
+        place_name: '국립한글박물관',
+        road_address_name: '',
+        address_name: '서울 용산구 용산동6가 168-6',
+        y: '37.521185',
+        x: '126.980993',
+      },
     ], 'OK'))
     render(<KakaoGeofenceMap points={[]} onPointAdd={vi.fn()} onUndo={vi.fn()} initialKeyword="국립중앙박물관" />)
     await waitFor(() => expect(sdk.mapInstances).toHaveLength(1))
@@ -157,10 +169,45 @@ describe('KakaoGeofenceMap', () => {
     fireEvent.click(screen.getByRole('button', { name: '장소 검색' }))
 
     // then
-    await waitFor(() => expect(sdk.mapInstances[0].setCenter).toHaveBeenCalled())
+    expect(await screen.findByRole('list', { name: '장소 검색 결과' })).toBeInTheDocument()
+    expect(screen.getByText('국립중앙박물관')).toBeInTheDocument()
+    expect(screen.getByText('서울 용산구 서빙고로 137')).toBeInTheDocument()
+    expect(screen.getByText('국립한글박물관')).toBeInTheDocument()
+    expect(screen.getByText('서울 용산구 용산동6가 168-6')).toBeInTheDocument()
+    expect(sdk.keywordSearch).toHaveBeenCalledWith('국립중앙박물관', expect.any(Function), { size: 15, sort: 'ACCURACY' })
+  })
+
+  it('검색 결과를 선택하면 해당 위치로 지도만 이동한다', async () => {
+    // given
+    sdk.keywordSearch.mockImplementation((_keyword, callback) => callback([
+      {
+        place_name: '국립중앙박물관',
+        road_address_name: '서울 용산구 서빙고로 137',
+        address_name: '서울 용산구 용산동6가 168-6',
+        y: '37.5238506',
+        x: '126.9804702',
+      },
+      {
+        place_name: '국립한글박물관',
+        road_address_name: '서울 용산구 서빙고로 139',
+        address_name: '서울 용산구 용산동6가 168-6',
+        y: '37.521185',
+        x: '126.980993',
+      },
+    ], 'OK'))
+    render(<KakaoGeofenceMap points={[]} onPointAdd={vi.fn()} onUndo={vi.fn()} initialKeyword="국립중앙박물관" />)
+    await waitFor(() => expect(sdk.mapInstances).toHaveLength(1))
+    fireEvent.click(screen.getByRole('button', { name: '장소 검색' }))
+    const result = await screen.findByRole('button', { name: /국립한글박물관/ })
+    expect(sdk.mapInstances[0].setCenter).not.toHaveBeenCalled()
+
+    // when
+    fireEvent.click(result)
+
+    // then
     const center = sdk.mapInstances[0].setCenter.mock.calls[0][0] as InstanceType<typeof sdk.FakeLatLng>
-    expect([center.getLat(), center.getLng()]).toEqual([37.5238506, 126.9804702])
-    expect(sdk.keywordSearch).toHaveBeenCalledWith('국립중앙박물관', expect.any(Function), { size: 1, sort: 'ACCURACY' })
+    expect([center.getLat(), center.getLng()]).toEqual([37.521185, 126.980993])
+    expect(sdk.mapInstances[0].setLevel).toHaveBeenCalledWith(3)
     expect(sdk.Marker).not.toHaveBeenCalled()
   })
 

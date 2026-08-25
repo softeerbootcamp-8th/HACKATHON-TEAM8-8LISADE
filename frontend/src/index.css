@@ -212,14 +212,21 @@ h2 { font-size: 17px; margin: 0; }
 .trip-primary-button { background: #ffc93d; border-radius: 16px; box-shadow: 0 3px 10px rgb(120 89 20 / 14%); color: #27303a; font-size: 16px; min-height: 54px; width: 100%; }
 .trip-primary-button:hover { background: #f5ba25; }
 .trip-primary-button:disabled { background: #eadfbf; color: #8b846f; cursor: not-allowed; }
-.geofence-step { display: grid; gap: 12px; grid-template-rows: auto 52px minmax(340px, 1fr); padding: 18px 24px 0; }
+.geofence-step { display: grid; gap: 12px; grid-template-rows: auto auto minmax(340px, 1fr); padding: 18px 24px 0; }
 .geofence-step h2 { font-size: 14px; margin: 0 0 3px; }
 .geofence-step > div > p { color: #667085; font-size: 11px; font-weight: 500; line-height: 1.3; margin: 0; }
+.place-search-area { display: grid; gap: 8px; min-height: 0; }
 .place-search { align-items: center; background: #fff; border: 1.5px solid #efe9da; border-radius: 14px; display: grid; grid-template-columns: minmax(0, 1fr) auto; min-height: 52px; padding: 0 10px 0 16px; }
 .place-search input { border: 0; border-radius: 8px; color: #667085; font-size: 15px; font-weight: 400; min-height: 40px; padding: 0; }
 .place-search button { background: #fff3d6; border-radius: 9px; color: #27303a; font-size: 12px; min-height: 26px; padding: 0 10px; }
 .place-search button:hover { background: #ffe9a7; }
 .place-search button:disabled { color: #7f7868; cursor: wait; }
+.place-results { background: #fff; border: 1px solid #efe9da; border-radius: 12px; list-style: none; margin: 0; max-height: 168px; overflow-y: auto; padding: 4px; }
+.place-results li + li { border-top: 1px solid #f2ecde; }
+.place-result { background: transparent; color: #27303a; display: grid; gap: 3px; min-height: 48px; padding: 8px 10px; text-align: left; width: 100%; }
+.place-result:hover { background: #fff8e8; }
+.place-result strong { font-size: 13px; }
+.place-result span { color: #667085; font-size: 11px; font-weight: 500; }
 .map-frame { margin-top: 4px; min-height: 340px; overflow: hidden; position: relative; }
 .geofence-map { background: #f4efe2; border-radius: 18px; height: 100%; min-height: 340px; overflow: hidden; touch-action: pan-x pan-y pinch-zoom; width: 100%; }
 .map-message { background: rgb(255 252 244 / 92%); border-radius: 12px; color: #5f6e85; font-size: 13px; left: 50%; margin: 0; max-width: calc(100% - 36px); padding: 10px 12px; position: absolute; text-align: center; top: 16px; transform: translateX(-50%); width: max-content; z-index: 2; }

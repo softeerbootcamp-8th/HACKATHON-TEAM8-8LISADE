@@ -1,7 +1,7 @@
 import { ArrowCounterClockwise } from '@phosphor-icons/react/ArrowCounterClockwise'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import type { GeoPoint } from '../../types/teacherTrip'
-import { loadKakaoMaps, type KakaoMap, type KakaoMapsApi, type KakaoPolygon } from './kakaoMaps'
+import { loadKakaoMaps, type KakaoMap, type KakaoMapsApi, type KakaoPlace, type KakaoPolygon } from './kakaoMaps'
 
 type Props = {
   points: GeoPoint[]
@@ -21,6 +21,7 @@ export function KakaoGeofenceMap({ points, initialKeyword, onPointAdd, onUndo }:
   const [keyword, setKeyword] = useState(initialKeyword)
   const [ready, setReady] = useState(false)
   const [searching, setSearching] = useState(false)
+  const [places, setPlaces] = useState<KakaoPlace[]>([])
   const [message, setMessage] = useState('지도를 불러오는 중입니다.')
 
   useEffect(() => {
@@ -92,6 +93,10 @@ export function KakaoGeofenceMap({ points, initialKeyword, onPointAdd, onUndo }:
     })
   }, [points, ready])
 
+  useEffect(() => {
+    if (ready) mapRef.current?.relayout()
+  }, [places.length, ready])
+
   const search = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const maps = mapsRef.current
@@ -99,6 +104,7 @@ export function KakaoGeofenceMap({ points, initialKeyword, onPointAdd, onUndo }:
     const query = keyword.trim()
 
     if (!query) {
+      setPlaces([])
       setMessage('검색할 장소를 입력해 주세요.')
       return
     }
@@ -108,25 +114,44 @@ export function KakaoGeofenceMap({ points, initialKeyword, onPointAdd, onUndo }:
     }
 
     setSearching(true)
-    new maps.services.Places().keywordSearch(query, (places, status) => {
+    setPlaces([])
+    new maps.services.Places().keywordSearch(query, (results, status) => {
       setSearching(false)
-      if (status !== maps.services.Status.OK || !places[0]) {
+      if (status !== maps.services.Status.OK || !results.length) {
         setMessage('검색 결과가 없습니다. 다른 장소를 입력해 주세요.')
         return
       }
 
-      map.setCenter(new maps.LatLng(Number(places[0].y), Number(places[0].x)))
-      map.setLevel(3)
+      setPlaces(results)
       setMessage('')
-    }, { size: 1, sort: maps.services.SortBy.ACCURACY })
+    }, { size: 15, sort: maps.services.SortBy.ACCURACY })
+  }
+
+  const selectPlace = (place: KakaoPlace) => {
+    const maps = mapsRef.current
+    const map = mapRef.current
+    if (!maps || !map) return
+
+    map.setCenter(new maps.LatLng(Number(place.y), Number(place.x)))
+    map.setLevel(3)
   }
 
   return <>
-    <form className="place-search" onSubmit={search}>
-      <label className="sr-only" htmlFor="place-keyword">장소 검색</label>
-      <input id="place-keyword" value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="장소를 입력해 주세요" />
-      <button type="submit" disabled={searching}>{searching ? '검색 중' : '장소 검색'}</button>
-    </form>
+    <div className="place-search-area">
+      <form className="place-search" onSubmit={search}>
+        <label className="sr-only" htmlFor="place-keyword">장소 검색</label>
+        <input id="place-keyword" value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="장소를 입력해 주세요" />
+        <button type="submit" disabled={searching}>{searching ? '검색 중' : '장소 검색'}</button>
+      </form>
+      {places.length > 0 && <ul className="place-results" aria-label="장소 검색 결과">
+        {places.map((place) => <li key={`${place.x}-${place.y}-${place.place_name}`}>
+          <button className="place-result" type="button" onClick={() => selectPlace(place)}>
+            <strong>{place.place_name}</strong>
+            <span>{place.road_address_name || place.address_name || '주소 정보 없음'}</span>
+          </button>
+        </li>)}
+      </ul>}
+    </div>
     <div className="map-frame">
       <div ref={containerRef} className="geofence-map" aria-label="활동 구역 지도" />
       {message && <p className="map-message" role="status">{message}</p>}
