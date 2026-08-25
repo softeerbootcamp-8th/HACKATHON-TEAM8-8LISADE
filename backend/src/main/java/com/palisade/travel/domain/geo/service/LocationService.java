@@ -2,6 +2,7 @@ package com.palisade.travel.domain.geo.service;
 
 import com.palisade.travel.domain.geo.dto.LocationUpdateRequest;
 import com.palisade.travel.domain.geo.dto.LocationUpdateResponse;
+import com.palisade.travel.domain.geo.dto.StudentLocationResponse;
 import com.palisade.travel.domain.geo.entity.CurrentLocation;
 import com.palisade.travel.domain.geo.entity.GeofencePoint;
 import com.palisade.travel.domain.geo.entity.LocationLog;
@@ -16,6 +17,8 @@ import com.palisade.travel.domain.trip.entity.TripParticipant;
 import com.palisade.travel.domain.trip.entity.TripStatus;
 import com.palisade.travel.domain.trip.repository.TripParticipantRepository;
 import com.palisade.travel.domain.trip.repository.TripRepository;
+import com.palisade.travel.global.sse.SseConnectionService;
+import com.palisade.travel.global.sse.SseEventType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +37,7 @@ public class LocationService {
     private final GeofencePointRepository geofencePointRepository;
     private final CurrentLocationRepository currentLocationRepository;
     private final LocationLogRepository locationLogRepository;
+    private final SseConnectionService sseConnectionService;
 
     // ponytail: 요구사항의 단일 인스턴스 인메모리 카운터다. 다중 인스턴스가 필요해지면 Redis 원자 연산으로 교체한다.
     private final ConcurrentMap<Long, Integer> consecutiveOutsideCounts = new ConcurrentHashMap<>();
@@ -42,12 +46,14 @@ public class LocationService {
                            TripRepository tripRepository,
                            GeofencePointRepository geofencePointRepository,
                            CurrentLocationRepository currentLocationRepository,
-                           LocationLogRepository locationLogRepository) {
+                           LocationLogRepository locationLogRepository,
+                           SseConnectionService sseConnectionService) {
         this.tripParticipantRepository = tripParticipantRepository;
         this.tripRepository = tripRepository;
         this.geofencePointRepository = geofencePointRepository;
         this.currentLocationRepository = currentLocationRepository;
         this.locationLogRepository = locationLogRepository;
+        this.sseConnectionService = sseConnectionService;
     }
 
     @Transactional
@@ -81,7 +87,11 @@ public class LocationService {
                 ));
         currentLocationRepository.save(currentLocation);
 
-        // TODO: 교사 화면에 최신 위치를 반영하도록 SSE 이벤트를 전송한다.
+        sseConnectionService.send(
+                trip.getTeacherId(),
+                SseEventType.LOCATION_UPDATED,
+                StudentLocationResponse.from(currentLocation)
+        );
 
         int consecutiveOutsideCount = consecutiveOutsideCounts.compute(
                 userId,

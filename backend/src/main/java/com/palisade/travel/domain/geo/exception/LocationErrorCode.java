@@ -10,6 +10,11 @@ public enum LocationErrorCode implements ErrorCode {
             "Participating trip was not found."
     ),
     TRIP_NOT_FOUND(HttpStatus.NOT_FOUND, "TRIP_NOT_FOUND", "Trip was not found."),
+    TRIP_ACCESS_FORBIDDEN(
+            HttpStatus.FORBIDDEN,
+            "TRIP_ACCESS_FORBIDDEN",
+            "The trip does not belong to the current teacher."
+    ),
     TRIP_INACTIVE(HttpStatus.GONE, "TRIP_INACTIVE", "Trip is no longer active."),
     GEOFENCE_NOT_CONFIGURED(
             HttpStatus.UNPROCESSABLE_CONTENT,

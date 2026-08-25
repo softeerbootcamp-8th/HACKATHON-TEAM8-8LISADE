@@ -14,8 +14,11 @@ import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
 import com.palisade.travel.domain.trip.entity.TripParticipantType;
 import com.palisade.travel.domain.trip.entity.TripStatus;
+import com.palisade.travel.domain.geo.dto.StudentLocationResponse;
 import com.palisade.travel.domain.trip.repository.TripParticipantRepository;
 import com.palisade.travel.domain.trip.repository.TripRepository;
+import com.palisade.travel.global.sse.SseConnectionService;
+import com.palisade.travel.global.sse.SseEventType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +34,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
@@ -56,6 +60,9 @@ class LocationServiceTest {
     @Mock
     private LocationLogRepository locationLogRepository;
 
+    @Mock
+    private SseConnectionService sseConnectionService;
+
     private LocationService locationService;
 
     @BeforeEach
@@ -65,7 +72,8 @@ class LocationServiceTest {
                 tripRepository,
                 geofencePointRepository,
                 currentLocationRepository,
-                locationLogRepository
+                locationLogRepository,
+                sseConnectionService
         );
     }
 
@@ -98,6 +106,27 @@ class LocationServiceTest {
         assertThat(currentLocation.getLongitude()).isEqualByComparingTo("127.0050000");
         assertThat(currentLocation.isOutside()).isFalse();
         assertThat(currentLocation.getUpdatedAt()).isEqualTo(LocalDateTime.of(2026, 8, 25, 8, 55, 30));
+    }
+
+    @Test
+    void 위치_갱신은_담당_교사에게_LOCATION_UPDATED_이벤트를_전송한다() {
+        // given
+        givenActiveTrip(USER_ID);
+        ArgumentCaptor<StudentLocationResponse> payloadCaptor =
+                ArgumentCaptor.forClass(StudentLocationResponse.class);
+
+        // when
+        locationService.update(USER_ID, outsideRequest());
+
+        // then
+        then(sseConnectionService).should()
+                .send(eq(99L), eq(SseEventType.LOCATION_UPDATED), payloadCaptor.capture());
+        StudentLocationResponse payload = payloadCaptor.getValue();
+        assertThat(payload.userId()).isEqualTo(USER_ID);
+        assertThat(payload.latitude()).isEqualByComparingTo("37.0200000");
+        assertThat(payload.longitude()).isEqualByComparingTo("127.0050000");
+        assertThat(payload.outside()).isTrue();
+        assertThat(payload.updatedAt()).isEqualTo(LocalDateTime.of(2026, 8, 25, 8, 55, 30));
     }
 
     @Test
