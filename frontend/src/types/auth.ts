@@ -5,6 +5,7 @@ export interface CurrentUser {
   loginId: string
   name: string
   role: UserRole
+  phoneNumber: string | null
 }
 
 export interface LoginInput {

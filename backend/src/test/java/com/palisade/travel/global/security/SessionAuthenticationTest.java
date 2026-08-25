@@ -33,10 +33,10 @@ class SessionAuthenticationTest {
     void setUpUser() {
         jdbcTemplate.update("DELETE FROM users");
         jdbcTemplate.update(
-                "INSERT INTO users (login_id, password_hash, email, name, role, enabled, created_at) "
-                        + "VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+                "INSERT INTO users (login_id, password_hash, email, name, role, phone_number, enabled, created_at) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
                 "student1", new BCryptPasswordEncoder().encode("password123"),
-                "student1@example.com", "학생1", "STUDENT", true);
+                "student1@example.com", "학생1", "STUDENT", "01012345678", true);
     }
 
     @Test
@@ -54,6 +54,14 @@ class SessionAuthenticationTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.loginId").value("student1"))
                 .andExpect(jsonPath("$.data.role").value("STUDENT"));
+    }
+
+    @Test
+    void 로그인_응답은_사용자의_전화번호를_포함한다() throws Exception {
+        // given & when & then
+        login()
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.phoneNumber").value("01012345678"));
     }
 
     @Test

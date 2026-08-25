@@ -9,11 +9,13 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.List;
 
-public record UserPrincipal(Long userId, String loginId, String name, UserRole role, String passwordHash, boolean enabled)
+public record UserPrincipal(Long userId, String loginId, String name, UserRole role, String phoneNumber,
+                            String passwordHash, boolean enabled)
         implements UserDetails {
 
     public static UserPrincipal from(User user) {
-        return new UserPrincipal(user.getId(), user.getLoginId(), user.getName(), user.getRole(), user.getPasswordHash(), user.isEnabled());
+        return new UserPrincipal(user.getId(), user.getLoginId(), user.getName(), user.getRole(), user.getPhoneNumber(),
+                user.getPasswordHash(), user.isEnabled());
     }
 
     @Override
