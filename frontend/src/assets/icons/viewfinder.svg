@@ -1,0 +1,22 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="370" height="500" viewBox="0 0 370 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="viewfinder">
+<g clip-path="url(#clip0_0_6)">
+<rect width="370" height="500" rx="20" fill="#F4EFE2"/>
+<ellipse id="Ellipse" cx="185" cy="470" rx="210" ry="130" fill="#DAE9D5"/>
+<rect id="Rectangle" x="150" y="210" width="70" height="180" rx="30" fill="#C7B89E"/>
+<rect id="Rectangle_2" x="18" y="18" width="34" height="4" rx="2" fill="#FFC93D"/>
+<rect id="Rectangle_3" x="18" y="18" width="4" height="34" rx="2" fill="#FFC93D"/>
+<rect id="Rectangle_4" x="318" y="18" width="34" height="4" rx="2" fill="#FFC93D"/>
+<rect id="Rectangle_5" x="348" y="18" width="4" height="34" rx="2" fill="#FFC93D"/>
+<rect id="Rectangle_6" x="18" y="478" width="34" height="4" rx="2" fill="#FFC93D"/>
+<rect id="Rectangle_7" x="18" y="448" width="4" height="34" rx="2" fill="#FFC93D"/>
+<rect id="Rectangle_8" x="318" y="478" width="34" height="4" rx="2" fill="#FFC93D"/>
+<rect id="Rectangle_9" x="348" y="448" width="4" height="34" rx="2" fill="#FFC93D"/>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_0_6">
+<rect width="370" height="500" rx="20" fill="white"/>
+</clipPath>
+</defs>
+</svg>

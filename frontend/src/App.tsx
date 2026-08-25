@@ -4,7 +4,7 @@ import { mockLocationTrackingAdapter } from './api/locationTrackingApi'
 import { missionApi } from './api/missionApi'
 import { studentTripApi } from './api/studentTripApi'
 import { resolvePostLoginScreen, type Screen } from './features/app/appFlow'
-import { LoginScreen, SignUpScreen } from './features/auth/AuthScreens'
+import { LoginScreen, SignUpScreen, StartScreen } from './features/auth/AuthScreens'
 import { ActivityConfirmation, ActivityMissionScreen, CheckMissionScreen, InviteCodeScreen, LocationBlockedScreen, LocationPermissionScreen, StudentHome, type CurrentMission } from './features/student/StudentScreens'
 import { TeacherDashboard } from './features/teacher/TeacherDashboard'
 import type { SignUpInput } from './types/auth'
@@ -15,7 +15,7 @@ const koreanMobileNumber = /^01[016789]\d{7,8}$/
 const normalizePhoneNumber = (value?: string) => value?.replace(/[-\s]/g, '') ?? ''
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>('LOGIN')
+  const [screen, setScreen] = useState<Screen>('START')
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
   const [signUpInput, setSignUpInput] = useState<SignUpInput>(initialSignUpInput)
@@ -95,7 +95,8 @@ export default function App() {
   }} />
   if (screen === 'TEACHER_HOME') return <TeacherDashboard />
   if (screen === 'SIGN_UP') return <SignUpScreen input={signUpInput} error={error} onChange={setSignUpInput} onSubmit={handleSignUp} onCancel={showLogin} />
-  return <LoginScreen loginId={loginId} password={password} notice={notice} error={error} onLoginIdChange={setLoginId} onPasswordChange={setPassword} onSubmit={handleLogin} onShowSignUp={showSignUp} />
+  if (screen === 'LOGIN') return <LoginScreen loginId={loginId} password={password} notice={notice} error={error} onLoginIdChange={setLoginId} onPasswordChange={setPassword} onSubmit={handleLogin} onShowSignUp={showSignUp} />
+  return <StartScreen onShowLogin={showLogin} onShowSignUp={showSignUp} />
 }
 
 async function photoUriToBlob(uri: string): Promise<Blob> {

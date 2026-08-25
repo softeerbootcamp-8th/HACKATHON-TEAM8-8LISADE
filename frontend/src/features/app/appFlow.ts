@@ -1,6 +1,7 @@
 import type { UserRole } from '../../types/auth'
 
 export type Screen =
+  | 'START'
   | 'LOGIN'
   | 'SIGN_UP'
   | 'STUDENT_INVITE'
