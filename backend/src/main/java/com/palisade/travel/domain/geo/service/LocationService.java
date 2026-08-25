@@ -2,9 +2,11 @@ package com.palisade.travel.domain.geo.service;
 
 import com.palisade.travel.domain.geo.dto.LocationUpdateRequest;
 import com.palisade.travel.domain.geo.dto.LocationUpdateResponse;
+import com.palisade.travel.domain.geo.entity.CurrentLocation;
 import com.palisade.travel.domain.geo.entity.GeofencePoint;
 import com.palisade.travel.domain.geo.exception.LocationErrorCode;
 import com.palisade.travel.domain.geo.exception.LocationException;
+import com.palisade.travel.domain.geo.repository.CurrentLocationRepository;
 import com.palisade.travel.domain.geo.repository.GeofencePointRepository;
 import com.palisade.travel.domain.geo.util.GeofenceUtils;
 import com.palisade.travel.domain.trip.entity.Trip;
@@ -15,6 +17,8 @@ import com.palisade.travel.domain.trip.repository.TripRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 @Service
@@ -24,15 +28,19 @@ public class LocationService {
     private final TripParticipantRepository tripParticipantRepository;
     private final TripRepository tripRepository;
     private final GeofencePointRepository geofencePointRepository;
+    private final CurrentLocationRepository currentLocationRepository;
 
     public LocationService(TripParticipantRepository tripParticipantRepository,
                            TripRepository tripRepository,
-                           GeofencePointRepository geofencePointRepository) {
+                           GeofencePointRepository geofencePointRepository,
+                           CurrentLocationRepository currentLocationRepository) {
         this.tripParticipantRepository = tripParticipantRepository;
         this.tripRepository = tripRepository;
         this.geofencePointRepository = geofencePointRepository;
+        this.currentLocationRepository = currentLocationRepository;
     }
 
+    @Transactional
     public LocationUpdateResponse update(Long userId, LocationUpdateRequest request) {
         TripParticipant participant = tripParticipantRepository.findFirstByUserIdOrderByCreatedAtDescIdDesc(userId)
                 .orElseThrow(() -> new LocationException(LocationErrorCode.PARTICIPATING_TRIP_NOT_FOUND));
@@ -45,6 +53,25 @@ public class LocationService {
 
         List<GeofencePoint> geofencePoints = findGeofencePoints(trip);
         boolean outside = !GeofenceUtils.contains(geofencePoints, request.latitude(), request.longitude());
+        LocalDateTime recordedAt = LocalDateTime.ofInstant(request.recordedAt(), ZoneOffset.UTC);
+
+        CurrentLocation currentLocation = currentLocationRepository.findByUserIdAndTripId(userId, trip.getId())
+                .map(location -> {
+                    location.update(request.latitude(), request.longitude(), outside, recordedAt);
+                    return location;
+                })
+                .orElseGet(() -> CurrentLocation.create(
+                        userId,
+                        trip.getId(),
+                        request.latitude(),
+                        request.longitude(),
+                        outside,
+                        recordedAt
+                ));
+        currentLocationRepository.save(currentLocation);
+
+        // TODO: 교사 화면에 최신 위치를 반영하도록 SSE 이벤트를 전송한다.
+
         return new LocationUpdateResponse(trip.getId(), outside, 0);
     }
 
