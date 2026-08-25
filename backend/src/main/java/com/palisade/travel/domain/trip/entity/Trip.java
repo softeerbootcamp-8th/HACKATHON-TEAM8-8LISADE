@@ -34,6 +34,9 @@ public class Trip {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "place", nullable = false, length = 200)
+    private String place;
+
     @Column(name = "start_at")
     private LocalDateTime startAt;
 
@@ -50,12 +53,13 @@ public class Trip {
     protected Trip() {
     }
 
-    public Trip(Long id, Long teacherId, Long geofenceId, String title, String description,
+    public Trip(Long id, Long teacherId, Long geofenceId, String title, String place, String description,
                 LocalDateTime startAt, LocalDateTime endAt, TripStatus status, LocalDateTime createdAt) {
         this.id = id;
         this.teacherId = teacherId;
         this.geofenceId = geofenceId;
         this.title = title;
+        this.place = place;
         this.description = description;
         this.startAt = startAt;
         this.endAt = endAt;
@@ -63,9 +67,9 @@ public class Trip {
         this.createdAt = createdAt;
     }
 
-    public static Trip create(Long teacherId, Long geofenceId, String title, String description,
+    public static Trip create(Long teacherId, Long geofenceId, String title, String place, String description,
                               LocalDateTime startAt, LocalDateTime endAt, TripStatus status) {
-        return new Trip(null, teacherId, geofenceId, title, description, startAt, endAt, status, LocalDateTime.now());
+        return new Trip(null, teacherId, geofenceId, title, place, description, startAt, endAt, status, LocalDateTime.now());
     }
 
 }
