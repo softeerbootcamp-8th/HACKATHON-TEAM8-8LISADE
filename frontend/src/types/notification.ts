@@ -1,11 +1,16 @@
-/** 교사 알림 유형 — 미션 미완료 · 안전구역 이탈 · 위치 확인 불가 (Figma T-07). */
-export type TeacherNotificationCategory = 'MISSION_INCOMPLETED' | 'RANGE_EXIT' | 'UNREACHABLE'
+/**
+ * 백엔드 `NotificationType`과 대응. 백엔드는 RANGE_EXIT / MISSION_CREATED /
+ * MISSION_INCOMPLETED를 보내며, UNREACHABLE(위치 확인 불가)은 시안(T-07)용으로
+ * 미리 둔 유형이다(백엔드 저장이 생기면 자동 표시).
+ */
+export type NotificationType = 'RANGE_EXIT' | 'MISSION_INCOMPLETED' | 'MISSION_CREATED' | 'UNREACHABLE'
 
 export interface TeacherNotification {
   id: number
-  category: TeacherNotificationCategory
-  /** 카드 본문 문구 (예: "김하늘이 허용 구역을 벗어났어요.") */
+  /** 알림 유형 — 배지 라벨/색상 매핑에 사용. 서버가 새 유형을 보내도 문자열로 안전 처리. */
+  type: NotificationType | string
+  title: string
   message: string
-  /** 우측 상대 시각 라벨 (예: "방금 전", "3분 전", "14:02") */
-  timeLabel: string
+  /** 서버 저장 시각 (ISO 8601). 카드 우측 시각 라벨은 이 값으로 계산한다. */
+  createdAt: string
 }

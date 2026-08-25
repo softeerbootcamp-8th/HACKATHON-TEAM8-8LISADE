@@ -268,3 +268,4 @@ h2 { font-size: 17px; margin: 0; }
 .noti-badge-incomplete { background: var(--color-warning-soft); color: var(--color-warning); }
 .noti-badge-exit { background: var(--color-danger-soft); color: var(--color-danger); }
 .noti-badge-unreachable { background: rgb(102 112 133 / 12%); color: var(--color-text-muted); }
+.noti-badge-info { background: var(--color-accent-soft); color: #6b4f0d; }
