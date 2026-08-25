@@ -1,0 +1,7 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="ic-home">
+<path id="Polygon" d="M11.3453 3.56695C11.7211 3.24152 12.2789 3.24152 12.6547 3.56695L17.7667 7.99407C18.4666 8.6002 18.0379 9.75 17.112 9.75H6.88799C5.96211 9.75 5.53344 8.60021 6.23334 7.99407L11.3453 3.56695Z" fill="#27303A"/>
+<path id="Rectangle" d="M6 12H18V19C18 20.1046 17.1046 21 16 21H8C6.89543 21 6 20.1046 6 19V12Z" fill="#27303A"/>
+<path id="Rectangle_2" d="M10 17C10 15.8954 10.8954 15 12 15V15C13.1046 15 14 15.8954 14 17V21H10V17Z" fill="white"/>
+</g>
+</svg>
