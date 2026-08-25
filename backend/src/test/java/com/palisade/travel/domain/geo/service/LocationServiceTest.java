@@ -10,6 +10,9 @@ import com.palisade.travel.domain.geo.exception.LocationException;
 import com.palisade.travel.domain.geo.repository.CurrentLocationRepository;
 import com.palisade.travel.domain.geo.repository.GeofencePointRepository;
 import com.palisade.travel.domain.geo.repository.LocationLogRepository;
+import com.palisade.travel.domain.notification.entity.Notification;
+import com.palisade.travel.domain.notification.entity.NotificationType;
+import com.palisade.travel.domain.notification.repository.NotificationRepository;
 import com.palisade.travel.domain.notification.service.PushNotificationService;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
@@ -77,6 +80,9 @@ class LocationServiceTest {
     @Mock
     private PushNotificationService pushNotificationService;
 
+    @Mock
+    private NotificationRepository notificationRepository;
+
     private LocationService locationService;
 
     @BeforeEach
@@ -89,7 +95,8 @@ class LocationServiceTest {
                 locationLogRepository,
                 sseConnectionService,
                 userRepository,
-                pushNotificationService
+                pushNotificationService,
+                notificationRepository
         );
     }
 
@@ -263,6 +270,29 @@ class LocationServiceTest {
 
         // then
         then(pushNotificationService).should(never()).sendToUser(any(), any(), any());
+        then(notificationRepository).should(never()).save(any());
+    }
+
+    @Test
+    void 연속_외부_12회에_도달하면_담당_교사_이탈_알림을_저장한다() {
+        // given
+        givenActiveTrip(USER_ID);
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(student("김철수")));
+        ArgumentCaptor<Notification> notificationCaptor = ArgumentCaptor.forClass(Notification.class);
+
+        // when
+        for (int count = 0; count < 12; count++) {
+            locationService.update(USER_ID, outsideRequest());
+        }
+
+        // then
+        then(notificationRepository).should(times(1)).save(notificationCaptor.capture());
+        Notification saved = notificationCaptor.getValue();
+        assertThat(saved.getUserId()).isEqualTo(TEACHER_ID);
+        assertThat(saved.getTripId()).isEqualTo(TRIP_ID);
+        assertThat(saved.getMissionId()).isNull();
+        assertThat(saved.getType()).isEqualTo(NotificationType.RANGE_EXIT);
+        assertThat(saved.getMessage()).contains("김철수");
     }
 
     @Test
@@ -278,6 +308,7 @@ class LocationServiceTest {
 
         // then
         then(pushNotificationService).should(times(1)).sendToUser(eq(TEACHER_ID), any(), any());
+        then(notificationRepository).should(times(1)).save(any());
     }
 
     @Test

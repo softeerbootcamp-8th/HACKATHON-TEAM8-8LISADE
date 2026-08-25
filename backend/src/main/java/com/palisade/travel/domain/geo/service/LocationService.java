@@ -12,6 +12,9 @@ import com.palisade.travel.domain.geo.repository.CurrentLocationRepository;
 import com.palisade.travel.domain.geo.repository.GeofencePointRepository;
 import com.palisade.travel.domain.geo.repository.LocationLogRepository;
 import com.palisade.travel.domain.geo.util.GeofenceUtils;
+import com.palisade.travel.domain.notification.entity.Notification;
+import com.palisade.travel.domain.notification.entity.NotificationType;
+import com.palisade.travel.domain.notification.repository.NotificationRepository;
 import com.palisade.travel.domain.notification.service.PushNotificationService;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
@@ -46,6 +49,7 @@ public class LocationService {
     private final SseConnectionService sseConnectionService;
     private final UserRepository userRepository;
     private final PushNotificationService pushNotificationService;
+    private final NotificationRepository notificationRepository;
 
     // ponytail: 요구사항의 단일 인스턴스 인메모리 카운터다. 다중 인스턴스가 필요해지면 Redis 원자 연산으로 교체한다.
     private final ConcurrentMap<Long, Integer> consecutiveOutsideCounts = new ConcurrentHashMap<>();
@@ -57,7 +61,8 @@ public class LocationService {
                            LocationLogRepository locationLogRepository,
                            SseConnectionService sseConnectionService,
                            UserRepository userRepository,
-                           PushNotificationService pushNotificationService) {
+                           PushNotificationService pushNotificationService,
+                           NotificationRepository notificationRepository) {
         this.tripParticipantRepository = tripParticipantRepository;
         this.tripRepository = tripRepository;
         this.geofencePointRepository = geofencePointRepository;
@@ -66,6 +71,7 @@ public class LocationService {
         this.sseConnectionService = sseConnectionService;
         this.userRepository = userRepository;
         this.pushNotificationService = pushNotificationService;
+        this.notificationRepository = notificationRepository;
     }
 
     @Transactional
@@ -133,6 +139,15 @@ public class LocationService {
                 .orElse("학생");
         String title = "안전 구역 이탈 알림";
         String body = "%s이 안전 구역을 벗어났습니다.".formatted(studentLabel);
+
+        notificationRepository.save(Notification.create(
+                trip.getTeacherId(),
+                trip.getId(),
+                null,
+                NotificationType.RANGE_EXIT,
+                title,
+                body
+        ));
         pushNotificationService.sendToUser(trip.getTeacherId(), title, body);
     }
 
