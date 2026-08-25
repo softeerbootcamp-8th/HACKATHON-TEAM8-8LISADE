@@ -180,6 +180,37 @@ describe('App', () => {
     expect(screen.getByText('완료')).toBeInTheDocument()
   })
 
+  it('관리_화면은_공통_상단바를_렌더링한다', async () => {
+    // given
+    renderApp()
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+
+    // when
+    fireEvent.click(await screen.findByRole('button', { name: '관리' }))
+
+    // then
+    expect(await screen.findByRole('heading', { name: '현장체험학습 관리' })).toBeInTheDocument()
+    expect(screen.getByRole('banner')).toHaveTextContent('두리번')
+  })
+
+  it('관리_화면은_공통_하단탭을_렌더링한다', async () => {
+    // given
+    renderApp()
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+
+    // when
+    fireEvent.click(await screen.findByRole('button', { name: '관리' }))
+
+    // then
+    expect(await screen.findByRole('heading', { name: '현장체험학습 관리' })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: '교사 하단 탭' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '관리' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
   it('교사_체험학습_목록_조회가_실패하면_오류를_안내한다', async () => {
     // given
     vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
