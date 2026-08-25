@@ -9,4 +9,4 @@
 - `POST /api/teacher/trips`는 체험학습 정보와 지오펜스 좌표를 함께 받아 같은 트랜잭션에서 지오펜스, 순서가 보존된 좌표, 체험학습을 저장한 뒤 초대 코드를 발급한다.
 - JavaScript 키는 `VITE_KAKAO_MAP_APP_KEY`로 주입하며 실제 값은 Git에서 제외된 `frontend/.env.local`에만 둔다. 브라우저에 전달되는 JavaScript 키이므로 Kakao Developers의 허용 도메인 제한을 함께 사용한다.
 
-검증: 프런트엔드 테스트 43개, ESLint, 프로덕션 빌드, 백엔드 Gradle 빌드와 테스트를 통과했다. 허용 도메인과 카카오맵 서비스를 활성화한 뒤 SDK HTTP 200 응답과 실제 지도 렌더링을 확인했다.
+검증: 프런트엔드 테스트 55개, ESLint, 프로덕션 빌드, 백엔드 Gradle 빌드와 테스트를 통과했다. 허용 도메인과 카카오맵 서비스를 활성화한 뒤 SDK HTTP 200 응답과 실제 지도 렌더링을 확인했다.
