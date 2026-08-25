@@ -7,12 +7,15 @@ import { resolvePostLoginScreen, type Screen } from './features/app/appFlow'
 import { LoginScreen, SignUpScreen, StartScreen } from './features/auth/AuthScreens'
 import { ActivityConfirmation, ActivityMissionScreen, CheckMissionScreen, InviteCodeScreen, LocationBlockedScreen, LocationPermissionScreen, StudentHome, type CurrentMission } from './features/student/StudentScreens'
 import { TeacherDashboard } from './features/teacher/TeacherDashboard'
+import { pushNotifications } from './notifications/pushNotifications'
 import type { CurrentUser, SignUpInput } from './types/auth'
 import type { LocationTrackingState, StudentTrip } from './types/studentTrip'
 
 const initialSignUpInput: SignUpInput = { role: 'STUDENT', name: '', loginId: '', password: '', passwordConfirmation: '', phoneNumber: '', parentNumber: '', guardianConsent: false }
 const koreanMobileNumber = /^01[016789]\d{7,8}$/
 const normalizePhoneNumber = (value?: string) => value?.replace(/[-\s]/g, '') ?? ''
+// 알림 권한 프롬프트와 FCM 장애가 로그인 진행을 막지 않도록 기다리지 않고 던져둔다.
+const registerPushNotifications = () => { void pushNotifications.register().catch(() => undefined) }
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('START')
@@ -38,6 +41,7 @@ export default function App() {
     try {
       const user = await authApi.login({ loginId, password })
       setCurrentUser(user)
+      registerPushNotifications()
       if (user.role === 'TEACHER') { setScreen(resolvePostLoginScreen({ role: user.role })); return }
       const [trip, tracking] = await Promise.all([studentTripApi.getActiveTrip(), mockLocationTrackingAdapter.getState()])
       setStudentTrip(trip); setLocationState(tracking)

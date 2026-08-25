@@ -1,47 +1,19 @@
 import type { CurrentUser, LoginInput, SignUpInput } from '../types/auth'
+import { csrfJsonHeaders, request } from './httpClient'
 
 export interface AuthApi {
   login(input: LoginInput): Promise<CurrentUser>
   signUp(input: SignUpInput): Promise<void>
+  logout(): Promise<void>
 }
 
-type ApiResponse<T> = {
-  success: boolean
-  data: T
-  message?: string
-}
-
-type CsrfToken = {
-  token: string
-  headerName: string
-}
-
-async function getCsrfToken(): Promise<CsrfToken> {
-  return request<CsrfToken>('/api/auth/csrf')
-}
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, { credentials: 'include', ...init })
-  const body = await response.json().catch(() => null) as ApiResponse<T> | null
-
-  if (!response.ok || !body?.success) {
-    throw new Error(body?.message ?? '요청 처리에 실패했습니다.')
+async function post<T>(path: string, payload?: unknown): Promise<T> {
+  const init: RequestInit = { method: 'POST', headers: await csrfJsonHeaders() }
+  if (payload !== undefined) {
+    init.body = JSON.stringify(payload)
   }
 
-  return body.data
-}
-
-async function post<T>(path: string, payload: unknown): Promise<T> {
-  const csrfToken = await getCsrfToken()
-
-  return request<T>(path, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      [csrfToken.headerName]: csrfToken.token,
-    },
-    body: JSON.stringify(payload),
-  })
+  return request<T>(path, init)
 }
 
 export const authApi: AuthApi = {
@@ -52,5 +24,8 @@ export const authApi: AuthApi = {
     const request = { ...input }
     delete request.passwordConfirmation
     return post<void>('/api/auth/signup', request)
+  },
+  logout() {
+    return post<void>('/api/auth/logout')
   },
 }

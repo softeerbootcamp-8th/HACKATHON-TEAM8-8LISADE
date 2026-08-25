@@ -1,6 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 import { notificationApi, type NotificationApi } from '../api/notificationApi'
-import { deleteFcmToken, requestFcmToken } from '../firebase/firebaseConfig'
+import { deleteFcmToken, listenForForegroundMessages, requestFcmToken } from '../firebase/firebaseConfig'
 import { nativeFcm } from '../native/fcm'
 
 interface NativeFcmBridge {
@@ -12,6 +12,7 @@ interface NativeFcmBridge {
 interface WebFcmBridge {
   requestToken(): Promise<string | null>
   deleteToken(): Promise<void>
+  listenForegroundMessages(): void
 }
 
 export function createPushNotifications(
@@ -20,24 +21,40 @@ export function createPushNotifications(
   web: WebFcmBridge,
   api: NotificationApi,
 ) {
+  // 로그아웃 때 서버에서 지울 토큰. 앱을 새로 띄우면 비어 있으므로 그때는 FCM에 다시 물어본다.
+  let registeredToken: string | null = null
+  const requestToken = () => (isNative ? native.requestToken() : web.requestToken())
+
   return {
     async register(): Promise<void> {
-      const token = isNative ? await native.requestToken() : await web.requestToken()
+      const token = await requestToken()
       if (!token) {
         return
       }
 
       await api.registerDevice(token, isNative ? 'ANDROID' : 'WEB')
+      registeredToken = token
 
       if (isNative) {
         native.onTokenRefresh((refreshedToken) => {
-          api.registerDevice(refreshedToken, 'ANDROID')
+          registeredToken = refreshedToken
+          // 갱신 재등록은 배경 작업이라 실패해도 되돌릴 방법이 없다. 다음 로그인에서 다시 등록된다.
+          api.registerDevice(refreshedToken, 'ANDROID').catch(() => undefined)
         })
+        return
       }
+
+      web.listenForegroundMessages()
     },
 
-    async unregister(token: string): Promise<void> {
-      await api.unregisterDevice(token)
+    async unregister(token?: string): Promise<void> {
+      const target = token ?? registeredToken ?? await requestToken()
+      registeredToken = null
+
+      if (target) {
+        await api.unregisterDevice(target)
+      }
+
       await (isNative ? native.deleteToken() : web.deleteToken())
     },
   }
@@ -46,6 +63,10 @@ export function createPushNotifications(
 export const pushNotifications = createPushNotifications(
   Capacitor.isNativePlatform(),
   nativeFcm,
-  { requestToken: requestFcmToken, deleteToken: deleteFcmToken },
+  {
+    requestToken: requestFcmToken,
+    deleteToken: deleteFcmToken,
+    listenForegroundMessages: listenForForegroundMessages,
+  },
   notificationApi,
 )
