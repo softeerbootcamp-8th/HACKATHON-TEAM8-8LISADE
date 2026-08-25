@@ -129,7 +129,30 @@ h2 { font-size: 17px; margin: 0; }
 .student-tag { border-radius: 8px; font-size: 11px; font-weight: 700; padding: 3px 8px; }
 .student-tag--danger { background: var(--color-danger-soft); color: var(--color-danger); }
 .student-tag--warning { background: var(--color-warning-soft); color: var(--color-warning); }
+.student-tag--success { background: var(--color-success-soft); color: var(--color-success); }
+.student-tag--neutral { background: rgb(152 162 179 / 13%); color: #98a2b3; }
 .student-row .chevron { color: var(--color-text-muted); font-size: 18px; }
+.student-list-empty { color: var(--color-text-muted); font-size: 14px; padding: 8px 4px; }
+
+/* Student detail (T-04-1) */
+.detail-name-row { align-items: center; display: flex; gap: 8px; }
+.info-card { background: var(--color-surface); border-radius: 18px; box-shadow: var(--shadow-card); display: grid; gap: 10px; padding: 16px 18px; }
+.info-card-title { font-size: 15px; font-weight: 700; margin: 0; }
+.info-card-row { align-items: center; display: flex; justify-content: space-between; }
+.info-card-row .label { color: var(--color-text-muted); font-size: 12px; margin: 0; }
+.info-card-row .value { font-size: 15px; font-weight: 700; margin: 2px 0 0; }
+.call-button { background: var(--color-success-soft); box-shadow: none; color: var(--color-success); font-size: 12px; min-height: auto; padding: 8px 12px; text-decoration: none; }
+.mini-map { background: #f4efe2; border-radius: 18px; height: 190px; position: relative; overflow: hidden; }
+.mini-map::before, .mini-map::after { background: #fff; content: ''; position: absolute; }
+.mini-map::before { height: 12px; left: 0; right: 0; top: 45%; }
+.mini-map::after { top: 0; bottom: 0; left: 48%; width: 12px; }
+.mini-map-dot { border: 3px solid #fff; border-radius: 50%; height: 34px; left: 50%; position: absolute; top: 50%; transform: translate(-50%, -50%); width: 34px; z-index: 1; }
+.mini-map-dot--normal { background: var(--color-success); }
+.mini-map-dot--outside { background: var(--color-danger); }
+.mini-map-dot--neutral { background: #98a2b3; }
+.mini-map-caption { background: #fff; border-radius: 11px; box-shadow: var(--shadow-soft); font-size: 10px; color: var(--color-text-muted); font-weight: 500; left: 50%; padding: 3px 9px; position: absolute; top: 66%; transform: translateX(-50%); z-index: 1; }
+.mission-status-row { align-items: center; background: var(--color-surface); border-radius: 14px; display: flex; height: 50px; justify-content: space-between; padding: 0 14px 0 16px; }
+.mission-status-row p { font-size: 13px; font-weight: 500; margin: 0; }
 .end-trip-button { background: var(--color-danger-soft); box-shadow: none; color: var(--color-danger); margin-top: 8px; }
 .stat-grid { display: grid; gap: 10px; }
 .stat-card { background: var(--color-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-card); padding: 14px 16px; }
