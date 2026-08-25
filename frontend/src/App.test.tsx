@@ -20,11 +20,27 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('이름'), { target: { value: '학생' } })
     fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'student01' } })
     fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+    fireEvent.change(screen.getByLabelText('비밀번호 확인'), { target: { value: 'password1234' } })
     fireEvent.change(screen.getByLabelText('학생 전화번호'), { target: { value: '01012345678' } })
     fireEvent.change(screen.getByLabelText('학부모 전화번호'), { target: { value: '01087654321' } })
     fireEvent.click(screen.getByRole('button', { name: '가입하기' }))
 
     expect(screen.getByText('보호자 동의가 필요합니다.')).toBeInTheDocument()
+  })
+
+  it('blocks sign-up when password confirmation does not match', () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: '회원가입' }))
+    fireEvent.change(screen.getByLabelText('이름'), { target: { value: '학생' } })
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'student01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+    fireEvent.change(screen.getByLabelText('비밀번호 확인'), { target: { value: 'password4321' } })
+    fireEvent.change(screen.getByLabelText('학생 전화번호'), { target: { value: '01012345678' } })
+    fireEvent.change(screen.getByLabelText('학부모 전화번호'), { target: { value: '01087654321' } })
+    fireEvent.click(screen.getByRole('button', { name: '가입하기' }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('비밀번호가 일치하지 않습니다.')
   })
 
   it('shows an authentication error when the password is incorrect', async () => {

@@ -17,6 +17,7 @@ export interface SignUpInput {
   name: string
   loginId: string
   password: string
+  passwordConfirmation?: string
   phoneNumber?: string
   parentNumber?: string
   guardianConsent?: boolean

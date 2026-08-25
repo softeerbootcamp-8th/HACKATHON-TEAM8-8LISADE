@@ -45,7 +45,7 @@ class LocationControllerTest {
                 .setValidator(validator)
                 .build();
 
-        UserPrincipal user = new UserPrincipal(42L, "student1", UserRole.STUDENT, "hash", true);
+        UserPrincipal user = new UserPrincipal(42L, "student1", "학생1", UserRole.STUDENT, "hash", true);
         authentication = UsernamePasswordAuthenticationToken.authenticated(
                 user,
                 null,

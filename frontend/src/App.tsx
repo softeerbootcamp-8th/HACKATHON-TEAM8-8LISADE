@@ -16,7 +16,7 @@ const teacherTrips = [
   { id: 'trip-2', title: '서울 역사 탐방', status: '예정', students: 18, normal: 0, outside: 0, missing: 18, missionRate: 0, pendingSubmissions: 0, updatedAt: '5분 전' },
 ]
 
-const initialSignUpInput: SignUpInput = { role: 'STUDENT', name: '', loginId: '', password: '', phoneNumber: '', parentNumber: '', guardianConsent: false }
+const initialSignUpInput: SignUpInput = { role: 'STUDENT', name: '', loginId: '', password: '', passwordConfirmation: '', phoneNumber: '', parentNumber: '', guardianConsent: false }
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('LOGIN')
@@ -52,6 +52,10 @@ export default function App() {
   const handleSignUp = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError('')
+    if (signUpInput.password !== signUpInput.passwordConfirmation) {
+      setError('비밀번호가 일치하지 않습니다.')
+      return
+    }
     if (signUpInput.role === 'STUDENT' && !signUpInput.guardianConsent) {
       setError('보호자 동의가 필요합니다.')
       return
@@ -102,7 +106,8 @@ function SignUpForm({ input, onChange, onSubmit, onCancel }: { input: SignUpInpu
     <fieldset className="role-choice"><legend>역할</legend><label><input type="radio" name="role" checked={input.role === 'STUDENT'} onChange={() => update('role', 'STUDENT')} /> 학생</label><label><input type="radio" name="role" checked={input.role === 'TEACHER'} onChange={() => update('role', 'TEACHER')} /> 교사</label></fieldset>
     <Field label="이름" id="sign-up-name"><input id="sign-up-name" value={input.name} onChange={(event) => update('name', event.target.value)} required /></Field>
     <Field label="아이디" id="sign-up-id"><input id="sign-up-id" value={input.loginId} onChange={(event) => update('loginId', event.target.value)} required /></Field>
-    <Field label="비밀번호" id="sign-up-password"><input id="sign-up-password" type="password" value={input.password} onChange={(event) => update('password', event.target.value)} required /></Field>
+    <Field label="비밀번호" id="sign-up-password"><input id="sign-up-password" type="password" minLength={8} maxLength={20} value={input.password} onChange={(event) => update('password', event.target.value)} required /></Field>
+    <Field label="비밀번호 확인" id="sign-up-password-confirmation"><input id="sign-up-password-confirmation" type="password" minLength={8} maxLength={20} value={input.passwordConfirmation} onChange={(event) => update('passwordConfirmation', event.target.value)} required /></Field>
     {input.role === 'STUDENT' ? <><Field label="학생 전화번호" id="student-phone"><input id="student-phone" inputMode="tel" value={input.phoneNumber} onChange={(event) => update('phoneNumber', event.target.value)} required /></Field><Field label="학부모 전화번호" id="parent-phone"><input id="parent-phone" inputMode="tel" value={input.parentNumber} onChange={(event) => update('parentNumber', event.target.value)} required /></Field><label className="check-label"><input type="checkbox" checked={Boolean(input.guardianConsent)} onChange={(event) => update('guardianConsent', event.target.checked)} /> 보호자 동의</label></> : <Field label="전화번호" id="teacher-phone"><input id="teacher-phone" inputMode="tel" value={input.phoneNumber} onChange={(event) => update('phoneNumber', event.target.value)} required /></Field>}
     <button type="submit">가입하기</button><button className="text-button" type="button" onClick={onCancel}>로그인으로 돌아가기</button>
   </form>

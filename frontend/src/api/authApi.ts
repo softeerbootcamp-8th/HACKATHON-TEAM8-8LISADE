@@ -49,6 +49,8 @@ export const authApi: AuthApi = {
     return post<CurrentUser>('/api/auth/login', input)
   },
   signUp(input) {
-    return post<void>('/api/auth/signup', input)
+    const request = { ...input }
+    delete request.passwordConfirmation
+    return post<void>('/api/auth/signup', request)
   },
 }

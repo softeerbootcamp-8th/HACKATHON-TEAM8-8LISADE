@@ -53,6 +53,8 @@ class UserSignUpControllerTest {
         assertThat(passwordEncoder.matches("password123", passwordHash)).isTrue();
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT guardian_consent FROM users WHERE login_id = ?", Boolean.class, "student1")).isTrue();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT phone_number FROM users WHERE login_id = ?", String.class, "student1")).isEqualTo("01011112222");
     }
 
     @Test
@@ -96,5 +98,31 @@ class UserSignUpControllerTest {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("DUPLICATE_LOGIN_ID"));
+    }
+
+    @Test
+    void signUpRejectsPasswordShorterThanEightCharacters() throws Exception {
+        mockMvc.perform(post("/api/auth/signup")
+                        .with(csrf())
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {"role":"TEACHER","name":"교사","loginId":"teacher1","password":"short1",
+                                 "phoneNumber":"010-1111-2222"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_PASSWORD"));
+    }
+
+    @Test
+    void signUpRejectsAnInvalidPhoneNumber() throws Exception {
+        mockMvc.perform(post("/api/auth/signup")
+                        .with(csrf())
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {"role":"TEACHER","name":"교사","loginId":"teacher1","password":"password123",
+                                 "phoneNumber":"020-1111-2222"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_PHONE_NUMBER"));
     }
 }
