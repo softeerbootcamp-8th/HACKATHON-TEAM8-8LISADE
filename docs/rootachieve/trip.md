@@ -10,3 +10,19 @@
 - JavaScript 키는 `VITE_KAKAO_MAP_APP_KEY`로 주입하며 실제 값은 Git에서 제외된 `frontend/.env.local`에만 둔다. 브라우저에 전달되는 JavaScript 키이므로 Kakao Developers의 허용 도메인 제한을 함께 사용한다.
 
 검증: 프런트엔드 테스트 56개, ESLint, 프로덕션 빌드, 백엔드 Gradle 빌드와 테스트를 통과했다. 허용 도메인과 카카오맵 서비스를 활성화한 뒤 SDK HTTP 200 응답과 실제 지도 렌더링을 확인했다.
+
+## 교사 관리 탭 및 체험학습 목록 조회 (#47)
+
+- `GET /api/teacher/trips`는 로그인한 교사가 만든 Trip만 생성일 역순으로 반환한다. 목록 응답은 `tripId`, `title`, `place`, `startAt`, `status`만 포함한다.
+- 로그인·현재 사용자 응답에 교사 연락처를 추가해 관리 탭의 교사 정보가 세션 사용자 데이터로 표시되도록 했다.
+- 관리 탭은 API 목록을 날짜·장소·상태 카드로 표시하며 로딩, 오류, 빈 목록을 각각 처리한다. 추가 CTA는 이번 이슈 범위에 맞춰 준비 중 안내만 제공한다.
+- 제공된 568 × 1236 시안을 기준으로 카드, 상태 배지와 CTA를 구현했다. 상단바와 하단 탭은 공통 레이아웃에서 제공할 영역이므로 관리 화면에서는 렌더링하지 않으며, 상세 비교 결과는 루트의 `design-qa.md`에 기록했다.
+- 공통 레이아웃에서 재사용할 로고·알림·탭 아이콘은 Figma `80:531` 노드의 SVG 원본으로 교체하고 대체 PNG와 아이콘 패키지를 제거했다.
+
+### 검증
+
+- `cd backend && ./gradlew test`: 통과
+- `cd frontend && npm test -- --run`: 9개 파일, 44개 테스트 통과
+- `cd frontend && npm run lint`: 통과
+- `cd frontend && npm run build`: 통과
+- 인앱 브라우저 568 × 1236 비교: console error/warn 0건, `design-qa.md` 최종 결과 `passed`
