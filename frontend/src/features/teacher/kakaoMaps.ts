@@ -15,7 +15,13 @@ export type KakaoPolygon = {
 }
 
 export type KakaoMouseEvent = { latLng: KakaoLatLng }
-export type KakaoPlace = { x: string; y: string }
+export type KakaoPlace = {
+  address_name: string
+  place_name: string
+  road_address_name: string
+  x: string
+  y: string
+}
 
 export type KakaoMapsApi = {
   load(callback: () => void): void
