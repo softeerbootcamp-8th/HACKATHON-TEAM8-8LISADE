@@ -19,6 +19,7 @@ public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
     @Column(name = "login_id", nullable = false, unique = true, length = 100)
@@ -27,25 +28,48 @@ public class User {
     @Column(name = "password_hash", nullable = false, length = 100)
     private String passwordHash;
 
+    @Column(name = "email", nullable = false, length = 255)
+    private String email;
+
+    @Column(name = "name", nullable = false, length = 100)
+    private String name;
+
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(name = "role", nullable = false, length = 20)
     private UserRole role;
 
-    @Column(nullable = false)
+    @Column(name = "phone_number", length = 20)
+    private String phoneNumber;
+
+    @Column(name = "parent_number", length = 20)
+    private String parentNumber;
+
+    @Column(name = "enabled", nullable = false)
     private boolean enabled;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     protected User() {
     }
 
-    public User(Long id, String loginId, String passwordHash, UserRole role, boolean enabled, LocalDateTime createdAt) {
+    public User(Long id, String loginId, String passwordHash, String email, String name, UserRole role,
+                String phoneNumber, String parentNumber, boolean enabled, LocalDateTime createdAt) {
         this.id = id;
         this.loginId = loginId;
         this.passwordHash = passwordHash;
+        this.email = email;
+        this.name = name;
         this.role = role;
+        this.phoneNumber = phoneNumber;
+        this.parentNumber = parentNumber;
         this.enabled = enabled;
         this.createdAt = createdAt;
+    }
+
+    public static User create(String loginId, String passwordHash, String email, String name, UserRole role,
+                              String phoneNumber, String parentNumber) {
+        return new User(null, loginId, passwordHash, email, name, role, phoneNumber, parentNumber,
+                true, LocalDateTime.now());
     }
 }

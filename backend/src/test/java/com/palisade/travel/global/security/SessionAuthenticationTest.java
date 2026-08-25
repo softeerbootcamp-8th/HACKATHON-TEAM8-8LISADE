@@ -32,8 +32,10 @@ class SessionAuthenticationTest {
     void setUpUser() {
         jdbcTemplate.update("DELETE FROM users");
         jdbcTemplate.update(
-                "INSERT INTO users (login_id, password_hash, role, enabled, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
-                "student1", new BCryptPasswordEncoder().encode("password123"), "STUDENT", true);
+                "INSERT INTO users (login_id, password_hash, email, name, role, enabled, created_at) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+                "student1", new BCryptPasswordEncoder().encode("password123"),
+                "student1@example.com", "학생1", "STUDENT", true);
     }
 
     @Test
