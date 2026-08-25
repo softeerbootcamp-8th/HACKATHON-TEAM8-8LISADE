@@ -1,5 +1,9 @@
 package com.palisade.travel.domain.trip.service;
 
+import com.palisade.travel.domain.geo.entity.Geofence;
+import com.palisade.travel.domain.geo.entity.GeofencePoint;
+import com.palisade.travel.domain.geo.repository.GeofencePointRepository;
+import com.palisade.travel.domain.geo.repository.GeofenceRepository;
 import com.palisade.travel.domain.trip.dto.CreateTripRequest;
 import com.palisade.travel.domain.trip.dto.InviteCodeResponse;
 import com.palisade.travel.domain.trip.dto.JoinTripResponse;
@@ -29,22 +33,36 @@ public class TripService {
     private final TripRepository tripRepository;
     private final InviteCodeRepository inviteCodeRepository;
     private final TripParticipantRepository participantRepository;
+    private final GeofenceRepository geofenceRepository;
+    private final GeofencePointRepository geofencePointRepository;
     private final Clock clock;
     private final InviteCodeGenerator inviteCodeGenerator;
 
     public TripService(TripRepository tripRepository, InviteCodeRepository inviteCodeRepository,
-                       TripParticipantRepository participantRepository, Clock clock,
+                       TripParticipantRepository participantRepository, GeofenceRepository geofenceRepository,
+                       GeofencePointRepository geofencePointRepository, Clock clock,
                        InviteCodeGenerator inviteCodeGenerator) {
         this.tripRepository = tripRepository;
         this.inviteCodeRepository = inviteCodeRepository;
         this.participantRepository = participantRepository;
+        this.geofenceRepository = geofenceRepository;
+        this.geofencePointRepository = geofencePointRepository;
         this.clock = clock;
         this.inviteCodeGenerator = inviteCodeGenerator;
     }
 
     @Transactional
     public InviteCodeResponse create(Long teacherId, CreateTripRequest request) {
-        Trip trip = tripRepository.save(Trip.create(teacherId, request.geofenceId(), request.title(), request.place(),
+        Geofence geofence = geofenceRepository.save(Geofence.create(request.title()));
+        List<GeofencePoint> points = java.util.stream.IntStream.range(0, request.geofencePoints().size())
+                .mapToObj(sequence -> {
+                    CreateTripRequest.GeofencePointRequest point = request.geofencePoints().get(sequence);
+                    return GeofencePoint.create(geofence.getId(), sequence, point.latitude(), point.longitude());
+                })
+                .toList();
+        geofencePointRepository.saveAll(points);
+
+        Trip trip = tripRepository.save(Trip.create(teacherId, geofence.getId(), request.title(), request.place(),
                 request.description(), request.startAt(), request.endAt(), TripStatus.ACTIVE));
         return InviteCodeResponse.from(issueCode(trip.getId()));
     }
