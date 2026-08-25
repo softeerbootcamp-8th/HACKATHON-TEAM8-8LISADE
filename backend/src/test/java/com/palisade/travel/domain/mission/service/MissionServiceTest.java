@@ -68,4 +68,29 @@ class MissionServiceTest {
         assertThatThrownBy(() -> missionService.submitPhoto(2L, 10L, "missions/2/students/11/x.jpg"))
                 .isInstanceOf(ApiException.class);
     }
+
+    @Test
+    void photoSubmissionCompletesImmediately() {
+        Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, null);
+        when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
+        when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(true);
+        when(submissionRepository.findByMissionIdAndUserId(2L, 10L)).thenReturn(Optional.empty());
+        when(submissionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertThat(missionService.submitPhoto(2L, 10L, "missions/2/students/10/x.jpg").status())
+                .isEqualTo(SubmissionStatus.COMPLETED);
+    }
+
+    @Test
+    void resubmittedPhotoCompletesImmediatelyAfterRejection() {
+        Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, null);
+        MissionSubmission rejected = MissionSubmission.photo(2L, 10L, "missions/2/students/10/old.jpg");
+        rejected.reject();
+        when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
+        when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(true);
+        when(submissionRepository.findByMissionIdAndUserId(2L, 10L)).thenReturn(Optional.of(rejected));
+
+        assertThat(missionService.submitPhoto(2L, 10L, "missions/2/students/10/new.jpg").status())
+                .isEqualTo(SubmissionStatus.COMPLETED);
+    }
 }

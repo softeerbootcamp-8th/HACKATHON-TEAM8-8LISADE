@@ -40,9 +40,9 @@ public class MissionSubmission {
         this.missionId = missionId; this.userId = userId; this.imageKey = imageKey; this.status = status;
         this.createdAt = LocalDateTime.now();
     }
-    public static MissionSubmission photo(Long missionId, Long userId, String imageKey) { return new MissionSubmission(missionId, userId, imageKey, SubmissionStatus.WAITING); }
+    public static MissionSubmission photo(Long missionId, Long userId, String imageKey) { return new MissionSubmission(missionId, userId, imageKey, SubmissionStatus.COMPLETED); }
     public static MissionSubmission completedCheck(Long missionId, Long userId) { return new MissionSubmission(missionId, userId, "", SubmissionStatus.COMPLETED); }
-    public void resubmit(String imageKey) { this.imageKey = imageKey; this.status = SubmissionStatus.WAITING; }
+    public void resubmit(String imageKey) { this.imageKey = imageKey; this.status = SubmissionStatus.COMPLETED; }
     public void reject() { this.status = SubmissionStatus.REJECTED; }
     public SubmissionStatus currentStatus(LocalDateTime now, Mission mission) { return status == SubmissionStatus.WAITING && mission.isExpiredAt(now) ? SubmissionStatus.EXPIRED : status; }
 
