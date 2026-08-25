@@ -3,6 +3,8 @@ package com.palisade.travel.domain.user.controller;
 import com.palisade.travel.domain.user.dto.CsrfTokenResponse;
 import com.palisade.travel.domain.user.dto.CurrentUserResponse;
 import com.palisade.travel.domain.user.dto.LoginRequest;
+import com.palisade.travel.domain.user.dto.SignUpRequest;
+import com.palisade.travel.domain.user.service.UserSignUpService;
 import com.palisade.travel.global.api.ApiResponse;
 import com.palisade.travel.global.error.ApiException;
 import com.palisade.travel.global.error.CommonErrorCode;
@@ -29,11 +31,20 @@ public class UserAuthController {
 
     private final AuthenticationManager authenticationManager;
     private final SessionAuthenticationService sessionAuthenticationService;
+    private final UserSignUpService userSignUpService;
 
     public UserAuthController(AuthenticationManager authenticationManager,
-                              SessionAuthenticationService sessionAuthenticationService) {
+                              SessionAuthenticationService sessionAuthenticationService,
+                              UserSignUpService userSignUpService) {
         this.authenticationManager = authenticationManager;
         this.sessionAuthenticationService = sessionAuthenticationService;
+        this.userSignUpService = userSignUpService;
+    }
+
+    @PostMapping("/signup")
+    public ApiResponse<Void> signUp(@Valid @RequestBody SignUpRequest request) {
+        userSignUpService.signUp(request);
+        return ApiResponse.success(null);
     }
 
     @PostMapping("/login")

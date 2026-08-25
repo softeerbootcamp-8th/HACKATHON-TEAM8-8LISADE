@@ -21,7 +21,7 @@ class SseSessionListenerTest {
 
     @Test
     void sessionDestroyedDisconnectsTheAuthenticatedUsersEmitters() {
-        UserPrincipal user = new UserPrincipal(1L, "teacher1", UserRole.TEACHER, "hash", true);
+        UserPrincipal user = new UserPrincipal(1L, "teacher1", "교사1", UserRole.TEACHER, "hash", true);
         SecurityContext context = new SecurityContextImpl(
                 UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities()));
         MockHttpSession session = new MockHttpSession();

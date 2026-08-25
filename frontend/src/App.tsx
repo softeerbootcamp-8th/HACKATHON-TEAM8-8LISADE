@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { mockAuthApi } from './api/authApi'
+import { authApi } from './api/authApi'
 import { mockCameraAdapter } from './api/cameraAdapter'
 import { mockLocationTrackingAdapter } from './api/locationTrackingApi'
 import { mockMissionApi } from './api/missionApi'
@@ -16,7 +16,12 @@ const teacherTrips = [
   { id: 'trip-2', title: '서울 역사 탐방', status: '예정', students: 18, normal: 0, outside: 0, missing: 18, missionRate: 0, pendingSubmissions: 0, updatedAt: '5분 전' },
 ]
 
-const initialSignUpInput: SignUpInput = { role: 'STUDENT', name: '', loginId: '', password: '', phoneNumber: '', parentNumber: '', guardianConsent: false }
+const initialSignUpInput: SignUpInput = { role: 'STUDENT', name: '', loginId: '', password: '', passwordConfirmation: '', phoneNumber: '', parentNumber: '', guardianConsent: false }
+const koreanMobileNumber = /^01[016789]\d{7,8}$/
+
+function normalizePhoneNumber(value?: string) {
+  return value?.replace(/[-\s]/g, '') ?? ''
+}
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('LOGIN')
@@ -38,7 +43,7 @@ export default function App() {
     event.preventDefault()
     setError('')
     try {
-      const user = await mockAuthApi.login({ loginId, password })
+      const user = await authApi.login({ loginId, password })
       if (user.role === 'TEACHER') { setScreen('TEACHER_HOME'); return }
       const [trip, tracking] = await Promise.all([mockStudentTripApi.getActiveTrip(user.id), mockLocationTrackingAdapter.getState()])
       setStudentTrip(trip)
@@ -52,14 +57,28 @@ export default function App() {
   const handleSignUp = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError('')
+    if (signUpInput.password !== signUpInput.passwordConfirmation) {
+      setError('비밀번호가 일치하지 않습니다.')
+      return
+    }
+    const phoneNumber = normalizePhoneNumber(signUpInput.phoneNumber)
+    const parentNumber = normalizePhoneNumber(signUpInput.parentNumber)
+    if (!koreanMobileNumber.test(phoneNumber) || (signUpInput.role === 'STUDENT' && !koreanMobileNumber.test(parentNumber))) {
+      setError('올바른 휴대폰 번호를 입력해 주세요.')
+      return
+    }
     if (signUpInput.role === 'STUDENT' && !signUpInput.guardianConsent) {
       setError('보호자 동의가 필요합니다.')
       return
     }
-    await mockAuthApi.signUp(signUpInput)
-    setNotice('회원가입이 완료되었습니다. 로그인해 주세요.')
-    setPassword('')
-    setScreen('LOGIN')
+    try {
+      await authApi.signUp({ ...signUpInput, phoneNumber, parentNumber: signUpInput.role === 'STUDENT' ? parentNumber : undefined })
+      setNotice('회원가입이 완료되었습니다. 로그인해 주세요.')
+      setPassword('')
+      setScreen('LOGIN')
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : '회원가입에 실패했습니다.')
+    }
   }
 
   const joinTrip = async (code: string) => {
@@ -87,7 +106,7 @@ export default function App() {
     {screen === 'LOGIN' ? <form className="auth-form" onSubmit={handleLogin}>
       <Field label="아이디" id="login-id"><input id="login-id" value={loginId} onChange={(event) => setLoginId(event.target.value)} required /></Field>
       <Field label="비밀번호" id="login-password"><input id="login-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required /></Field>
-      <button type="submit">로그인</button><button className="text-button" type="button" onClick={showSignUp}>회원가입</button><p className="hint">데모 비밀번호: password1234</p>
+      <button type="submit">로그인</button><button className="text-button" type="button" onClick={showSignUp}>회원가입</button>
     </form> : <SignUpForm input={signUpInput} onChange={setSignUpInput} onSubmit={handleSignUp} onCancel={showLogin} />}
   </section></main>
 }
@@ -98,7 +117,8 @@ function SignUpForm({ input, onChange, onSubmit, onCancel }: { input: SignUpInpu
     <fieldset className="role-choice"><legend>역할</legend><label><input type="radio" name="role" checked={input.role === 'STUDENT'} onChange={() => update('role', 'STUDENT')} /> 학생</label><label><input type="radio" name="role" checked={input.role === 'TEACHER'} onChange={() => update('role', 'TEACHER')} /> 교사</label></fieldset>
     <Field label="이름" id="sign-up-name"><input id="sign-up-name" value={input.name} onChange={(event) => update('name', event.target.value)} required /></Field>
     <Field label="아이디" id="sign-up-id"><input id="sign-up-id" value={input.loginId} onChange={(event) => update('loginId', event.target.value)} required /></Field>
-    <Field label="비밀번호" id="sign-up-password"><input id="sign-up-password" type="password" value={input.password} onChange={(event) => update('password', event.target.value)} required /></Field>
+    <Field label="비밀번호" id="sign-up-password"><input id="sign-up-password" type="password" minLength={8} maxLength={20} value={input.password} onChange={(event) => update('password', event.target.value)} required /></Field>
+    <Field label="비밀번호 확인" id="sign-up-password-confirmation"><input id="sign-up-password-confirmation" type="password" minLength={8} maxLength={20} value={input.passwordConfirmation} onChange={(event) => update('passwordConfirmation', event.target.value)} required /></Field>
     {input.role === 'STUDENT' ? <><Field label="학생 전화번호" id="student-phone"><input id="student-phone" inputMode="tel" value={input.phoneNumber} onChange={(event) => update('phoneNumber', event.target.value)} required /></Field><Field label="학부모 전화번호" id="parent-phone"><input id="parent-phone" inputMode="tel" value={input.parentNumber} onChange={(event) => update('parentNumber', event.target.value)} required /></Field><label className="check-label"><input type="checkbox" checked={Boolean(input.guardianConsent)} onChange={(event) => update('guardianConsent', event.target.checked)} /> 보호자 동의</label></> : <Field label="전화번호" id="teacher-phone"><input id="teacher-phone" inputMode="tel" value={input.phoneNumber} onChange={(event) => update('phoneNumber', event.target.value)} required /></Field>}
     <button type="submit">가입하기</button><button className="text-button" type="button" onClick={onCancel}>로그인으로 돌아가기</button>
   </form>
