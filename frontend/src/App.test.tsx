@@ -123,6 +123,7 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: '제출하기' }))
     expect(await screen.findByText('사진 미션을 제출했습니다.')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '경복궁 출석 체크' })).toBeInTheDocument()
+    expect(screen.getByText('2 / 3')).toBeInTheDocument()
   })
 
   it('keeps the next mission hidden while the current mission is not completed', async () => {

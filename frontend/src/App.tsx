@@ -62,14 +62,15 @@ export default function App() {
     setScreen('STUDENT_PERMISSION')
   }
   const allowLocation = async () => { const tracking = await mockLocationTrackingAdapter.requestPermission(); setLocationState(tracking); setScreen('STUDENT_HOME') }
+  const incrementMissionProgress = () => setStudentTrip((trip) => trip ? { ...trip, missionCompleted: Math.min(trip.missionCompleted + 1, trip.missionTotal) } : trip)
 
   if (screen === 'STUDENT_INVITE') return <InviteCodeScreen onSubmit={joinTrip} />
   if (screen === 'STUDENT_PERMISSION') return <LocationPermissionScreen onAllow={allowLocation} onDeny={() => setScreen('STUDENT_PERMISSION_BLOCKED')} />
   if (screen === 'STUDENT_PERMISSION_BLOCKED') return <LocationBlockedScreen onOpenSettings={() => mockLocationTrackingAdapter.openSettings()} />
   if (screen === 'STUDENT_HOME' && studentTrip && locationState) return <StudentHome trip={studentTrip} location={locationState} notice={missionNotice} currentMission={currentMission} onCurrentMission={() => setScreen(currentMission?.kind === 'CHECK' ? 'CHECK_MISSION' : 'ACTIVITY_MISSION')} />
   if (screen === 'ACTIVITY_MISSION') return <ActivityMissionScreen isResubmission={currentMission?.isResubmission ?? false} onCaptured={(uri) => { setCapturedPhotoUri(uri); setScreen('ACTIVITY_CONFIRMATION') }} />
-  if (screen === 'ACTIVITY_CONFIRMATION') return <ActivityConfirmation isResubmission={currentMission?.isResubmission ?? false} photoUri={capturedPhotoUri} onRetake={() => setScreen('ACTIVITY_MISSION')} onSubmit={async () => { await mockMissionApi.uploadPhoto(capturedPhotoUri); setCurrentMission({ kind: 'CHECK', isResubmission: false }); setMissionNotice(currentMission?.isResubmission ? '사진 미션을 재제출했습니다.' : '사진 미션을 제출했습니다.'); setScreen('STUDENT_HOME') }} />
-  if (screen === 'CHECK_MISSION') return <CheckMissionScreen onCompleted={() => { setCurrentMission(null); setMissionNotice('출석 체크를 완료했습니다.'); setScreen('STUDENT_HOME') }} />
+  if (screen === 'ACTIVITY_CONFIRMATION') return <ActivityConfirmation isResubmission={currentMission?.isResubmission ?? false} photoUri={capturedPhotoUri} onRetake={() => setScreen('ACTIVITY_MISSION')} onSubmit={async () => { await mockMissionApi.uploadPhoto(capturedPhotoUri); incrementMissionProgress(); setCurrentMission({ kind: 'CHECK', isResubmission: false }); setMissionNotice(currentMission?.isResubmission ? '사진 미션을 재제출했습니다.' : '사진 미션을 제출했습니다.'); setScreen('STUDENT_HOME') }} />
+  if (screen === 'CHECK_MISSION') return <CheckMissionScreen onCompleted={() => { incrementMissionProgress(); setCurrentMission(null); setMissionNotice('출석 체크를 완료했습니다.'); setScreen('STUDENT_HOME') }} />
   if (screen === 'TEACHER_HOME') return <Home title="교사 홈" description="진행 중인 Trip을 확인 중입니다." />
 
   return <main className="app-shell"><section className="auth-card" aria-labelledby="auth-title">
