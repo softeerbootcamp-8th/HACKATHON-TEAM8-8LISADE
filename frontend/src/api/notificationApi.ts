@@ -1,3 +1,5 @@
+import { sendJson } from './httpClient'
+
 export type DevicePlatform = 'WEB' | 'ANDROID'
 
 export interface NotificationApi {
@@ -5,21 +7,13 @@ export interface NotificationApi {
   unregisterDevice(token: string): Promise<void>
 }
 
+const DEVICES_PATH = '/api/notifications/devices'
+
 export const notificationApi: NotificationApi = {
-  async registerDevice(token, platform) {
-    await fetch('/api/notifications/devices', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, platform }),
-    })
+  registerDevice(token, platform) {
+    return sendJson(DEVICES_PATH, 'POST', { token, platform })
   },
-  async unregisterDevice(token) {
-    await fetch('/api/notifications/devices', {
-      method: 'DELETE',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
-    })
+  unregisterDevice(token) {
+    return sendJson(DEVICES_PATH, 'DELETE', { token })
   },
 }
