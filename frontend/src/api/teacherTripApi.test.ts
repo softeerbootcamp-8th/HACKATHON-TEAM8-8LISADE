@@ -57,4 +57,31 @@ describe('teacherTripApi', () => {
     // then
     await expect(creation).rejects.toThrow('활동 구역을 확인해 주세요.')
   })
+
+  it('인증된_교사가_생성한_체험학습_목록을_조회한다', async () => {
+    // given
+    const fetchMock = vi.fn()
+    fetchMock.mockResolvedValueOnce(jsonResponse({ success: true, data: [
+      { tripId: 7, title: '26년 5학년 2반', place: '국립중앙박물관', startAt: '2026-09-12T09:00:00', status: 'ACTIVE' },
+    ] }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    // when
+    const trips = await teacherTripApi.getTrips()
+
+    // then
+    expect(fetchMock).toHaveBeenCalledWith('/api/teacher/trips', { credentials: 'include' })
+    expect(trips).toEqual([
+      { id: 7, title: '26년 5학년 2반', place: '국립중앙박물관', startAt: '2026-09-12T09:00:00', status: 'ACTIVE' },
+    ])
+  })
+
+  it('체험학습_목록_조회_실패_메시지를_전달한다', async () => {
+    // given
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ success: false, message: '체험학습 목록을 불러오지 못했습니다.' }, false))
+    vi.stubGlobal('fetch', fetchMock)
+
+    // when & then
+    await expect(teacherTripApi.getTrips()).rejects.toThrow('체험학습 목록을 불러오지 못했습니다.')
+  })
 })
