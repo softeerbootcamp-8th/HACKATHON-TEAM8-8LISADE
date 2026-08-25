@@ -9,6 +9,12 @@ import type { LocationTrackingState, StudentTrip } from './types/studentTrip'
 
 type Screen = 'LOGIN' | 'SIGN_UP' | 'STUDENT_INVITE' | 'STUDENT_PERMISSION' | 'STUDENT_PERMISSION_BLOCKED' | 'STUDENT_HOME' | 'ACTIVITY_MISSION' | 'ACTIVITY_CONFIRMATION' | 'CHECK_MISSION' | 'TEACHER_HOME'
 type CurrentMission = { kind: 'ACTIVITY' | 'CHECK'; isResubmission: boolean } | null
+type TeacherTab = 'HOME' | 'STUDENTS' | 'MISSIONS' | 'LOCATION' | 'MANAGE'
+
+const teacherTrips = [
+  { id: 'trip-1', title: '경복궁 현장체험학습', status: '진행 중', students: 24, normal: 20, outside: 1, missing: 3, missionRate: 68, pendingSubmissions: 2, updatedAt: '방금 전' },
+  { id: 'trip-2', title: '서울 역사 탐방', status: '예정', students: 18, normal: 0, outside: 0, missing: 18, missionRate: 0, pendingSubmissions: 0, updatedAt: '5분 전' },
+]
 
 const initialSignUpInput: SignUpInput = { role: 'STUDENT', name: '', loginId: '', password: '', phoneNumber: '', parentNumber: '', guardianConsent: false }
 
@@ -71,7 +77,7 @@ export default function App() {
   if (screen === 'ACTIVITY_MISSION') return <ActivityMissionScreen isResubmission={currentMission?.isResubmission ?? false} onCaptured={(uri) => { setCapturedPhotoUri(uri); setScreen('ACTIVITY_CONFIRMATION') }} />
   if (screen === 'ACTIVITY_CONFIRMATION') return <ActivityConfirmation isResubmission={currentMission?.isResubmission ?? false} photoUri={capturedPhotoUri} onRetake={() => setScreen('ACTIVITY_MISSION')} onSubmit={async () => { await mockMissionApi.uploadPhoto(capturedPhotoUri); incrementMissionProgress(); setCurrentMission({ kind: 'CHECK', isResubmission: false }); setMissionNotice(currentMission?.isResubmission ? '사진 미션을 재제출했습니다.' : '사진 미션을 제출했습니다.'); setScreen('STUDENT_HOME') }} />
   if (screen === 'CHECK_MISSION') return <CheckMissionScreen onCompleted={() => { incrementMissionProgress(); setCurrentMission(null); setMissionNotice('출석 체크를 완료했습니다.'); setScreen('STUDENT_HOME') }} />
-  if (screen === 'TEACHER_HOME') return <Home title="교사 홈" description="진행 중인 Trip을 확인 중입니다." />
+  if (screen === 'TEACHER_HOME') return <TeacherDashboard />
 
   return <main className="app-shell"><section className="auth-card" aria-labelledby="auth-title">
     <p className="brand">현장체험학습 안전관리</p>
@@ -99,7 +105,7 @@ function SignUpForm({ input, onChange, onSubmit, onCancel }: { input: SignUpInpu
 }
 
 function Field({ label, id, children }: { label: string; id: string; children: ReactNode }) { return <label className="field" htmlFor={id}>{label}{children}</label> }
-function Home({ title, description }: { title: string; description: string }) { return <main className="app-shell"><section className="auth-card home-card"><p className="brand">현장체험학습 안전관리</p><h1>{title}</h1><p>{description}</p><p className="hint">다음 이슈에서 Trip 기능과 하단 탭을 연결합니다.</p></section></main> }
+function TeacherDashboard() { const [tripId, setTripId] = useState(teacherTrips[0].id); const [tab, setTab] = useState<TeacherTab>('HOME'); const trip = teacherTrips.find((candidate) => candidate.id === tripId) ?? teacherTrips[0]; const tabs: Array<{ id: TeacherTab; label: string }> = [{ id: 'HOME', label: '홈' }, { id: 'STUDENTS', label: '학생' }, { id: 'MISSIONS', label: '미션' }, { id: 'LOCATION', label: '위치' }, { id: 'MANAGE', label: '관리' }]; return <ScreenCard title="교사 홈"><Field label="기준 Trip" id="teacher-trip"><select id="teacher-trip" value={tripId} onChange={(event) => setTripId(event.target.value)}>{teacherTrips.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.title} · {candidate.status}</option>)}</select></Field><h2>{trip.title}</h2><p className="brand">{trip.status}</p>{tab === 'HOME' ? <><section className="trip-summary"><div><p>참여 학생 {trip.students}명</p><p className="hint">전체 참여 학생</p></div><div><p>정상 위치 {trip.normal}명</p><p>이탈 {trip.outside}명 · 확인 필요 {trip.missing}명</p></div><div><p>미션 완료율 {trip.missionRate}%</p><p>미확인 제출 {trip.pendingSubmissions}건</p></div></section><p className="hint">마지막 갱신: {trip.updatedAt}</p></> : <section className="mission-card"><h2>{tabs.find((item) => item.id === tab)?.label}</h2><p>{trip.title} 기준 화면입니다.</p></section>}<nav aria-label="교사 하단 탭" className="teacher-tabs">{tabs.map((item) => <button key={item.id} className={tab === item.id ? '' : 'text-button'} onClick={() => setTab(item.id)} aria-pressed={tab === item.id}>{item.label}</button>)}</nav></ScreenCard> }
 
 function InviteCodeScreen({ onSubmit }: { onSubmit: (code: string) => Promise<void> }) {
   const [code, setCode] = useState(''); const [error, setError] = useState('')
