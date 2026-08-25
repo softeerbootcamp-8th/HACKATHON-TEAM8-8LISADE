@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class BackgroundLocationService extends Service {
     static final String ACTION_STOP = "com.softeerbootcamp.eightlisade.STOP_LOCATION";
-    private static final long INTERVAL_MILLIS = 30_000;
+    private static final long INTERVAL_MILLIS = 10_000;
     private static final AtomicBoolean TRACKING = new AtomicBoolean(false);
 
     private final AtomicBoolean uploading = new AtomicBoolean(false);
@@ -123,7 +123,7 @@ public class BackgroundLocationService extends Service {
                 mainHandler.post(this::expireSession);
             }
         } catch (Exception ignored) {
-            // 다음 30초 위치에서 다시 시도한다. 쿠키와 위치 값은 로그에 남기지 않는다.
+            // 다음 10초 위치에서 다시 시도한다. 쿠키와 위치 값은 로그에 남기지 않는다.
         } finally {
             uploading.set(false);
         }
