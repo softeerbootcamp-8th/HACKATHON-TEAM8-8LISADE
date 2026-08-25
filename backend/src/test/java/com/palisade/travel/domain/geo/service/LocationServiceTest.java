@@ -4,10 +4,12 @@ import com.palisade.travel.domain.geo.dto.LocationUpdateRequest;
 import com.palisade.travel.domain.geo.dto.LocationUpdateResponse;
 import com.palisade.travel.domain.geo.entity.CurrentLocation;
 import com.palisade.travel.domain.geo.entity.GeofencePoint;
+import com.palisade.travel.domain.geo.entity.LocationLog;
 import com.palisade.travel.domain.geo.exception.LocationErrorCode;
 import com.palisade.travel.domain.geo.exception.LocationException;
 import com.palisade.travel.domain.geo.repository.CurrentLocationRepository;
 import com.palisade.travel.domain.geo.repository.GeofencePointRepository;
+import com.palisade.travel.domain.geo.repository.LocationLogRepository;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
 import com.palisade.travel.domain.trip.entity.TripStatus;
@@ -17,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
@@ -28,6 +31,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 
 @ExtendWith(MockitoExtension.class)
 class LocationServiceTest {
@@ -48,6 +52,9 @@ class LocationServiceTest {
     @Mock
     private CurrentLocationRepository currentLocationRepository;
 
+    @Mock
+    private LocationLogRepository locationLogRepository;
+
     private LocationService locationService;
 
     @BeforeEach
@@ -56,7 +63,8 @@ class LocationServiceTest {
                 tripParticipantRepository,
                 tripRepository,
                 geofencePointRepository,
-                currentLocationRepository
+                currentLocationRepository,
+                locationLogRepository
         );
     }
 
@@ -142,6 +150,41 @@ class LocationServiceTest {
 
         // then
         assertThat(response.consecutiveOutsideCount()).isZero();
+    }
+
+    @Test
+    void 외부_좌표는_위치_로그로_남긴다() {
+        // given
+        givenActiveTrip(USER_ID);
+        ArgumentCaptor<LocationLog> logCaptor = ArgumentCaptor.forClass(LocationLog.class);
+
+        // when
+        locationService.update(USER_ID, outsideRequest());
+
+        // then
+        then(locationLogRepository).should().save(logCaptor.capture());
+        LocationLog log = logCaptor.getValue();
+        assertThat(log.getTripId()).isEqualTo(TRIP_ID);
+        assertThat(log.getUserId()).isEqualTo(USER_ID);
+        assertThat(log.getLatitude()).isEqualByComparingTo("37.0200000");
+        assertThat(log.getLongitude()).isEqualByComparingTo("127.0050000");
+        assertThat(log.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 8, 25, 8, 55, 30));
+    }
+
+    @Test
+    void 열두_번째_연속_외부_좌표는_카운트_12를_반환한다() {
+        // given
+        givenActiveTrip(USER_ID);
+
+        // when
+        LocationUpdateResponse response = null;
+        for (int count = 0; count < 12; count++) {
+            response = locationService.update(USER_ID, outsideRequest());
+        }
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.consecutiveOutsideCount()).isEqualTo(12);
     }
 
     @Test

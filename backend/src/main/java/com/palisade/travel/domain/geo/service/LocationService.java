@@ -4,10 +4,12 @@ import com.palisade.travel.domain.geo.dto.LocationUpdateRequest;
 import com.palisade.travel.domain.geo.dto.LocationUpdateResponse;
 import com.palisade.travel.domain.geo.entity.CurrentLocation;
 import com.palisade.travel.domain.geo.entity.GeofencePoint;
+import com.palisade.travel.domain.geo.entity.LocationLog;
 import com.palisade.travel.domain.geo.exception.LocationErrorCode;
 import com.palisade.travel.domain.geo.exception.LocationException;
 import com.palisade.travel.domain.geo.repository.CurrentLocationRepository;
 import com.palisade.travel.domain.geo.repository.GeofencePointRepository;
+import com.palisade.travel.domain.geo.repository.LocationLogRepository;
 import com.palisade.travel.domain.geo.util.GeofenceUtils;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
@@ -31,6 +33,7 @@ public class LocationService {
     private final TripRepository tripRepository;
     private final GeofencePointRepository geofencePointRepository;
     private final CurrentLocationRepository currentLocationRepository;
+    private final LocationLogRepository locationLogRepository;
 
     // ponytail: 요구사항의 단일 인스턴스 인메모리 카운터다. 다중 인스턴스가 필요해지면 Redis 원자 연산으로 교체한다.
     private final ConcurrentMap<Long, Integer> consecutiveOutsideCounts = new ConcurrentHashMap<>();
@@ -38,11 +41,13 @@ public class LocationService {
     public LocationService(TripParticipantRepository tripParticipantRepository,
                            TripRepository tripRepository,
                            GeofencePointRepository geofencePointRepository,
-                           CurrentLocationRepository currentLocationRepository) {
+                           CurrentLocationRepository currentLocationRepository,
+                           LocationLogRepository locationLogRepository) {
         this.tripParticipantRepository = tripParticipantRepository;
         this.tripRepository = tripRepository;
         this.geofencePointRepository = geofencePointRepository;
         this.currentLocationRepository = currentLocationRepository;
+        this.locationLogRepository = locationLogRepository;
     }
 
     @Transactional
@@ -82,6 +87,19 @@ public class LocationService {
                 userId,
                 (ignored, count) -> outside ? count == null ? 1 : count + 1 : 0
         );
+        if (outside) {
+            locationLogRepository.save(LocationLog.create(
+                    trip.getId(),
+                    userId,
+                    request.latitude(),
+                    request.longitude(),
+                    recordedAt
+            ));
+        }
+
+        if (consecutiveOutsideCount == 12) {
+            // TODO: 안전 구역 이탈 알림을 전송한다.
+        }
 
         return new LocationUpdateResponse(trip.getId(), outside, consecutiveOutsideCount);
     }
