@@ -22,8 +22,8 @@ class TestUserPrincipalResolver implements HandlerMethodArgumentResolver {
                                   NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
         HttpServletRequest request = webRequest.getNativeRequest(HttpServletRequest.class);
         if (request != null && request.getRequestURI().startsWith("/api/student/")) {
-            return new UserPrincipal(20L, "student", UserRole.STUDENT, "hash", true);
+            return new UserPrincipal(20L, "student", "student@example.com", UserRole.STUDENT, "hash", true);
         }
-        return new UserPrincipal(10L, "teacher", UserRole.TEACHER, "hash", true);
+        return new UserPrincipal(10L, "teacher", "teacher@example.com", UserRole.TEACHER, "hash", true);
     }
 }
