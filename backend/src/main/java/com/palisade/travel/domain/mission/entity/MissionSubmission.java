@@ -19,22 +19,23 @@ public class MissionSubmission {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "mission_id", nullable = false)
     private Long missionId;
 
-    @Column(nullable = false)
+    @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(nullable = false, length = 1024)
+    @Column(name = "image_url", nullable = false, length = 1024)
     private String imageUrl;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
+    @Column(name = "validation_status", nullable = false, length = 30)
     private ValidationStatus validationStatus;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     protected MissionSubmission() {

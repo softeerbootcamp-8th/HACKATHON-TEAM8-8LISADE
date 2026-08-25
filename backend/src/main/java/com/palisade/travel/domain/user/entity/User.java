@@ -19,6 +19,7 @@ public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
     @Column(name = "login_id", nullable = false, unique = true, length = 100)
@@ -27,14 +28,14 @@ public class User {
     @Column(name = "password_hash", nullable = false, length = 100)
     private String passwordHash;
 
-    @Column(nullable = false, length = 255)
+    @Column(name = "email", nullable = false, length = 255)
     private String email;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "name", nullable = false, length = 100)
     private String name;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(name = "role", nullable = false, length = 20)
     private UserRole role;
 
     @Column(name = "phone_number", length = 20)
@@ -43,10 +44,10 @@ public class User {
     @Column(name = "parent_number", length = 20)
     private String parentNumber;
 
-    @Column(nullable = false)
+    @Column(name = "enabled", nullable = false)
     private boolean enabled;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     protected User() {
@@ -64,5 +65,11 @@ public class User {
         this.parentNumber = parentNumber;
         this.enabled = enabled;
         this.createdAt = createdAt;
+    }
+
+    public static User create(String loginId, String passwordHash, String email, String name, UserRole role,
+                              String phoneNumber, String parentNumber) {
+        return new User(null, loginId, passwordHash, email, name, role, phoneNumber, parentNumber,
+                true, LocalDateTime.now());
     }
 }

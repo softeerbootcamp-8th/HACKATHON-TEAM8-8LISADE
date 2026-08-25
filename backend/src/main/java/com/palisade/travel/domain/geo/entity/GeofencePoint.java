@@ -17,18 +17,19 @@ public class GeofencePoint {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "geofence_id", nullable = false)
     private Long geofenceId;
 
-    @Column(nullable = false)
+    @Column(name = "sequence", nullable = false)
     private Integer sequence;
 
-    @Column(nullable = false, precision = 10, scale = 7)
+    @Column(name = "latitude", nullable = false, precision = 10, scale = 7)
     private BigDecimal latitude;
 
-    @Column(nullable = false, precision = 10, scale = 7)
+    @Column(name = "longitude", nullable = false, precision = 10, scale = 7)
     private BigDecimal longitude;
 
     protected GeofencePoint() {
