@@ -8,6 +8,7 @@ import icStudents from '../../assets/icons/ic-students.svg'
 import icMission from '../../assets/icons/ic-mission.svg'
 import icPin from '../../assets/icons/ic-pin.svg'
 import icSliders from '../../assets/icons/ic-sliders.svg'
+import { TripCreationFlow } from './TripCreationFlow'
 
 type TeacherTab = 'HOME' | 'STUDENTS' | 'MISSIONS' | 'LOCATION' | 'MANAGE'
 
@@ -27,7 +28,17 @@ const tabs: Array<{ id: TeacherTab; label: string; icon: string }> = [
 export function TeacherDashboard() {
   const [tripId, setTripId] = useState(teacherTrips[0].id)
   const [tab, setTab] = useState<TeacherTab>('HOME')
+  const [creating, setCreating] = useState(false)
+  const [createdNotice, setCreatedNotice] = useState('')
   const trip = teacherTrips.find((candidate) => candidate.id === tripId) ?? teacherTrips[0]
+  if (creating) return <TripCreationFlow
+    onCancel={() => setCreating(false)}
+    onCreated={(code) => {
+      setCreatedNotice(`현장체험학습을 생성했습니다. 초대 코드: ${code}`)
+      setCreating(false)
+    }}
+  />
+
   return <ScreenCard title="교사 홈">
     <AppHeader />
     <div className="teacher-body">
@@ -40,7 +51,7 @@ export function TeacherDashboard() {
           <div className="stat-card"><p>미션 완료율 {trip.missionRate}%</p><p>미확인 제출 {trip.pendingSubmissions}건</p></div>
         </div>
         <p className="hint">마지막 갱신: {trip.updatedAt}</p>
-      </> : tab === 'MISSIONS' ? <TeacherMissions key={tripId} tripId={tripId} /> : <section className="stat-card"><p className="hint">{tabs.find((item) => item.id === tab)?.label}</p><p>{trip.title} 기준 화면입니다.</p></section>}
+      </> : tab === 'MISSIONS' ? <TeacherMissions key={tripId} tripId={tripId} /> : tab === 'MANAGE' ? <section className="stat-card"><p className="hint">관리</p>{createdNotice && <p className="notice" role="status">{createdNotice}</p>}<button onClick={() => setCreating(true)}>현장체험학습 생성</button></section> : <section className="stat-card"><p className="hint">{tabs.find((item) => item.id === tab)?.label}</p><p>{trip.title} 기준 화면입니다.</p></section>}
     </div>
     <nav aria-label="교사 하단 탭" className="teacher-tabs">{tabs.map((item) => <button key={item.id} onClick={() => setTab(item.id)} aria-pressed={tab === item.id}><img src={item.icon} alt="" />{item.label}</button>)}</nav>
   </ScreenCard>

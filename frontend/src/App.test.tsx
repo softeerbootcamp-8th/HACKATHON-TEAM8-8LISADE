@@ -140,6 +140,25 @@ describe('App', () => {
     expect(screen.getByText('참여 학생 18명')).toBeInTheDocument()
   })
 
+  it('관리 탭의 현장체험학습 생성 버튼에서 등록 화면으로 이동한다', async () => {
+    // given
+    renderApp()
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+    await screen.findByRole('heading', { name: '교사 홈' })
+
+    // when
+    fireEvent.click(screen.getByRole('button', { name: '관리' }))
+    fireEvent.click(screen.getByRole('button', { name: '현장체험학습 생성' }))
+
+    // then
+    expect(screen.getByRole('heading', { name: '현장체험학습 등록' })).toBeInTheDocument()
+    expect(screen.getByLabelText('제목')).toBeInTheDocument()
+    expect(screen.getByLabelText('일자')).toHaveAttribute('type', 'date')
+    expect(screen.getByLabelText('장소')).toBeInTheDocument()
+  })
+
   it('takes a student without a Trip to the invite code screen after login', async () => {
     renderApp()
 
