@@ -10,7 +10,12 @@ public enum LocationErrorCode implements ErrorCode {
             "Participating trip was not found."
     ),
     TRIP_NOT_FOUND(HttpStatus.NOT_FOUND, "TRIP_NOT_FOUND", "Trip was not found."),
-    TRIP_INACTIVE(HttpStatus.GONE, "TRIP_INACTIVE", "Trip is no longer active.");
+    TRIP_INACTIVE(HttpStatus.GONE, "TRIP_INACTIVE", "Trip is no longer active."),
+    GEOFENCE_NOT_CONFIGURED(
+            HttpStatus.UNPROCESSABLE_CONTENT,
+            "GEOFENCE_NOT_CONFIGURED",
+            "A valid geofence is not configured for the trip."
+    );
 
     private final HttpStatus status;
     private final String code;

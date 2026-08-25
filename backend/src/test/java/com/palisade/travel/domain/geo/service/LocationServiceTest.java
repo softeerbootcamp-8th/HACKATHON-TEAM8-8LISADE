@@ -2,8 +2,10 @@ package com.palisade.travel.domain.geo.service;
 
 import com.palisade.travel.domain.geo.dto.LocationUpdateRequest;
 import com.palisade.travel.domain.geo.dto.LocationUpdateResponse;
+import com.palisade.travel.domain.geo.entity.GeofencePoint;
 import com.palisade.travel.domain.geo.exception.LocationErrorCode;
 import com.palisade.travel.domain.geo.exception.LocationException;
+import com.palisade.travel.domain.geo.repository.GeofencePointRepository;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
 import com.palisade.travel.domain.trip.entity.TripStatus;
@@ -18,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,6 +32,7 @@ class LocationServiceTest {
 
     private static final Long USER_ID = 1L;
     private static final Long TRIP_ID = 10L;
+    private static final Long GEOFENCE_ID = 20L;
 
     @Mock
     private TripParticipantRepository tripParticipantRepository;
@@ -36,11 +40,14 @@ class LocationServiceTest {
     @Mock
     private TripRepository tripRepository;
 
+    @Mock
+    private GeofencePointRepository geofencePointRepository;
+
     private LocationService locationService;
 
     @BeforeEach
     void setUp() {
-        locationService = new LocationService(tripParticipantRepository, tripRepository);
+        locationService = new LocationService(tripParticipantRepository, tripRepository, geofencePointRepository);
     }
 
     @Test
@@ -49,6 +56,8 @@ class LocationServiceTest {
         given(tripParticipantRepository.findFirstByUserIdOrderByCreatedAtDescIdDesc(USER_ID))
                 .willReturn(Optional.of(participant()));
         given(tripRepository.findById(TRIP_ID)).willReturn(Optional.of(trip(TripStatus.ACTIVE)));
+        given(geofencePointRepository.findAllByGeofenceIdOrderBySequenceAsc(GEOFENCE_ID))
+                .willReturn(square());
 
         // when
         LocationUpdateResponse response = locationService.update(USER_ID, request());
@@ -98,6 +107,22 @@ class LocationServiceTest {
                         .isEqualTo(LocationErrorCode.TRIP_INACTIVE));
     }
 
+    @Test
+    void 지오펜스_점이_세_개보다_적으면_설정_오류를_반환한다() {
+        // given
+        given(tripParticipantRepository.findFirstByUserIdOrderByCreatedAtDescIdDesc(USER_ID))
+                .willReturn(Optional.of(participant()));
+        given(tripRepository.findById(TRIP_ID)).willReturn(Optional.of(trip(TripStatus.ACTIVE)));
+        given(geofencePointRepository.findAllByGeofenceIdOrderBySequenceAsc(GEOFENCE_ID))
+                .willReturn(square().subList(0, 2));
+
+        // when & then
+        assertThatThrownBy(() -> locationService.update(USER_ID, request()))
+                .isInstanceOf(LocationException.class)
+                .satisfies(exception -> assertThat(((LocationException) exception).getErrorCode())
+                        .isEqualTo(LocationErrorCode.GEOFENCE_NOT_CONFIGURED));
+    }
+
     private LocationUpdateRequest request() {
         return new LocationUpdateRequest(
                 new BigDecimal("37.0050000"),
@@ -115,13 +140,32 @@ class LocationServiceTest {
         return new Trip(
                 TRIP_ID,
                 99L,
-                20L,
+                GEOFENCE_ID,
                 "현장학습",
                 null,
                 LocalDateTime.of(2026, 1, 1, 9, 0),
                 LocalDateTime.of(2026, 1, 1, 18, 0),
                 status,
                 LocalDateTime.of(2025, 12, 1, 0, 0)
+        );
+    }
+
+    private List<GeofencePoint> square() {
+        return List.of(
+                point(0, "37.0000000", "127.0000000"),
+                point(1, "37.0000000", "127.0100000"),
+                point(2, "37.0100000", "127.0100000"),
+                point(3, "37.0100000", "127.0000000")
+        );
+    }
+
+    private GeofencePoint point(int sequence, String latitude, String longitude) {
+        return new GeofencePoint(
+                (long) sequence + 1,
+                GEOFENCE_ID,
+                sequence,
+                new BigDecimal(latitude),
+                new BigDecimal(longitude)
         );
     }
 }
