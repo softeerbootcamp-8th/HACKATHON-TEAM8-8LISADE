@@ -114,6 +114,37 @@ class LocationServiceTest {
     }
 
     @Test
+    void 연속_외부_좌표는_사용자별_카운트를_증가시킨다() {
+        // given
+        givenActiveTrip(USER_ID);
+        givenActiveTrip(2L);
+
+        // when
+        LocationUpdateResponse firstUserFirst = locationService.update(USER_ID, outsideRequest());
+        LocationUpdateResponse firstUserSecond = locationService.update(USER_ID, outsideRequest());
+        LocationUpdateResponse secondUserFirst = locationService.update(2L, outsideRequest());
+
+        // then
+        assertThat(firstUserFirst.consecutiveOutsideCount()).isEqualTo(1);
+        assertThat(firstUserSecond.consecutiveOutsideCount()).isEqualTo(2);
+        assertThat(secondUserFirst.consecutiveOutsideCount()).isEqualTo(1);
+    }
+
+    @Test
+    void 내부_좌표가_수신되면_연속_외부_카운트를_초기화한다() {
+        // given
+        givenActiveTrip(USER_ID);
+        locationService.update(USER_ID, outsideRequest());
+        locationService.update(USER_ID, outsideRequest());
+
+        // when
+        LocationUpdateResponse response = locationService.update(USER_ID, request());
+
+        // then
+        assertThat(response.consecutiveOutsideCount()).isZero();
+    }
+
+    @Test
     void 참여_여행이_없으면_위치_대상을_찾을_수_없다는_오류를_반환한다() {
         // given
         given(tripParticipantRepository.findFirstByUserIdOrderByCreatedAtDescIdDesc(USER_ID))
@@ -177,6 +208,28 @@ class LocationServiceTest {
                 new BigDecimal("8.2"),
                 Instant.parse("2026-08-25T08:55:30Z")
         );
+    }
+
+    private LocationUpdateRequest outsideRequest() {
+        return new LocationUpdateRequest(
+                new BigDecimal("37.0200000"),
+                new BigDecimal("127.0050000"),
+                new BigDecimal("8.2"),
+                Instant.parse("2026-08-25T08:55:30Z")
+        );
+    }
+
+    private void givenActiveTrip(Long userId) {
+        given(tripParticipantRepository.findFirstByUserIdOrderByCreatedAtDescIdDesc(userId))
+                .willReturn(Optional.of(new TripParticipant(
+                        100L + userId,
+                        TRIP_ID,
+                        userId,
+                        LocalDateTime.of(2026, 1, 1, 0, 0)
+                )));
+        given(tripRepository.findById(TRIP_ID)).willReturn(Optional.of(trip(TripStatus.ACTIVE)));
+        given(geofencePointRepository.findAllByGeofenceIdOrderBySequenceAsc(GEOFENCE_ID))
+                .willReturn(square());
     }
 
     private TripParticipant participant() {
