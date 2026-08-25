@@ -13,3 +13,8 @@
 - Android/iOS 클라이언트 연동은 이 이슈 범위에서 제외했다(Android는 #29, iOS는 계정 확보 후 별도 이슈).
 
 검증: 실제 Chrome 브라우저에서 `getToken()`으로 실제 FCM 토큰을 발급받고, 백엔드에서 `FirebaseMessaging.send()`로 그 토큰에 직접 테스트 메시지를 보내 다른 탭에 있는 상태에서 macOS 알림 수신까지 확인했다(DB/컨트롤러를 거치지 않은 최소 검증). `./gradlew test`, `npx tsc -b`, `npm run lint` 모두 통과.
+
+## FCM 토큰 해제 (#36)
+
+- `firebaseConfig.ts`에 `deleteFcmToken()`을 추가했다. `deleteToken(messaging)`으로 브라우저의 push 구독 자체를 무효화한다 — 기존 `notificationApi.unregisterDevice()`는 서버 DB의 `Device` 레코드만 지우고 브라우저 구독은 그대로 남기던 반쪽짜리 구현이었다.
+- 호출 시점(로그아웃 등 트리거)은 이 작업 범위 밖이다. 실제 로그인/로그아웃 플로우가 붙는 시점에 `deleteFcmToken()` + `notificationApi.unregisterDevice(token)`을 함께 호출하도록 연결해야 한다.
