@@ -57,3 +57,8 @@ frontend/ios/App/App/capacitor.config.json
 frontend/ios/App/DerivedData/
 frontend/ios/**/*.xcuserstate
 frontend/ios/**/xcuserdata/
+
+# ---- Vercel ----
+.vercel/
+.vercelignore
+deploy.sh
