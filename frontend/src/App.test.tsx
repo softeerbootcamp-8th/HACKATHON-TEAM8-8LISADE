@@ -161,7 +161,7 @@ describe('App', () => {
 
   it('교사가_관리_탭을_열면_자신의_정보와_체험학습_목록을_본다', async () => {
     // given
-    render(<App />)
+    renderApp()
     fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
     fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
     fireEvent.click(screen.getByRole('button', { name: '로그인' }))
@@ -189,7 +189,7 @@ describe('App', () => {
       if (path === '/api/teacher/trips') return apiResponse({ success: false, message: '체험학습 목록을 불러오지 못했습니다.' }, 500)
       throw new Error(`Unexpected request: ${path} ${init?.method ?? 'GET'}`)
     })
-    render(<App />)
+    renderApp()
     fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
     fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
 
@@ -204,7 +204,7 @@ describe('App', () => {
   it('생성한_체험학습이_없으면_빈_목록을_안내한다', async () => {
     // given
     vi.stubGlobal('fetch', teacherFetch({ success: true, data: [] }))
-    render(<App />)
+    renderApp()
     fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
     fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
 
