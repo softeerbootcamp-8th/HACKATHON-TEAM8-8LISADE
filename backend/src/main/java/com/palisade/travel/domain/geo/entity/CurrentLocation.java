@@ -39,6 +39,9 @@ public class CurrentLocation {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "outside_since")
+    private LocalDateTime outsideSince;
+
     protected CurrentLocation() {
     }
 
@@ -51,6 +54,7 @@ public class CurrentLocation {
         this.longitude = longitude;
         this.isOutside = isOutside;
         this.updatedAt = updatedAt;
+        this.outsideSince = isOutside ? updatedAt : null;
     }
 
     public static CurrentLocation create(Long userId, Long tripId, BigDecimal latitude, BigDecimal longitude,
@@ -61,6 +65,11 @@ public class CurrentLocation {
     public void update(BigDecimal latitude, BigDecimal longitude, boolean isOutside, LocalDateTime updatedAt) {
         this.latitude = latitude;
         this.longitude = longitude;
+        if (isOutside && (!this.isOutside || this.outsideSince == null)) {
+            this.outsideSince = updatedAt;
+        } else if (!isOutside) {
+            this.outsideSince = null;
+        }
         this.isOutside = isOutside;
         this.updatedAt = updatedAt;
     }

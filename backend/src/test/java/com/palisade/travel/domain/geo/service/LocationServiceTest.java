@@ -132,24 +132,26 @@ class LocationServiceTest {
     }
 
     @Test
-    void 위치_갱신은_담당_교사에게_LOCATION_UPDATED_이벤트를_전송한다() {
+    void 안전구역_안의_위치도_담당_교사에게_LOCATION_UPDATED_이벤트로_전송한다() {
         // given
         givenActiveTrip(USER_ID);
         ArgumentCaptor<StudentLocationResponse> payloadCaptor =
                 ArgumentCaptor.forClass(StudentLocationResponse.class);
 
         // when
-        locationService.update(USER_ID, outsideRequest());
+        locationService.update(USER_ID, request());
 
         // then
         then(sseConnectionService).should()
                 .send(eq(99L), eq(SseEventType.LOCATION_UPDATED), payloadCaptor.capture());
         StudentLocationResponse payload = payloadCaptor.getValue();
+        assertThat(payload.tripId()).isEqualTo(TRIP_ID);
         assertThat(payload.userId()).isEqualTo(USER_ID);
-        assertThat(payload.latitude()).isEqualByComparingTo("37.0200000");
+        assertThat(payload.latitude()).isEqualByComparingTo("37.0050000");
         assertThat(payload.longitude()).isEqualByComparingTo("127.0050000");
-        assertThat(payload.outside()).isTrue();
-        assertThat(payload.updatedAt()).isEqualTo(LocalDateTime.of(2026, 8, 25, 8, 55, 30));
+        assertThat(payload.outside()).isFalse();
+        assertThat(payload.outsideSince()).isNull();
+        assertThat(payload.updatedAt()).isEqualTo(Instant.parse("2026-08-25T08:55:30Z"));
     }
 
     @Test
