@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
@@ -22,6 +23,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -44,15 +46,59 @@ class TripControllerTest {
     }
 
     @Test
-    void teacherCreatesTripAndReceivesInviteCode() throws Exception {
+    void 교사는_세_개_이상의_지오펜스_좌표로_체험학습을_생성한다() throws Exception {
+        // given
         given(tripService.create(eq(10L), any())).willReturn(new InviteCodeResponse("AB1234", LocalDateTime.of(2026, 8, 25, 9, 5)));
 
-        mockMvc.perform(post("/api/teacher/trips")
+        // when
+        ResultActions result = mockMvc.perform(post("/api/teacher/trips")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"title\":\"경복궁\",\"place\":\"서울\"}"))
+                        .content("""
+                                {
+                                  "title": "경복궁",
+                                  "place": "서울",
+                                  "startAt": "2026-08-25T00:00:00",
+                                  "endAt": "2026-08-25T23:59:59",
+                                  "geofencePoints": [
+                                    {"latitude": 37.5796, "longitude": 126.9770},
+                                    {"latitude": 37.5797, "longitude": 126.9780},
+                                    {"latitude": 37.5788, "longitude": 126.9775}
+                                  ]
+                                }
+                                """));
+
+        // then
+        result
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.code").value("AB1234"));
+    }
+
+    @Test
+    void 지오펜스_좌표가_세_개보다_적으면_체험학습을_생성하지_않는다() throws Exception {
+        // given
+        String request = """
+                {
+                  "title": "경복궁",
+                  "place": "서울",
+                  "startAt": "2026-08-25T00:00:00",
+                  "endAt": "2026-08-25T23:59:59",
+                  "geofencePoints": [
+                    {"latitude": 37.5796, "longitude": 126.9770},
+                    {"latitude": 37.5797, "longitude": 126.9780}
+                  ]
+                }
+                """;
+
+        // when
+        ResultActions result = mockMvc.perform(post("/api/teacher/trips")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(request));
+
+        // then
+        result
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(tripService);
     }
 
     @Test
