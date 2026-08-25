@@ -52,7 +52,8 @@ public class MissionService {
     @Transactional
     public SubmissionResult submitPhoto(Long missionId, Long studentId, String imageKey) {
         Mission mission=getStudentMission(missionId, studentId);
-        if (mission.getType()!=MissionType.ACTIVITY || mission.isExpiredAt(LocalDateTime.now()) || imageKey==null || imageKey.isBlank()) throw new ApiException(CommonErrorCode.INVALID_REQUEST);
+        String requiredPrefix = "missions/" + missionId + "/students/" + studentId + "/";
+        if (mission.getType()!=MissionType.ACTIVITY || mission.isExpiredAt(LocalDateTime.now()) || imageKey==null || !imageKey.startsWith(requiredPrefix)) throw new ApiException(CommonErrorCode.INVALID_REQUEST);
         MissionSubmission submission=submissionRepository.findByMissionIdAndUserId(missionId, studentId).map(s -> { if (s.getStatus()!=SubmissionStatus.REJECTED) throw new ApiException(CommonErrorCode.INVALID_REQUEST); s.resubmit(imageKey); return s; }).orElseGet(() -> submissionRepository.save(MissionSubmission.photo(missionId,studentId,imageKey)));
         return SubmissionResult.from(submission, mission);
     }

@@ -58,4 +58,14 @@ class MissionServiceTest {
 
         assertThat(missionService.verifyPin(2L, 10L, "1234").status()).isEqualTo(SubmissionStatus.COMPLETED);
     }
+
+    @Test
+    void photoSubmissionRejectsAKeyNotIssuedForTheStudent() {
+        Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, null);
+        when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
+        when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(true);
+
+        assertThatThrownBy(() -> missionService.submitPhoto(2L, 10L, "missions/2/students/11/x.jpg"))
+                .isInstanceOf(ApiException.class);
+    }
 }

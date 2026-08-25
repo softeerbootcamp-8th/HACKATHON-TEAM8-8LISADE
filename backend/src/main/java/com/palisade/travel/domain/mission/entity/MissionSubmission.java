@@ -21,30 +21,29 @@ public class MissionSubmission {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "image_key", length = 1024)
+    // Existing deployments created this column as image_url; it stores the opaque object key now.
+    @Column(name = "image_url", nullable = false, length = 1024)
     private String imageKey;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "submission_status", nullable = false, length = 20)
+    @Column(name = "validation_status", nullable = false, length = 20)
     private SubmissionStatus status;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
 
     protected MissionSubmission() {
     }
 
     private MissionSubmission(Long missionId, Long userId, String imageKey, SubmissionStatus status) {
         this.missionId = missionId; this.userId = userId; this.imageKey = imageKey; this.status = status;
-        this.createdAt = LocalDateTime.now(); this.updatedAt = this.createdAt;
+        this.createdAt = LocalDateTime.now();
     }
     public static MissionSubmission photo(Long missionId, Long userId, String imageKey) { return new MissionSubmission(missionId, userId, imageKey, SubmissionStatus.WAITING); }
-    public static MissionSubmission completedCheck(Long missionId, Long userId) { return new MissionSubmission(missionId, userId, null, SubmissionStatus.COMPLETED); }
-    public void resubmit(String imageKey) { this.imageKey = imageKey; this.status = SubmissionStatus.WAITING; this.updatedAt = LocalDateTime.now(); }
-    public void reject() { this.status = SubmissionStatus.REJECTED; this.updatedAt = LocalDateTime.now(); }
+    public static MissionSubmission completedCheck(Long missionId, Long userId) { return new MissionSubmission(missionId, userId, "", SubmissionStatus.COMPLETED); }
+    public void resubmit(String imageKey) { this.imageKey = imageKey; this.status = SubmissionStatus.WAITING; }
+    public void reject() { this.status = SubmissionStatus.REJECTED; }
     public SubmissionStatus currentStatus(LocalDateTime now, Mission mission) { return status == SubmissionStatus.WAITING && mission.isExpiredAt(now) ? SubmissionStatus.EXPIRED : status; }
 
 }
