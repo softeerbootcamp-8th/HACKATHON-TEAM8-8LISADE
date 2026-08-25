@@ -199,7 +199,7 @@ h2 { font-size: 17px; margin: 0; }
 .sr-only { height: 1px; margin: -1px; overflow: hidden; padding: 0; position: absolute; width: 1px; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 .trip-create-shell { background: #fffdf6; color: #27303a; display: grid; grid-template-rows: 96px 1fr auto; margin: 0 auto; min-height: 100dvh; width: min(100%, 402px); }
 .trip-create-header { align-items: center; border: 1px solid #efe9da; display: flex; gap: 8px; min-height: 96px; padding: 48px 16px 10px; }
-.trip-create-header button { align-items: center; background: transparent; color: #27303a; display: inline-flex; justify-content: center; margin: -3px -12px; min-height: 44px; padding: 12px; width: 44px; }
+.trip-create-header button { align-items: center; background: transparent; box-shadow: none; color: #27303a; display: inline-flex; justify-content: center; margin: -3px -12px; min-height: 44px; padding: 12px; width: 44px; }
 .trip-create-header button img { height: 20px; width: 20px; }
 .trip-create-header h1 { font-size: 18px; font-weight: 700; margin: 0; }
 .trip-create-content { min-height: 0; padding: 24px; }
