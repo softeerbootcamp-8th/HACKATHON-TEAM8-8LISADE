@@ -26,7 +26,7 @@
 
 ## 자동 검증
 
-- `cd frontend && npm test -- --run`: 10 files, 43 tests passed
+- `cd frontend && npm test -- --run`: 13 files, 55 tests passed
 - `cd frontend && npm run lint`: passed
 - `cd frontend && npm run build`: passed
 - `cd backend && ./gradlew test`: passed
