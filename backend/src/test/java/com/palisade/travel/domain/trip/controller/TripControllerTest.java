@@ -3,6 +3,7 @@ package com.palisade.travel.domain.trip.controller;
 import com.palisade.travel.domain.trip.dto.InviteCodeResponse;
 import com.palisade.travel.domain.trip.dto.JoinTripResponse;
 import com.palisade.travel.domain.trip.dto.TripParticipantResponse;
+import com.palisade.travel.domain.trip.dto.TeacherTripSummaryResponse;
 import com.palisade.travel.domain.trip.entity.TripParticipantType;
 import com.palisade.travel.domain.trip.entity.TripStatus;
 import com.palisade.travel.domain.trip.service.TripService;
@@ -99,6 +100,26 @@ class TripControllerTest {
         result
                 .andExpect(status().isBadRequest());
         verifyNoInteractions(tripService);
+    }
+
+    @Test
+    void 교사는_자신이_만든_체험학습_목록을_조회한다() throws Exception {
+        // given
+        given(tripService.getTrips(10L)).willReturn(List.of(
+                new TeacherTripSummaryResponse(1L, "26년 5학년 2반", "국립중앙박물관",
+                        LocalDateTime.of(2026, 9, 12, 9, 0), TripStatus.ACTIVE),
+                new TeacherTripSummaryResponse(2L, "현장체험학습 2", "경주 첨성대",
+                        LocalDateTime.of(2026, 10, 2, 9, 0), TripStatus.READY)
+        ));
+
+        // when & then
+        mockMvc.perform(get("/api/teacher/trips"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].tripId").value(1))
+                .andExpect(jsonPath("$.data[0].title").value("26년 5학년 2반"))
+                .andExpect(jsonPath("$.data[0].place").value("국립중앙박물관"))
+                .andExpect(jsonPath("$.data[0].status").value("ACTIVE"))
+                .andExpect(jsonPath("$.data[1].status").value("READY"));
     }
 
     @Test

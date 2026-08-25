@@ -133,6 +133,28 @@ class TripServiceTest {
     }
 
     @Test
+    void 교사_소유_체험학습을_최신_생성순_요약으로_반환한다() {
+        // given
+        Trip recent = new Trip(2L, 10L, null, "현장체험학습 2", "경주 첨성대", null,
+                LocalDateTime.of(2026, 10, 2, 9, 0), null, TripStatus.READY,
+                LocalDateTime.of(2026, 8, 25, 10, 0));
+        Trip older = new Trip(1L, 10L, null, "26년 5학년 2반", "국립중앙박물관", null,
+                LocalDateTime.of(2026, 9, 12, 9, 0), null, TripStatus.ACTIVE,
+                LocalDateTime.of(2026, 8, 25, 9, 0));
+        given(tripRepository.findAllByTeacherIdOrderByCreatedAtDesc(10L)).willReturn(List.of(recent, older));
+
+        // when
+        var trips = tripService.getTrips(10L);
+
+        // then
+        assertThat(trips).extracting("tripId", "title", "status")
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(2L, "현장체험학습 2", TripStatus.READY),
+                        org.assertj.core.groups.Tuple.tuple(1L, "26년 5학년 2반", TripStatus.ACTIVE)
+                );
+    }
+
+    @Test
     void reissuingInviteCodeRevokesPreviousCodeBeforeIssuingNewOne() {
         Trip trip = new Trip(1L, 10L, null, "경복궁", "서울", null, null, null, TripStatus.ACTIVE,
                 LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
