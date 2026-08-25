@@ -64,6 +64,29 @@ class LocationServiceTest {
 
         // then
         assertThat(response.tripId()).isEqualTo(TRIP_ID);
+        assertThat(response.outside()).isFalse();
+    }
+
+    @Test
+    void 지오펜스_외부_좌표는_외부로_판정한다() {
+        // given
+        given(tripParticipantRepository.findFirstByUserIdOrderByCreatedAtDescIdDesc(USER_ID))
+                .willReturn(Optional.of(participant()));
+        given(tripRepository.findById(TRIP_ID)).willReturn(Optional.of(trip(TripStatus.ACTIVE)));
+        given(geofencePointRepository.findAllByGeofenceIdOrderBySequenceAsc(GEOFENCE_ID))
+                .willReturn(square());
+        LocationUpdateRequest outside = new LocationUpdateRequest(
+                new BigDecimal("37.0200000"),
+                new BigDecimal("127.0050000"),
+                new BigDecimal("8.2"),
+                Instant.parse("2026-08-25T08:55:30Z")
+        );
+
+        // when
+        LocationUpdateResponse response = locationService.update(USER_ID, outside);
+
+        // then
+        assertThat(response.outside()).isTrue();
     }
 
     @Test
