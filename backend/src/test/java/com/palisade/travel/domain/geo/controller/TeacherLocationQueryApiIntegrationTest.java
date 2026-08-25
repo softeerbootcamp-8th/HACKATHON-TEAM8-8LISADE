@@ -69,6 +69,9 @@ class TeacherLocationQueryApiIntegrationTest {
 
         saveCurrentLocation(studentAId, "37.0050000", "127.0050000", false);
         saveCurrentLocation(studentBId, "37.0200000", "127.0050000", true);
+        savePoint(geofenceId, 0, "37.0000000", "127.0000000");
+        savePoint(geofenceId, 1, "37.0100000", "127.0100000");
+        savePoint(geofenceId, 2, "37.0100000", "127.0000000");
     }
 
     @Test
@@ -81,10 +84,25 @@ class TeacherLocationQueryApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].tripId").value(tripId))
                 .andExpect(jsonPath("$.data[0].userId").value(studentAId))
                 .andExpect(jsonPath("$.data[0].outside").value(false))
                 .andExpect(jsonPath("$.data[1].userId").value(studentBId))
-                .andExpect(jsonPath("$.data[1].outside").value(true));
+                .andExpect(jsonPath("$.data[1].outside").value(true))
+                .andExpect(jsonPath("$.data[1].outsideSince").isNotEmpty());
+    }
+
+    @Test
+    void 담당_교사는_체험학습의_지오펜스를_조회한다() throws Exception {
+        // given
+        MockHttpSession session = login("teacher1");
+
+        // when & then
+        mockMvc.perform(get("/api/teacher/trips/{tripId}/geofence", tripId).session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(3))
+                .andExpect(jsonPath("$.data[0].latitude").value(37.0))
+                .andExpect(jsonPath("$.data[1].longitude").value(127.01));
     }
 
     @Test
@@ -125,13 +143,24 @@ class TeacherLocationQueryApiIntegrationTest {
 
     private void saveCurrentLocation(Long userId, String latitude, String longitude, boolean outside) {
         jdbcTemplate.update(
-                "INSERT INTO current_location (user_id, trip_id, latitude, longitude, is_outside, updated_at) "
-                        + "VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+                "INSERT INTO current_location (user_id, trip_id, latitude, longitude, is_outside, outside_since, updated_at) "
+                        + "VALUES (?, ?, ?, ?, ?, CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END, CURRENT_TIMESTAMP)",
                 userId,
                 tripId,
                 new BigDecimal(latitude),
                 new BigDecimal(longitude),
+                outside,
                 outside
+        );
+    }
+
+    private void savePoint(Long geofenceId, int sequence, String latitude, String longitude) {
+        jdbcTemplate.update(
+                "INSERT INTO geofence_point (geofence_id, sequence, latitude, longitude) VALUES (?, ?, ?, ?)",
+                geofenceId,
+                sequence,
+                new BigDecimal(latitude),
+                new BigDecimal(longitude)
         );
     }
 

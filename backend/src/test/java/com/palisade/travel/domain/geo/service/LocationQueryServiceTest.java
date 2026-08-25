@@ -2,9 +2,11 @@ package com.palisade.travel.domain.geo.service;
 
 import com.palisade.travel.domain.geo.dto.StudentLocationResponse;
 import com.palisade.travel.domain.geo.entity.CurrentLocation;
+import com.palisade.travel.domain.geo.entity.GeofencePoint;
 import com.palisade.travel.domain.geo.exception.LocationErrorCode;
 import com.palisade.travel.domain.geo.exception.LocationException;
 import com.palisade.travel.domain.geo.repository.CurrentLocationRepository;
+import com.palisade.travel.domain.geo.repository.GeofencePointRepository;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripStatus;
 import com.palisade.travel.domain.trip.repository.TripRepository;
@@ -35,11 +37,15 @@ class LocationQueryServiceTest {
     @Mock
     private CurrentLocationRepository currentLocationRepository;
 
+    @Mock
+    private GeofencePointRepository geofencePointRepository;
+
     private LocationQueryService locationQueryService;
 
     @BeforeEach
     void setUp() {
-        locationQueryService = new LocationQueryService(tripRepository, currentLocationRepository);
+        locationQueryService = new LocationQueryService(tripRepository, currentLocationRepository,
+                geofencePointRepository);
     }
 
     @Test
@@ -57,7 +63,30 @@ class LocationQueryServiceTest {
         // then
         assertThat(snapshot).hasSize(2);
         assertThat(snapshot).extracting(StudentLocationResponse::userId).containsExactly(1L, 2L);
+        assertThat(snapshot).extracting(StudentLocationResponse::tripId).containsOnly(TRIP_ID);
         assertThat(snapshot.get(1).outside()).isTrue();
+        assertThat(snapshot.get(1).outsideSince()).isEqualTo(snapshot.get(1).updatedAt());
+    }
+
+    @Test
+    void 담당_교사는_체험학습에_저장된_지오펜스_좌표를_순서대로_받는다() {
+        // given
+        given(tripRepository.findById(TRIP_ID)).willReturn(Optional.of(trip(TEACHER_ID)));
+        given(geofencePointRepository.findAllByGeofenceIdOrderBySequenceAsc(20L)).willReturn(List.of(
+                point(0, "37.0000000", "127.0000000"),
+                point(1, "37.0100000", "127.0100000"),
+                point(2, "37.0100000", "127.0000000")
+        ));
+
+        // when
+        var geofence = locationQueryService.geofence(TEACHER_ID, TRIP_ID);
+
+        // then
+        assertThat(geofence).extracting("latitude", "longitude").containsExactly(
+                org.assertj.core.groups.Tuple.tuple(new BigDecimal("37.0000000"), new BigDecimal("127.0000000")),
+                org.assertj.core.groups.Tuple.tuple(new BigDecimal("37.0100000"), new BigDecimal("127.0100000")),
+                org.assertj.core.groups.Tuple.tuple(new BigDecimal("37.0100000"), new BigDecimal("127.0000000"))
+        );
     }
 
     @Test
@@ -108,5 +137,10 @@ class LocationQueryServiceTest {
                 outside,
                 LocalDateTime.of(2026, 8, 25, 8, 55, 30)
         );
+    }
+
+    private GeofencePoint point(int sequence, String latitude, String longitude) {
+        return new GeofencePoint((long) sequence, 20L, sequence, new BigDecimal(latitude),
+                new BigDecimal(longitude));
     }
 }
