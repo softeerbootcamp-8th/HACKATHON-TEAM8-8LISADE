@@ -86,4 +86,54 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: '설정으로 이동' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '학생 홈' })).not.toBeInTheDocument()
   })
+
+  it('shows locked missions in the student mission list', async () => {
+    await openStudentHome()
+
+    fireEvent.click(screen.getByRole('button', { name: '미션 보기' }))
+
+    expect(await screen.findByRole('heading', { name: '미션' })).toBeInTheDocument()
+    expect(screen.getByText('다음 미션은 이전 미션을 완료하면 열립니다.')).toBeInTheDocument()
+  })
+
+  it('shows a PIN error before completing an attendance mission', async () => {
+    await openStudentHome()
+
+    fireEvent.click(screen.getByRole('button', { name: '미션 보기' }))
+    fireEvent.click(await screen.findByRole('button', { name: '출석 체크' }))
+    fireEvent.change(screen.getByLabelText('출석 PIN'), { target: { value: '0000' } })
+    fireEvent.click(screen.getByRole('button', { name: '확인' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('PIN 번호를 확인해 주세요.')
+  })
+
+  it('submits a photo mission through the mock camera and upload flow', async () => {
+    await openStudentHome()
+
+    fireEvent.click(screen.getByRole('button', { name: '미션 보기' }))
+    fireEvent.click(await screen.findByRole('button', { name: '사진 촬영 후 제출' }))
+
+    expect(await screen.findByText('사진 미션을 제출했습니다.')).toBeInTheDocument()
+  })
+
+  it('offers a resubmission action for a rejected mission', async () => {
+    await openStudentHome()
+
+    fireEvent.click(screen.getByRole('button', { name: '미션 보기' }))
+
+    expect(await screen.findByRole('button', { name: '재제출하기' })).toBeInTheDocument()
+  })
 })
+
+async function openStudentHome() {
+  render(<App />)
+  fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'student01' } })
+  fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+  fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+  await screen.findByRole('heading', { name: 'Trip 참여' })
+  fireEvent.change(screen.getByLabelText('초대 코드'), { target: { value: 'AB1234' } })
+  fireEvent.click(screen.getByRole('button', { name: '참여하기' }))
+  await screen.findByRole('heading', { name: '위치 권한' })
+  fireEvent.click(screen.getByRole('button', { name: '위치 권한 허용' }))
+  await screen.findByRole('heading', { name: '학생 홈' })
+}
