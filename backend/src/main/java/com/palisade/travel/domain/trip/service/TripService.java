@@ -8,6 +8,7 @@ import com.palisade.travel.domain.trip.dto.CreateTripRequest;
 import com.palisade.travel.domain.trip.dto.InviteCodeResponse;
 import com.palisade.travel.domain.trip.dto.JoinTripResponse;
 import com.palisade.travel.domain.trip.dto.TripParticipantResponse;
+import com.palisade.travel.domain.trip.dto.TeacherTripSummaryResponse;
 import com.palisade.travel.domain.trip.entity.InviteCode;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
@@ -103,6 +104,12 @@ public class TripService {
         findOwnedTrip(teacherId, tripId);
         return participantRepository.findAllByTripIdOrderByCreatedAtAsc(tripId).stream()
                 .map(TripParticipantResponse::from)
+                .toList();
+    }
+
+    public List<TeacherTripSummaryResponse> getTrips(Long teacherId) {
+        return tripRepository.findAllByTeacherIdOrderByCreatedAtDesc(teacherId).stream()
+                .map(TeacherTripSummaryResponse::from)
                 .toList();
     }
 
