@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">8LISADE</string>
+    <string name="title_activity_main">8LISADE</string>
+    <string name="package_name">com.softeerbootcamp.eightlisade</string>
+    <string name="custom_url_scheme">com.softeerbootcamp.eightlisade</string>
+    <string name="location_notification_channel">위치 수집</string>
+    <string name="location_notification_title">위치 수집 중</string>
+    <string name="location_notification_body">8LISADE가 10초마다 위치를 기록하고 있습니다.</string>
+    <string name="location_notification_stop">수집 종료</string>
+    <string name="session_notification_channel">세션 알림</string>
+    <string name="session_expired_title">로그인이 만료되었습니다</string>
+    <string name="session_expired_body">위치 수집을 중지했습니다. 앱에서 다시 로그인해 주세요.</string>
+</resources>
