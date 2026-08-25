@@ -87,41 +87,49 @@ describe('App', () => {
     expect(screen.queryByRole('heading', { name: '학생 홈' })).not.toBeInTheDocument()
   })
 
-  it('shows locked missions in the student mission list', async () => {
+  it('shows the current mission and a locked next mission on the student home', async () => {
     await openStudentHome()
 
-    fireEvent.click(screen.getByRole('button', { name: '미션 보기' }))
-
-    expect(await screen.findByRole('heading', { name: '미션' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '전통 문화 사진 미션' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '현재 미션 수행' })).toBeInTheDocument()
     expect(screen.getByText('다음 미션은 이전 미션을 완료하면 열립니다.')).toBeInTheDocument()
   })
 
   it('shows a PIN error before completing an attendance mission', async () => {
     await openStudentHome()
 
-    fireEvent.click(screen.getByRole('button', { name: '미션 보기' }))
-    fireEvent.click(await screen.findByRole('button', { name: '출석 체크' }))
+    fireEvent.click(screen.getByRole('button', { name: '전체 미션 보기' }))
+    fireEvent.click(await screen.findByRole('button', { name: '경복궁 출석 체크' }))
+    fireEvent.click(screen.getByRole('button', { name: '출석 체크' }))
     fireEvent.change(screen.getByLabelText('출석 PIN'), { target: { value: '0000' } })
     fireEvent.click(screen.getByRole('button', { name: '확인' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('PIN 번호를 확인해 주세요.')
   })
 
-  it('submits a photo mission through the mock camera and upload flow', async () => {
+  it('lets a student confirm a captured photo before submitting it', async () => {
     await openStudentHome()
 
-    fireEvent.click(screen.getByRole('button', { name: '미션 보기' }))
-    fireEvent.click(await screen.findByRole('button', { name: '사진 촬영 후 제출' }))
+    fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
+    fireEvent.click(await screen.findByRole('button', { name: '촬영하기' }))
 
+    expect(await screen.findByRole('heading', { name: '사진 확인' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '재촬영하기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '제출하기' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '제출하기' }))
     expect(await screen.findByText('사진 미션을 제출했습니다.')).toBeInTheDocument()
   })
 
   it('offers a resubmission action for a rejected mission', async () => {
     await openStudentHome()
 
-    fireEvent.click(screen.getByRole('button', { name: '미션 보기' }))
+    fireEvent.click(screen.getByRole('button', { name: '전체 미션 보기' }))
 
-    expect(await screen.findByRole('button', { name: '재제출하기' })).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: '반려된 사진 미션' }))
+    fireEvent.click(screen.getByRole('button', { name: '촬영하기' }))
+
+    expect(await screen.findByRole('button', { name: '재촬영하기' })).toBeInTheDocument()
   })
 })
 
