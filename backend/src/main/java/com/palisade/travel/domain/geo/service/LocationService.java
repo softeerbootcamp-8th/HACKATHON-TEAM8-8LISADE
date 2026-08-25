@@ -2,8 +2,10 @@ package com.palisade.travel.domain.geo.service;
 
 import com.palisade.travel.domain.geo.dto.LocationUpdateRequest;
 import com.palisade.travel.domain.geo.dto.LocationUpdateResponse;
+import com.palisade.travel.domain.geo.entity.GeofencePoint;
 import com.palisade.travel.domain.geo.exception.LocationErrorCode;
 import com.palisade.travel.domain.geo.exception.LocationException;
+import com.palisade.travel.domain.geo.repository.GeofencePointRepository;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
 import com.palisade.travel.domain.trip.entity.TripStatus;
@@ -12,17 +14,22 @@ import com.palisade.travel.domain.trip.repository.TripRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @Transactional(readOnly = true)
 public class LocationService {
 
     private final TripParticipantRepository tripParticipantRepository;
     private final TripRepository tripRepository;
+    private final GeofencePointRepository geofencePointRepository;
 
     public LocationService(TripParticipantRepository tripParticipantRepository,
-                           TripRepository tripRepository) {
+                           TripRepository tripRepository,
+                           GeofencePointRepository geofencePointRepository) {
         this.tripParticipantRepository = tripParticipantRepository;
         this.tripRepository = tripRepository;
+        this.geofencePointRepository = geofencePointRepository;
     }
 
     public LocationUpdateResponse update(Long userId, LocationUpdateRequest request) {
@@ -35,6 +42,20 @@ public class LocationService {
             throw new LocationException(LocationErrorCode.TRIP_INACTIVE);
         }
 
+        findGeofencePoints(trip);
         return new LocationUpdateResponse(trip.getId(), false, 0);
+    }
+
+    private List<GeofencePoint> findGeofencePoints(Trip trip) {
+        if (trip.getGeofenceId() == null) {
+            throw new LocationException(LocationErrorCode.GEOFENCE_NOT_CONFIGURED);
+        }
+
+        List<GeofencePoint> points = geofencePointRepository
+                .findAllByGeofenceIdOrderBySequenceAsc(trip.getGeofenceId());
+        if (points.size() < 3) {
+            throw new LocationException(LocationErrorCode.GEOFENCE_NOT_CONFIGURED);
+        }
+        return points;
     }
 }
