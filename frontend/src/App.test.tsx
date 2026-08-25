@@ -87,19 +87,22 @@ describe('App', () => {
     expect(screen.queryByRole('heading', { name: '학생 홈' })).not.toBeInTheDocument()
   })
 
-  it('shows the current mission and a locked next mission on the student home', async () => {
+  it('shows only the current mission and does not expose future missions', async () => {
     await openStudentHome()
 
     expect(screen.getByRole('heading', { name: '전통 문화 사진 미션' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '현재 미션 수행' })).toBeInTheDocument()
-    expect(screen.getByText('다음 미션은 이전 미션을 완료하면 열립니다.')).toBeInTheDocument()
+    expect(screen.getByText('미완료 미션을 먼저 진행해 주세요.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '전체 미션 보기' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '경복궁 출석 체크' })).not.toBeInTheDocument()
   })
 
   it('shows a PIN error before completing an attendance mission', async () => {
     await openStudentHome()
 
-    fireEvent.click(screen.getByRole('button', { name: '전체 미션 보기' }))
-    fireEvent.click(await screen.findByRole('button', { name: '경복궁 출석 체크' }))
+    await completePhotoMission()
+
+    fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
     fireEvent.click(screen.getByRole('button', { name: '출석 체크' }))
     fireEvent.change(screen.getByLabelText('출석 PIN'), { target: { value: '0000' } })
     fireEvent.click(screen.getByRole('button', { name: '확인' }))
@@ -119,17 +122,14 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '제출하기' }))
     expect(await screen.findByText('사진 미션을 제출했습니다.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '경복궁 출석 체크' })).toBeInTheDocument()
   })
 
-  it('offers a resubmission action for a rejected mission', async () => {
+  it('keeps the next mission hidden while the current mission is not completed', async () => {
     await openStudentHome()
 
-    fireEvent.click(screen.getByRole('button', { name: '전체 미션 보기' }))
-
-    fireEvent.click(await screen.findByRole('button', { name: '반려된 사진 미션' }))
-    fireEvent.click(screen.getByRole('button', { name: '촬영하기' }))
-
-    expect(await screen.findByRole('button', { name: '재촬영하기' })).toBeInTheDocument()
+    expect(screen.queryByText('반려된 사진 미션')).not.toBeInTheDocument()
+    expect(screen.queryByText('경복궁 출석 체크')).not.toBeInTheDocument()
   })
 })
 
@@ -144,4 +144,11 @@ async function openStudentHome() {
   await screen.findByRole('heading', { name: '위치 권한' })
   fireEvent.click(screen.getByRole('button', { name: '위치 권한 허용' }))
   await screen.findByRole('heading', { name: '학생 홈' })
+}
+
+async function completePhotoMission() {
+  fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
+  fireEvent.click(await screen.findByRole('button', { name: '촬영하기' }))
+  fireEvent.click(await screen.findByRole('button', { name: '제출하기' }))
+  await screen.findByText('사진 미션을 제출했습니다.')
 }
