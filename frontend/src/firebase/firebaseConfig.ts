@@ -1,5 +1,5 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
-import { deleteToken, getMessaging, getToken, type Messaging } from 'firebase/messaging'
+import { deleteToken, getMessaging, getToken, onMessage, type Messaging } from 'firebase/messaging'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -48,4 +48,17 @@ export async function deleteFcmToken(): Promise<void> {
     return
   }
   await deleteToken(messagingInstance)
+}
+
+export function listenForForegroundMessages(): void {
+  const messagingInstance = getFirebaseMessaging()
+  if (!messagingInstance) {
+    return
+  }
+  onMessage(messagingInstance, (payload) => {
+    const { title, body } = payload.notification ?? {}
+    if (title && Notification.permission === 'granted') {
+      new Notification(title, { body })
+    }
+  })
 }
