@@ -23,6 +23,21 @@ describe('authApi', () => {
     }))
   })
 
+  it('CSRF 토큰을 실어 본문 없이 로그아웃한다', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: { token: 'csrf-token', headerName: 'X-CSRF-TOKEN' } }))
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: null }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await authApi.logout()
+
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': 'csrf-token' },
+    })
+  })
+
   it('uses the API error message when sign-up is rejected', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse({ success: true, data: { token: 'csrf-token', headerName: 'X-CSRF-TOKEN' } }))
