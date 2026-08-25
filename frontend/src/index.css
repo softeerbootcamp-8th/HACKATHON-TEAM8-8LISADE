@@ -196,3 +196,36 @@ h2 { font-size: 17px; margin: 0; }
 .photo-placeholder { background: linear-gradient(135deg, #ffe9a8, #cfe8d8); border-radius: 8px; height: 90px; margin-bottom: 8px; }
 .danger-button { background: #fff; border: 1px solid #f0b3b6; color: #b4232a; width: 100%; }
 .danger-button:hover { background: #fff0f1; }
+.sr-only { height: 1px; margin: -1px; overflow: hidden; padding: 0; position: absolute; width: 1px; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+.trip-create-shell { background: #fffdf6; color: #27303a; display: grid; grid-template-rows: 96px 1fr auto; margin: 0 auto; min-height: 100dvh; width: min(100%, 402px); }
+.trip-create-header { align-items: center; border: 1px solid #efe9da; display: flex; gap: 8px; min-height: 96px; padding: 48px 16px 10px; }
+.trip-create-header button { align-items: center; background: transparent; color: #27303a; display: inline-flex; justify-content: center; margin: -3px -12px; min-height: 44px; padding: 12px; width: 44px; }
+.trip-create-header button img { height: 20px; width: 20px; }
+.trip-create-header h1 { font-size: 18px; font-weight: 700; margin: 0; }
+.trip-create-content { min-height: 0; padding: 24px; }
+.trip-details-form { align-content: start; display: grid; gap: 15px; padding-top: 18px; }
+.trip-details-form label { color: #202934; display: grid; font-size: 14px; font-weight: 700; gap: 8px; }
+.trip-details-form input { background: #fff; border: 1px solid #e9e1cf; border-radius: 14px; color: #66738a; font-size: 16px; font-weight: 400; min-height: 52px; padding: 0 14px; }
+.trip-details-form input:focus, .place-search input:focus { border-color: #e2b63f; outline: 3px solid rgb(255 200 61 / 22%); }
+.trip-create-footer { background: #fffdf6; padding: 19px 24px max(50px, env(safe-area-inset-bottom)); }
+.trip-create-footer .error { margin-bottom: 10px; }
+.trip-primary-button { background: #ffc93d; border-radius: 16px; box-shadow: 0 3px 10px rgb(120 89 20 / 14%); color: #27303a; font-size: 16px; min-height: 54px; width: 100%; }
+.trip-primary-button:hover { background: #f5ba25; }
+.trip-primary-button:disabled { background: #eadfbf; color: #8b846f; cursor: not-allowed; }
+.geofence-step { display: grid; gap: 12px; grid-template-rows: auto 52px minmax(340px, 1fr); padding: 18px 24px 0; }
+.geofence-step h2 { font-size: 14px; margin: 0 0 3px; }
+.geofence-step > div > p { color: #667085; font-size: 11px; font-weight: 500; line-height: 1.3; margin: 0; }
+.place-search { align-items: center; background: #fff; border: 1.5px solid #efe9da; border-radius: 14px; display: grid; grid-template-columns: minmax(0, 1fr) auto; min-height: 52px; padding: 0 10px 0 16px; }
+.place-search input { border: 0; border-radius: 8px; color: #667085; font-size: 15px; font-weight: 400; min-height: 40px; padding: 0; }
+.place-search button { background: #fff3d6; border-radius: 9px; color: #27303a; font-size: 12px; min-height: 26px; padding: 0 10px; }
+.place-search button:hover { background: #ffe9a7; }
+.place-search button:disabled { color: #7f7868; cursor: wait; }
+.map-frame { margin-top: 4px; min-height: 340px; overflow: hidden; position: relative; }
+.geofence-map { background: #f4efe2; border-radius: 18px; height: 100%; min-height: 340px; overflow: hidden; touch-action: pan-x pan-y pinch-zoom; width: 100%; }
+.map-message { background: rgb(255 252 244 / 92%); border-radius: 12px; color: #5f6e85; font-size: 13px; left: 50%; margin: 0; max-width: calc(100% - 36px); padding: 10px 12px; position: absolute; text-align: center; top: 16px; transform: translateX(-50%); width: max-content; z-index: 2; }
+.map-undo { align-items: center; background: #fff; border: 1px solid #e7decb; border-radius: 50%; bottom: 16px; box-shadow: 0 4px 14px rgb(32 41 52 / 16%); color: #26313c; display: flex; justify-content: center; min-height: 48px; padding: 0; position: absolute; right: 16px; width: 48px; z-index: 2; }
+.map-undo:hover { background: #fff8e8; }
+.map-undo:disabled { color: #aaa391; cursor: not-allowed; opacity: .72; }
+@media (min-width: 403px) {
+  .trip-create-shell { box-shadow: 0 16px 50px rgb(23 32 51 / 12%); }
+}
