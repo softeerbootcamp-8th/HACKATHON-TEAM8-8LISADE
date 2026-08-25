@@ -46,6 +46,27 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: '교사 홈' })).toBeInTheDocument()
   })
 
+  it('changes the teacher dashboard and shared tab context when the Trip is selected', async () => {
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+
+    expect(await screen.findByLabelText('기준 Trip')).toHaveValue('trip-1')
+    expect(screen.getByText('참여 학생 24명')).toBeInTheDocument()
+    expect(screen.getByText('마지막 갱신: 방금 전')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '학생' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '미션' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '위치' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '관리' })).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('기준 Trip'), { target: { value: 'trip-2' } })
+
+    expect(screen.getByText('서울 역사 탐방')).toBeInTheDocument()
+    expect(screen.getByText('참여 학생 18명')).toBeInTheDocument()
+  })
+
   it('takes a student without a Trip to the invite code screen after login', async () => {
     render(<App />)
 
