@@ -1,5 +1,16 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('./api/studentTripApi', () => ({
+  studentTripApi: {
+    async getActiveTrip() { return null },
+    async joinWithInviteCode(code: string) {
+      if (code.toUpperCase() !== 'AB1234') throw new Error('초대 코드를 확인해 주세요.')
+      return { id: 1, title: '경복궁 현장체험학습', place: '경복궁', period: '2026. 08. 25. 09:00 - 16:00', status: 'ACTIVE', missionCompleted: 1, missionTotal: 3, hasSafetyWarning: false }
+    },
+  },
+}))
+
 import App from './App'
 
 describe('App', () => {

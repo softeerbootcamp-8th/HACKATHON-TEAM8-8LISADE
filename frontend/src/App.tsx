@@ -3,7 +3,7 @@ import { authApi } from './api/authApi'
 import { mockCameraAdapter } from './api/cameraAdapter'
 import { mockLocationTrackingAdapter } from './api/locationTrackingApi'
 import { mockMissionApi } from './api/missionApi'
-import { mockStudentTripApi } from './api/studentTripApi'
+import { studentTripApi } from './api/studentTripApi'
 import type { SignUpInput } from './types/auth'
 import type { LocationTrackingState, StudentTrip } from './types/studentTrip'
 
@@ -45,7 +45,7 @@ export default function App() {
     try {
       const user = await authApi.login({ loginId, password })
       if (user.role === 'TEACHER') { setScreen('TEACHER_HOME'); return }
-      const [trip, tracking] = await Promise.all([mockStudentTripApi.getActiveTrip(user.id), mockLocationTrackingAdapter.getState()])
+      const [trip, tracking] = await Promise.all([studentTripApi.getActiveTrip(), mockLocationTrackingAdapter.getState()])
       setStudentTrip(trip)
       setLocationState(tracking)
       setScreen(trip ? (tracking.permission === 'GRANTED' ? 'STUDENT_HOME' : 'STUDENT_PERMISSION_BLOCKED') : 'STUDENT_INVITE')
@@ -82,7 +82,7 @@ export default function App() {
   }
 
   const joinTrip = async (code: string) => {
-    const trip = await mockStudentTripApi.joinWithInviteCode(code)
+    const trip = await studentTripApi.joinWithInviteCode(code)
     setStudentTrip(trip)
     setScreen('STUDENT_PERMISSION')
   }
