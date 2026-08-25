@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { mockAuthApi } from './api/authApi'
+import { authApi } from './api/authApi'
 import { mockCameraAdapter } from './api/cameraAdapter'
 import { mockLocationTrackingAdapter } from './api/locationTrackingApi'
 import { mockMissionApi } from './api/missionApi'
@@ -38,7 +38,7 @@ export default function App() {
     event.preventDefault()
     setError('')
     try {
-      const user = await mockAuthApi.login({ loginId, password })
+      const user = await authApi.login({ loginId, password })
       if (user.role === 'TEACHER') { setScreen('TEACHER_HOME'); return }
       const [trip, tracking] = await Promise.all([mockStudentTripApi.getActiveTrip(user.id), mockLocationTrackingAdapter.getState()])
       setStudentTrip(trip)
@@ -56,10 +56,14 @@ export default function App() {
       setError('보호자 동의가 필요합니다.')
       return
     }
-    await mockAuthApi.signUp(signUpInput)
-    setNotice('회원가입이 완료되었습니다. 로그인해 주세요.')
-    setPassword('')
-    setScreen('LOGIN')
+    try {
+      await authApi.signUp(signUpInput)
+      setNotice('회원가입이 완료되었습니다. 로그인해 주세요.')
+      setPassword('')
+      setScreen('LOGIN')
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : '회원가입에 실패했습니다.')
+    }
   }
 
   const joinTrip = async (code: string) => {
@@ -87,7 +91,7 @@ export default function App() {
     {screen === 'LOGIN' ? <form className="auth-form" onSubmit={handleLogin}>
       <Field label="아이디" id="login-id"><input id="login-id" value={loginId} onChange={(event) => setLoginId(event.target.value)} required /></Field>
       <Field label="비밀번호" id="login-password"><input id="login-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required /></Field>
-      <button type="submit">로그인</button><button className="text-button" type="button" onClick={showSignUp}>회원가입</button><p className="hint">데모 비밀번호: password1234</p>
+      <button type="submit">로그인</button><button className="text-button" type="button" onClick={showSignUp}>회원가입</button>
     </form> : <SignUpForm input={signUpInput} onChange={setSignUpInput} onSubmit={handleSignUp} onCancel={showLogin} />}
   </section></main>
 }

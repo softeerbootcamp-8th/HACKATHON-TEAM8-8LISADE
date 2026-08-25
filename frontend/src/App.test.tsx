@@ -9,6 +9,7 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: '로그인' })).toBeInTheDocument()
     expect(screen.getByLabelText('아이디')).toBeInTheDocument()
     expect(screen.getByLabelText('비밀번호')).toBeInTheDocument()
+    expect(screen.queryByText(/데모 비밀번호/)).not.toBeInTheDocument()
   })
 
   it('requires a guardian consent before a student can complete sign-up', () => {

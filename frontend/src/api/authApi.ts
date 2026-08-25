@@ -1,27 +1,54 @@
-import type { CurrentUser, LoginInput, SignUpInput, UserRole } from '../types/auth'
+import type { CurrentUser, LoginInput, SignUpInput } from '../types/auth'
 
 export interface AuthApi {
   login(input: LoginInput): Promise<CurrentUser>
   signUp(input: SignUpInput): Promise<void>
 }
 
-const DEMO_PASSWORD = 'password1234'
-
-function resolveRole(loginId: string): UserRole {
-  return loginId.toLowerCase().includes('teacher') ? 'TEACHER' : 'STUDENT'
+type ApiResponse<T> = {
+  success: boolean
+  data: T
+  message?: string
 }
 
-export const mockAuthApi: AuthApi = {
-  async login({ loginId, password }) {
-    if (password !== DEMO_PASSWORD) {
-      throw new Error('아이디 또는 비밀번호가 올바르지 않습니다.')
-    }
+type CsrfToken = {
+  token: string
+  headerName: string
+}
 
-    const role = resolveRole(loginId)
+async function getCsrfToken(): Promise<CsrfToken> {
+  return request<CsrfToken>('/api/auth/csrf')
+}
 
-    return { id: role === 'TEACHER' ? 1 : 2, loginId, name: role === 'TEACHER' ? '교사' : '학생', role }
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, { credentials: 'include', ...init })
+  const body = await response.json().catch(() => null) as ApiResponse<T> | null
+
+  if (!response.ok || !body?.success) {
+    throw new Error(body?.message ?? '요청 처리에 실패했습니다.')
+  }
+
+  return body.data
+}
+
+async function post<T>(path: string, payload: unknown): Promise<T> {
+  const csrfToken = await getCsrfToken()
+
+  return request<T>(path, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      [csrfToken.headerName]: csrfToken.token,
+    },
+    body: JSON.stringify(payload),
+  })
+}
+
+export const authApi: AuthApi = {
+  login(input) {
+    return post<CurrentUser>('/api/auth/login', input)
   },
-  async signUp() {
-    return Promise.resolve()
+  signUp(input) {
+    return post<void>('/api/auth/signup', input)
   },
 }
