@@ -23,6 +23,7 @@ interface NativeBackgroundLocationPlugin {
 }
 
 const NativeBackgroundLocation = registerPlugin<NativeBackgroundLocationPlugin>('BackgroundLocation')
+const STUDENT_LOCATION_PATH = '/api/student/locations'
 
 export function createBackgroundLocation(
   plugin: NativeBackgroundLocationPlugin,
@@ -36,7 +37,11 @@ export function createBackgroundLocation(
   })
 
   return {
-    syncSession: isNative ? plugin.syncSession.bind(plugin) : unavailable,
+    syncSession: isNative
+      ? ({ apiBaseUrl }: { apiBaseUrl: string }) => plugin.syncSession({
+          locationEndpoint: new URL(STUDENT_LOCATION_PATH, apiBaseUrl).toString(),
+        })
+      : unavailable,
     expireSession: isNative ? plugin.expireSession.bind(plugin) : unavailable,
     startTracking: isNative ? plugin.startTracking.bind(plugin) : unavailable,
     stopTracking: isNative ? plugin.stopTracking.bind(plugin) : unavailable,

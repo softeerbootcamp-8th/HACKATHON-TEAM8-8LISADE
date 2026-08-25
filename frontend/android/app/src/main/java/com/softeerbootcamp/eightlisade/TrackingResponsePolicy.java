@@ -2,9 +2,13 @@ package com.softeerbootcamp.eightlisade;
 
 enum TrackingResponsePolicy {
     CONTINUE,
+    STOP_TRACKING,
     EXPIRE_SESSION;
 
     static TrackingResponsePolicy fromStatus(int status) {
-        return status == 401 ? EXPIRE_SESSION : CONTINUE;
+        if (status == 401) {
+            return EXPIRE_SESSION;
+        }
+        return status == 410 ? STOP_TRACKING : CONTINUE;
     }
 }

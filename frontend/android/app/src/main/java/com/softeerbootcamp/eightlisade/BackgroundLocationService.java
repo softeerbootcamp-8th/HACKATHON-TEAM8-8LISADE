@@ -119,8 +119,16 @@ public class BackgroundLocationService extends Service {
     private void upload(Location location) {
         try {
             String endpoint = BackgroundLocationState.endpoint(this);
-            if (endpoint == null || TrackingResponsePolicy.fromStatus(httpClient.send(endpoint, location)) == TrackingResponsePolicy.EXPIRE_SESSION) {
+            if (endpoint == null) {
                 mainHandler.post(this::expireSession);
+                return;
+            }
+
+            TrackingResponsePolicy policy = TrackingResponsePolicy.fromStatus(httpClient.send(endpoint, location));
+            if (policy == TrackingResponsePolicy.EXPIRE_SESSION) {
+                mainHandler.post(this::expireSession);
+            } else if (policy == TrackingResponsePolicy.STOP_TRACKING) {
+                mainHandler.post(this::stopTracking);
             }
         } catch (Exception ignored) {
             // 다음 10초 위치에서 다시 시도한다. 쿠키와 위치 값은 로그에 남기지 않는다.
