@@ -94,7 +94,7 @@ function ManagementTab({ user, trips, error, notice, onAdd }: { user: CurrentUse
             </article>)}
     </div>
     {notice && <p className="add-notice" role="status">{notice}</p>}
-    <button type="button" className="add-trip-button" onClick={onAdd}><span aria-hidden="true">+</span>현장체험학습 추가하기</button>
+    <button type="button" className="add-trip-button" aria-label="현장체험학습 추가하기" onClick={onAdd}>+ 현장체험학습 추가하기</button>
   </section>
 }
 
