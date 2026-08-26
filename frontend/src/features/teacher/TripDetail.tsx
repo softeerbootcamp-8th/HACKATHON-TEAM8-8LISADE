@@ -1,9 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { teacherMissionApi } from '../../api/missionApi'
 import { teacherTripApi } from '../../api/teacherTripApi'
 import chevronLeft from '../../assets/chevron-left.svg'
+import type { TeacherMission } from '../../types/mission'
 import type { TeacherTrip } from '../../types/teacherTrip'
 
-const statusLabel: Record<TeacherTrip['status'], string> = { READY: '대기', ACTIVE: '진행 중', FINISHED: '완료' }
+const statusLabel: Record<TeacherTrip['status'], string> = { READY: '대기', ACTIVE: '진행 중', FINISHED: '종료' }
 
 function formatSchedule(startAt: string | null) {
   if (!startAt) return '일정 미정'
@@ -29,22 +31,38 @@ export function TripDetail({ trip, teacherName, onBack, onAddStudent, onStarted,
   const [starting, setStarting] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [missions, setMissions] = useState<TeacherMission[] | null>(null)
+  const [missionError, setMissionError] = useState('')
   const [error, setError] = useState('')
   const isActive = trip.status === 'ACTIVE'
   const isReady = trip.status === 'READY'
+  const isFinished = trip.status === 'FINISHED'
 
   useEffect(() => {
     let active = true
-    teacherTripApi.getParticipants(trip.id)
-      .then((list) => { if (active) setParticipantCount(list.length) })
-      .catch(() => { if (active) setParticipantCount(null) })
+    if (!isFinished) {
+      teacherTripApi.getParticipants(trip.id)
+        .then((list) => { if (active) setParticipantCount(list.length) })
+        .catch(() => { if (active) setParticipantCount(null) })
+    }
     if (isActive) {
       teacherTripApi.getCurrentInviteCode(trip.id)
         .then((code) => { if (active) setInviteCode(code?.code ?? null) })
         .catch(() => { if (active) setInviteCode(null) })
     }
     return () => { active = false }
-  }, [trip.id, isActive])
+  }, [trip.id, isActive, isFinished])
+
+  useEffect(() => {
+    if (!isFinished) return
+    let active = true
+    teacherMissionApi.listMissions(String(trip.id))
+      .then((list) => { if (active) setMissions(list) })
+      .catch((caught) => {
+        if (active) setMissionError(caught instanceof Error ? caught.message : '미션 목록을 불러오지 못했습니다.')
+      })
+    return () => { active = false }
+  }, [trip.id, isFinished])
 
   const confirmEnd = async () => {
     setError('')
@@ -90,12 +108,12 @@ export function TripDetail({ trip, teacherName, onBack, onAddStudent, onStarted,
       <h1>{trip.title}</h1>
       <span className={`trip-status trip-status-${trip.status.toLowerCase()}`}>{statusLabel[trip.status]}</span>
     </header>
-    <section className="trip-create-content trip-detail-content">
+    <section className={`trip-create-content trip-detail-content${isFinished ? ' trip-detail-finished' : ''}`}>
       <div className="trip-detail-card">
         <div><span className="label">날짜</span><span className="value">{formatSchedule(trip.startAt)}</span></div>
         <div><span className="label">장소</span><span className="value">{trip.place}</span></div>
         <div><span className="label">담당자</span><span className="value">{teacherName} 선생님</span></div>
-        <div><span className="label">참여 학생</span><span className="value">{participantCount === null ? '-' : `${participantCount}명`}</span></div>
+        {!isFinished && <div><span className="label">참여 학생</span><span className="value">{participantCount === null ? '-' : `${participantCount}명`}</span></div>}
       </div>
 
       {isActive && <div className="trip-detail-card trip-invite-card">
@@ -105,6 +123,22 @@ export function TripDetail({ trip, teacherName, onBack, onAddStudent, onStarted,
         <div className="invite-actions">
           <button type="button" className="text-button" onClick={onAddStudent}>학생 직접 추가하기 ›</button>
         </div>
+      </div>}
+
+      {isFinished && <div className="finished-missions">
+        {missions === null
+          ? missionError
+            ? <p className="error" role="alert">{missionError}</p>
+            : <p className="hint" role="status">미션을 불러오는 중...</p>
+          : <>
+            <h2>수행한 미션 {missions.length}개</h2>
+            <ol className="finished-mission-list">
+              {missions.map((mission, index) => <li key={mission.id}>
+                <span>미션{index + 1} · {mission.title}</span>
+                <span aria-hidden="true">›</span>
+              </li>)}
+            </ol>
+          </>}
       </div>}
 
       {error && <p className="error" role="alert">{error}</p>}
@@ -122,8 +156,8 @@ export function TripDetail({ trip, teacherName, onBack, onAddStudent, onStarted,
         : <button type="button" className="end-trip-button" onClick={() => setConfirmingEnd(true)}>현장체험학습 종료</button>}
     </footer>}
 
-    {isReady && <footer className="trip-create-footer">
-      <button type="button" className="trip-primary-button" onClick={start} disabled={starting}>{starting ? '시작하는 중...' : '현장체험학습 시작'}</button>
+    {(isReady || isFinished) && <footer className="trip-create-footer">
+      {isReady && <button type="button" className="trip-primary-button" onClick={start} disabled={starting}>{starting ? '시작하는 중...' : '현장체험학습 시작'}</button>}
       {confirmingDelete
         ? <div className="end-trip-confirm">
           <p>정말 삭제할까요? 삭제 후에는 되돌릴 수 없어요.</p>
@@ -132,7 +166,7 @@ export function TripDetail({ trip, teacherName, onBack, onAddStudent, onStarted,
             <button type="button" className="danger-button" onClick={confirmDelete} disabled={deleting}>{deleting ? '삭제하는 중...' : '삭제하기'}</button>
           </div>
         </div>
-        : <button type="button" className="danger-button" style={{ marginTop: 8 }} onClick={() => setConfirmingDelete(true)}>삭제하기</button>}
+        : <button type="button" className="danger-button" style={isReady ? { marginTop: 8 } : undefined} onClick={() => setConfirmingDelete(true)}>삭제하기</button>}
     </footer>}
   </main>
 }
