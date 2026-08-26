@@ -66,6 +66,88 @@ class TripServiceTest {
     }
 
     @Test
+    void 체험학습을_생성하면_READY_상태로_저장된다() {
+        // given
+        Geofence geofence = new Geofence(7L, "경복궁", LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
+        Trip savedTrip = new Trip(1L, 10L, 7L, "경복궁", "서울", null,
+                LocalDateTime.of(2026, 8, 25, 0, 0), LocalDateTime.of(2026, 8, 25, 23, 59), TripStatus.READY,
+                LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
+        given(geofenceRepository.save(any(Geofence.class))).willReturn(geofence);
+        given(tripRepository.save(any(Trip.class))).willReturn(savedTrip);
+
+        // when
+        tripService.create(10L, createTripRequest());
+
+        // then
+        ArgumentCaptor<Trip> tripCaptor = ArgumentCaptor.forClass(Trip.class);
+        verify(tripRepository).save(tripCaptor.capture());
+        assertThat(tripCaptor.getValue().getStatus()).isEqualTo(TripStatus.READY);
+    }
+
+    @Test
+    void 예정_체험학습을_시작하면_ACTIVE로_바뀌고_새_초대_코드를_발급한다() {
+        // given
+        Trip trip = new Trip(1L, 10L, null, "경복궁", "서울", null, null, null, TripStatus.READY,
+                LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
+        InviteCode previous = new InviteCode(3L, 1L, "AB1234", LocalDateTime.of(2026, 8, 25, 9, 5), null);
+        given(tripRepository.findById(1L)).willReturn(Optional.of(trip));
+        given(inviteCodeRepository.findByTripIdAndRevokedAtIsNull(1L)).willReturn(Optional.of(previous));
+        given(inviteCodeRepository.existsByCode("AB1234")).willReturn(false);
+
+        // when
+        InviteCodeResponse response = tripService.start(10L, 1L);
+
+        // then
+        assertThat(trip.getStatus()).isEqualTo(TripStatus.ACTIVE);
+        assertThat(previous.getRevokedAt()).isEqualTo(LocalDateTime.of(2026, 8, 25, 9, 0));
+        assertThat(response.code()).isEqualTo("AB1234");
+        verify(tripRepository).save(trip);
+    }
+
+    @Test
+    void 이미_시작된_체험학습을_다시_시작하려하면_예외() {
+        // given
+        Trip trip = new Trip(1L, 10L, null, "경복궁", "서울", null, null, null, TripStatus.ACTIVE,
+                LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
+        given(tripRepository.findById(1L)).willReturn(Optional.of(trip));
+
+        // when & then
+        assertThatThrownBy(() -> tripService.start(10L, 1L))
+                .hasMessageContaining("not ready");
+        verify(tripRepository, never()).save(any());
+    }
+
+    @Test
+    void 예정_체험학습을_삭제하면_지오펜스와_초대코드까지_함께_삭제한다() {
+        // given
+        Trip trip = new Trip(1L, 10L, 7L, "경복궁", "서울", null, null, null, TripStatus.READY,
+                LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
+        given(tripRepository.findById(1L)).willReturn(Optional.of(trip));
+
+        // when
+        tripService.delete(10L, 1L);
+
+        // then
+        verify(inviteCodeRepository).deleteAllByTripId(1L);
+        verify(geofencePointRepository).deleteAllByGeofenceId(7L);
+        verify(geofenceRepository).deleteById(7L);
+        verify(tripRepository).delete(trip);
+    }
+
+    @Test
+    void 진행중인_체험학습을_삭제하려하면_예외() {
+        // given
+        Trip trip = new Trip(1L, 10L, null, "경복궁", "서울", null, null, null, TripStatus.ACTIVE,
+                LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
+        given(tripRepository.findById(1L)).willReturn(Optional.of(trip));
+
+        // when & then
+        assertThatThrownBy(() -> tripService.delete(10L, 1L))
+                .hasMessageContaining("not ready");
+        verify(tripRepository, never()).delete(any());
+    }
+
+    @Test
     void 체험학습을_생성하면_오분_후_만료되는_여섯_자리_초대_코드를_발급한다() {
         // given
         Geofence geofence = new Geofence(7L, "경복궁", LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));

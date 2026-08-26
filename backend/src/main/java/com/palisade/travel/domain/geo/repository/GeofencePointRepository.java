@@ -8,4 +8,6 @@ import java.util.List;
 public interface GeofencePointRepository extends JpaRepository<GeofencePoint, Long> {
 
     List<GeofencePoint> findAllByGeofenceIdOrderBySequenceAsc(Long geofenceId);
+
+    void deleteAllByGeofenceId(Long geofenceId);
 }

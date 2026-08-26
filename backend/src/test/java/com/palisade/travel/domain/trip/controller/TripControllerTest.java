@@ -25,6 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -171,5 +172,24 @@ class TripControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
         org.mockito.Mockito.verify(tripService).finish(10L, 1L);
+    }
+
+    @Test
+    void 교사는_예정된_체험학습을_시작한다() throws Exception {
+        given(tripService.start(10L, 1L))
+                .willReturn(new InviteCodeResponse("CD5678", LocalDateTime.of(2026, 8, 25, 9, 5)));
+
+        mockMvc.perform(post("/api/teacher/trips/1/start"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.code").value("CD5678"));
+        org.mockito.Mockito.verify(tripService).start(10L, 1L);
+    }
+
+    @Test
+    void 교사는_예정된_체험학습을_삭제한다() throws Exception {
+        mockMvc.perform(delete("/api/teacher/trips/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+        org.mockito.Mockito.verify(tripService).delete(10L, 1L);
     }
 }

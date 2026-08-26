@@ -10,7 +10,8 @@ public enum TripErrorCode implements ErrorCode {
     TRIP_ACCESS_DENIED(HttpStatus.FORBIDDEN, "TRIP_ACCESS_DENIED", "Trip access denied."),
     INVALID_INVITE_CODE(HttpStatus.BAD_REQUEST, "INVALID_INVITE_CODE", "Invalid invite code."),
     ACTIVE_TRIP_ALREADY_JOINED(HttpStatus.CONFLICT, "ACTIVE_TRIP_ALREADY_JOINED", "Student already joined an active trip."),
-    TRIP_NOT_ACTIVE(HttpStatus.CONFLICT, "TRIP_NOT_ACTIVE", "Trip is not active.");
+    TRIP_NOT_ACTIVE(HttpStatus.CONFLICT, "TRIP_NOT_ACTIVE", "Trip is not active."),
+    TRIP_NOT_READY(HttpStatus.CONFLICT, "TRIP_NOT_READY", "Trip is not ready.");
 
     private final HttpStatus status;
     private final String code;

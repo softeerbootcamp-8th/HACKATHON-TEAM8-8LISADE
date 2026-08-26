@@ -57,8 +57,35 @@ public class TripService {
         geofencePointRepository.saveAll(points);
 
         Trip trip = tripRepository.save(Trip.create(teacherId, geofence.getId(), request.title(), request.place(),
-                request.description(), request.startAt(), request.endAt(), TripStatus.ACTIVE));
+                request.description(), request.startAt(), request.endAt(), TripStatus.READY));
         return InviteCodeResponse.from(issueCode(trip.getId()));
+    }
+
+    @Transactional
+    public InviteCodeResponse start(Long teacherId, Long tripId) {
+        Trip trip = findOwnedTrip(teacherId, tripId);
+        if (trip.getStatus() != TripStatus.READY) {
+            throw new ApiException(TripErrorCode.TRIP_NOT_READY);
+        }
+        trip.start();
+        tripRepository.save(trip);
+        inviteCodeRepository.findByTripIdAndRevokedAtIsNull(tripId)
+                .ifPresent(code -> code.revoke(now()));
+        return InviteCodeResponse.from(issueCode(tripId));
+    }
+
+    @Transactional
+    public void delete(Long teacherId, Long tripId) {
+        Trip trip = findOwnedTrip(teacherId, tripId);
+        if (trip.getStatus() != TripStatus.READY) {
+            throw new ApiException(TripErrorCode.TRIP_NOT_READY);
+        }
+        inviteCodeRepository.deleteAllByTripId(tripId);
+        if (trip.getGeofenceId() != null) {
+            geofencePointRepository.deleteAllByGeofenceId(trip.getGeofenceId());
+            geofenceRepository.deleteById(trip.getGeofenceId());
+        }
+        tripRepository.delete(trip);
     }
 
     @Transactional
