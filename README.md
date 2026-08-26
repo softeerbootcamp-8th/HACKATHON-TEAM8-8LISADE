@@ -164,9 +164,8 @@ erDiagram
 
 ## Known Issues
 
-> 다른 작업 마무리 후 마지막에 채운다.
-
-- [ ] TODO
+- **iOS 미지원**: Capacitor iOS 앱 빌드·배포에는 Apple Developer Program(유료) 가입이 필요해 이번 해커톤 범위에서는 지원하지 않는다. Android/Web만 지원한다.
+- **웹 브라우저에서의 GPS 정확도 한계**: 웹은 Capacitor 네이티브 위치 API 대신 브라우저 Geolocation API를 쓰는데, 백그라운드(탭 비활성/화면 꺼짐) 상태에서 위치 수집이 제한되고 정확도도 기기·브라우저별로 편차가 커서 안전 구역 이탈 판정이 앱 대비 불안정할 수 있다.
 
 ## 개발자 조 구성원 정보
 
