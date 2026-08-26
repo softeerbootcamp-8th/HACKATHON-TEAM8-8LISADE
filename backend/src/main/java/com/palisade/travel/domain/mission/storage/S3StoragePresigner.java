@@ -3,8 +3,11 @@ package com.palisade.travel.domain.mission.storage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
@@ -13,6 +16,8 @@ import java.time.Duration;
 @Component
 @Profile("prod")
 public class S3StoragePresigner implements StoragePresigner {
+
+    private static final Duration SIGNATURE_DURATION = Duration.ofMinutes(5);
 
     private final S3Presigner s3Presigner;
     private final String bucket;
@@ -30,9 +35,22 @@ public class S3StoragePresigner implements StoragePresigner {
                 .contentType("image/jpeg")
                 .build();
         PresignedPutObjectRequest presignedRequest = s3Presigner.presignPutObject(PutObjectPresignRequest.builder()
-                .signatureDuration(Duration.ofMinutes(5))
+                .signatureDuration(SIGNATURE_DURATION)
                 .putObjectRequest(putObjectRequest)
                 .build());
         return new PresignedUpload(objectKey, presignedRequest.url().toString());
+    }
+
+    @Override
+    public String presignGet(String objectKey) {
+        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                .bucket(bucket)
+                .key(objectKey)
+                .build();
+        PresignedGetObjectRequest presignedRequest = s3Presigner.presignGetObject(GetObjectPresignRequest.builder()
+                .signatureDuration(SIGNATURE_DURATION)
+                .getObjectRequest(getObjectRequest)
+                .build());
+        return presignedRequest.url().toString();
     }
 }
