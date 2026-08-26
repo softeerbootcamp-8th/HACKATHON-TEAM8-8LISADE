@@ -166,6 +166,10 @@ erDiagram
 
 - **iOS 미지원**: Capacitor iOS 앱 빌드·배포에는 Apple Developer Program(유료) 가입이 필요해 이번 해커톤 범위에서는 지원하지 않는다. Android/Web만 지원한다.
 - **웹 브라우저에서의 GPS 정확도 한계**: 웹은 Capacitor 네이티브 위치 API 대신 브라우저 Geolocation API를 쓰는데, 백그라운드(탭 비활성/화면 꺼짐) 상태에서 위치 수집이 제한되고 정확도도 기기·브라우저별로 편차가 커서 안전 구역 이탈 판정이 앱 대비 불안정할 수 있다.
+- **학생/학부모 전화 걸기 버튼 비활성**: 교사용 학생 상세 화면에 전화 걸기 UI는 있지만, 참가자 조회 API 계약에 전화번호 필드 자체가 없어 실제 `tel:` 연결이나 번호 표시는 되지 않는다.
+- **위치 이력 전체 조회 불가**: 위치 로그는 안전 구역 이탈 좌표만 적재하며, 학생의 전체 이동 경로(트랙) 조회 기능은 없다.
+- **진행중/종료 상태 Trip 삭제 불가**: Trip 삭제는 `READY`(시작 전) 상태에서만 가능하다. 참가자·위치·미션 데이터가 쌓인 진행중/종료 Trip을 삭제하려면 해당 데이터까지 함께 정리하는 별도 구현이 필요해 지원하지 않는다.
+- **Trip 종료 결과보고서/내보내기 기능 없음**: 체험학습 종료 후 참여 기록·미션 결과를 파일로 내보내거나 요약 리포트로 보는 기능은 구현하지 않았다.
 
 ## 개발자 조 구성원 정보
 
@@ -176,4 +180,4 @@ erDiagram
 | 김현문 | [@hyeonyway](https://github.com/hyeonyway) | Frontend 리드 · 인증/세션 · Trip 참여 및 미션 제출 플로우 · 배포 관리 |
 | 김근성 | [@rootachieve](https://github.com/rootachieve) | 위치 추적(GPS/안전 구역 이탈 판정) · Android 백그라운드 위치 파이프라인 · 인프라 |
 | 박민서 | [@minseo6753](https://github.com/minseo6753) | Backend 도메인 모델링(JPA) · 알림(Notification) · 실시간 위치 SSE |
-| 임하민 | [@haimin13](https://github.com/haimin13) | FCM Push 연동 · 미션 관리 화면/API · CI/CD |
+| 임하민 | [@haimin13](https://github.com/haimin13) | FCM Push/SSE 연동 · 미션 관리 화면/API · CI/CD |
