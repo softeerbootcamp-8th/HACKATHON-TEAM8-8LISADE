@@ -7,13 +7,18 @@ import com.palisade.travel.domain.geo.repository.GeofenceRepository;
 import com.palisade.travel.domain.trip.dto.CreateTripRequest;
 import com.palisade.travel.domain.trip.dto.InviteCodeResponse;
 import com.palisade.travel.domain.trip.dto.JoinTripResponse;
+import com.palisade.travel.domain.trip.dto.TripParticipantResponse;
 import com.palisade.travel.domain.trip.entity.InviteCode;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
+import com.palisade.travel.domain.trip.entity.TripParticipantType;
 import com.palisade.travel.domain.trip.entity.TripStatus;
 import com.palisade.travel.domain.trip.repository.InviteCodeRepository;
 import com.palisade.travel.domain.trip.repository.TripParticipantRepository;
 import com.palisade.travel.domain.trip.repository.TripRepository;
+import com.palisade.travel.domain.user.entity.User;
+import com.palisade.travel.domain.user.entity.UserRole;
+import com.palisade.travel.domain.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,13 +53,14 @@ class TripServiceTest {
     private final TripParticipantRepository participantRepository = mock(TripParticipantRepository.class);
     private final GeofenceRepository geofenceRepository = mock(GeofenceRepository.class);
     private final GeofencePointRepository geofencePointRepository = mock(GeofencePointRepository.class);
+    private final UserRepository userRepository = mock(UserRepository.class);
     private TripService tripService;
 
     @BeforeEach
     void setUp() {
         AtomicInteger generated = new AtomicInteger();
         tripService = new TripService(tripRepository, inviteCodeRepository, participantRepository,
-                geofenceRepository, geofencePointRepository, clock,
+                geofenceRepository, geofencePointRepository, userRepository, clock,
                 () -> generated.getAndIncrement() == 0 ? "AB1234" : "CD5678");
         given(inviteCodeRepository.save(any(InviteCode.class))).willAnswer(invocation -> invocation.getArgument(0));
     }
@@ -169,6 +175,29 @@ class TripServiceTest {
         assertThat(previous.getRevokedAt()).isEqualTo(LocalDateTime.of(2026, 8, 25, 9, 0));
         assertThat(response.code()).isEqualTo("CD5678");
         verify(inviteCodeRepository).save(any(InviteCode.class));
+    }
+
+    @Test
+    void 참여자_목록_조회시_앱으로_참여한_학생은_User_이름을_직접추가한_학생은_등록한_이름을_반환한다() {
+        Trip trip = new Trip(1L, 10L, null, "경복궁", "서울", null, null, null, TripStatus.ACTIVE,
+                LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
+        given(tripRepository.findById(1L)).willReturn(Optional.of(trip));
+        TripParticipant appParticipant = new TripParticipant(100L, 1L, 20L, null, TripParticipantType.APP,
+                LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
+        TripParticipant manualParticipant = new TripParticipant(101L, 1L, null, "김직접",
+                TripParticipantType.MANUAL, LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
+        given(participantRepository.findAllByTripIdOrderByCreatedAtAsc(1L))
+                .willReturn(List.of(appParticipant, manualParticipant));
+        User user = new User(20L, "student01", "hash", null, "이서연", UserRole.STUDENT,
+                "01012345678", null, true, true, LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
+        given(userRepository.findAllById(List.of(20L))).willReturn(List.of(user));
+
+        List<TripParticipantResponse> responses = tripService.getParticipants(10L, 1L);
+
+        assertThat(responses).extracting(TripParticipantResponse::userId, TripParticipantResponse::name)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(20L, "이서연"),
+                        org.assertj.core.groups.Tuple.tuple(null, "김직접"));
     }
 
     @Test

@@ -17,14 +17,17 @@ import com.palisade.travel.domain.trip.exception.TripErrorCode;
 import com.palisade.travel.domain.trip.repository.InviteCodeRepository;
 import com.palisade.travel.domain.trip.repository.TripParticipantRepository;
 import com.palisade.travel.domain.trip.repository.TripRepository;
+import com.palisade.travel.domain.user.entity.User;
+import com.palisade.travel.domain.user.repository.UserRepository;
 import com.palisade.travel.global.error.ApiException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.util.Locale;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 @Service
 @Transactional(readOnly = true)
@@ -36,18 +39,20 @@ public class TripService {
     private final TripParticipantRepository participantRepository;
     private final GeofenceRepository geofenceRepository;
     private final GeofencePointRepository geofencePointRepository;
+    private final UserRepository userRepository;
     private final Clock clock;
     private final InviteCodeGenerator inviteCodeGenerator;
 
     public TripService(TripRepository tripRepository, InviteCodeRepository inviteCodeRepository,
                        TripParticipantRepository participantRepository, GeofenceRepository geofenceRepository,
-                       GeofencePointRepository geofencePointRepository, Clock clock,
+                       GeofencePointRepository geofencePointRepository, UserRepository userRepository, Clock clock,
                        InviteCodeGenerator inviteCodeGenerator) {
         this.tripRepository = tripRepository;
         this.inviteCodeRepository = inviteCodeRepository;
         this.participantRepository = participantRepository;
         this.geofenceRepository = geofenceRepository;
         this.geofencePointRepository = geofencePointRepository;
+        this.userRepository = userRepository;
         this.clock = clock;
         this.inviteCodeGenerator = inviteCodeGenerator;
     }
@@ -102,8 +107,17 @@ public class TripService {
 
     public List<TripParticipantResponse> getParticipants(Long teacherId, Long tripId) {
         findOwnedTrip(teacherId, tripId);
-        return participantRepository.findAllByTripIdOrderByCreatedAtAsc(tripId).stream()
-                .map(TripParticipantResponse::from)
+        List<TripParticipant> participants = participantRepository.findAllByTripIdOrderByCreatedAtAsc(tripId);
+        List<Long> userIds = participants.stream().map(TripParticipant::getUserId).filter(java.util.Objects::nonNull).toList();
+        Map<Long, String> namesByUserId = userRepository.findAllById(userIds).stream()
+                .collect(java.util.stream.Collectors.toMap(User::getId, User::getName));
+        return participants.stream()
+                .map(participant -> {
+                    String resolvedName = participant.getUserId() != null
+                            ? namesByUserId.get(participant.getUserId())
+                            : participant.getParticipantName();
+                    return TripParticipantResponse.from(participant, resolvedName);
+                })
                 .toList();
     }
 
