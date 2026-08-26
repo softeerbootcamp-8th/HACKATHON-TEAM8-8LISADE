@@ -66,3 +66,18 @@ API와 무관하므로 그대로 유지했다.
 - `SessionAuthenticationTest`의 로그인 실패 테스트 2건(`loginWithAnInvalidPasswordReturnsUnauthorized`,
   `disabledAccountCannotLogIn`) 기대 코드를 `INVALID_CREDENTIALS`/`ACCOUNT_DISABLED`로
   갱신, 메시지 문구까지 검증하도록 보강.
+
+## 후속: 전 도메인 ErrorCode 메시지 한글화
+
+`ErrorResponse.message`가 프론트(`App.tsx`)에서 그대로 화면에 노출되는
+구조라 로그인 실패 메시지만 한글로 바꾸는 걸로는 부족했다. `CommonErrorCode`,
+`LocationErrorCode`, `MissionErrorCode`, `TripErrorCode`, `UserErrorCode`
+전체의 메시지를 자연스러운 한글 안내 문구로 교체했다(코드 값과 HTTP
+상태는 변경 없음). 영문 메시지의 부분 문자열을 검증하던
+`TripServiceTest`의 assertion 3건(`hasMessageContaining("active trip")` 등)도
+한글 기준으로 갱신했다.
+
+### 검증
+
+- `./gradlew compileJava compileTestJava`: 통과
+- `./gradlew test`: 145개 테스트 전부 통과(실패/에러 0)
