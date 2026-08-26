@@ -5,11 +5,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.web.server.autoconfigure.ServerProperties;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
+import java.time.Duration;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -17,6 +20,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -28,6 +32,9 @@ class SessionAuthenticationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private ServerProperties serverProperties;
 
     @BeforeEach
     void setUpUser() {
@@ -54,6 +61,15 @@ class SessionAuthenticationTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.loginId").value("student1"))
                 .andExpect(jsonPath("$.data.role").value("STUDENT"));
+    }
+
+    @Test
+    void Given_로그인_세션_When_쿠키를_발급하면_Then_앱_종료_후에도_30분간_보관한다() {
+        // given & when
+        Duration maxAge = serverProperties.getServlet().getSession().getCookie().getMaxAge();
+
+        // then
+        assertThat(maxAge).isEqualTo(Duration.ofMinutes(30));
     }
 
     @Test

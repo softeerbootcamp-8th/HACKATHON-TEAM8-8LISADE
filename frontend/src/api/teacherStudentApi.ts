@@ -1,3 +1,5 @@
+import { apiFetch } from './httpClient'
+
 export type StudentParticipantType = 'APP' | 'MANUAL'
 
 export interface StudentRosterEntry {
@@ -37,7 +39,7 @@ type StudentLocationResponse = {
 }
 
 async function request<T>(path: string, fallbackMessage: string): Promise<T> {
-  const response = await fetch(apiUrl(path), { credentials: 'include' })
+  const response = await apiFetch(path)
   const body = await response.json().catch(() => null) as ApiResponse<T> | null
 
   if (!response.ok || !body?.success) {
@@ -76,4 +78,3 @@ export const teacherStudentApi: TeacherStudentApi = {
     return student
   },
 }
-import { apiUrl } from './apiUrl'
