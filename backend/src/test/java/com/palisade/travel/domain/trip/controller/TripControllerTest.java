@@ -2,6 +2,7 @@ package com.palisade.travel.domain.trip.controller;
 
 import com.palisade.travel.domain.trip.dto.InviteCodeResponse;
 import com.palisade.travel.domain.trip.dto.JoinTripResponse;
+import com.palisade.travel.domain.trip.dto.TripCreatedResponse;
 import com.palisade.travel.domain.trip.dto.TripParticipantResponse;
 import com.palisade.travel.domain.trip.dto.TeacherTripSummaryResponse;
 import com.palisade.travel.domain.trip.entity.TripParticipantType;
@@ -50,7 +51,7 @@ class TripControllerTest {
     @Test
     void 교사는_세_개_이상의_지오펜스_좌표로_체험학습을_생성한다() throws Exception {
         // given
-        given(tripService.create(eq(10L), any())).willReturn(new InviteCodeResponse("AB1234", LocalDateTime.of(2026, 8, 25, 9, 5)));
+        given(tripService.create(eq(10L), any())).willReturn(new TripCreatedResponse(1L));
 
         // when
         ResultActions result = mockMvc.perform(post("/api/teacher/trips")
@@ -73,7 +74,7 @@ class TripControllerTest {
         result
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.code").value("AB1234"));
+                .andExpect(jsonPath("$.data.tripId").value(1));
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.palisade.travel.domain.trip.controller;
 import com.palisade.travel.domain.trip.dto.CreateTripRequest;
 import com.palisade.travel.domain.trip.dto.InviteCodeResponse;
 import com.palisade.travel.domain.trip.dto.ManualParticipantRequest;
+import com.palisade.travel.domain.trip.dto.TripCreatedResponse;
 import com.palisade.travel.domain.trip.dto.TripParticipantResponse;
 import com.palisade.travel.domain.trip.dto.TeacherTripSummaryResponse;
 import com.palisade.travel.domain.trip.service.TripService;
@@ -31,8 +32,8 @@ public class TeacherTripController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<InviteCodeResponse> create(@AuthenticationPrincipal UserPrincipal teacher,
-                                                   @Valid @RequestBody CreateTripRequest request) {
+    public ApiResponse<TripCreatedResponse> create(@AuthenticationPrincipal UserPrincipal teacher,
+                                                    @Valid @RequestBody CreateTripRequest request) {
         return ApiResponse.success(tripService.create(teacher.userId(), request));
     }
 

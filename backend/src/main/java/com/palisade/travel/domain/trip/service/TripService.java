@@ -7,6 +7,7 @@ import com.palisade.travel.domain.geo.repository.GeofenceRepository;
 import com.palisade.travel.domain.trip.dto.CreateTripRequest;
 import com.palisade.travel.domain.trip.dto.InviteCodeResponse;
 import com.palisade.travel.domain.trip.dto.JoinTripResponse;
+import com.palisade.travel.domain.trip.dto.TripCreatedResponse;
 import com.palisade.travel.domain.trip.dto.TripParticipantResponse;
 import com.palisade.travel.domain.trip.dto.TeacherTripSummaryResponse;
 import com.palisade.travel.domain.trip.entity.InviteCode;
@@ -46,7 +47,7 @@ public class TripService {
     private final InviteCodeGenerator inviteCodeGenerator;
 
     @Transactional
-    public InviteCodeResponse create(Long teacherId, CreateTripRequest request) {
+    public TripCreatedResponse create(Long teacherId, CreateTripRequest request) {
         Geofence geofence = geofenceRepository.save(Geofence.create(request.title()));
         List<GeofencePoint> points = java.util.stream.IntStream.range(0, request.geofencePoints().size())
                 .mapToObj(sequence -> {
@@ -58,7 +59,7 @@ public class TripService {
 
         Trip trip = tripRepository.save(Trip.create(teacherId, geofence.getId(), request.title(), request.place(),
                 request.description(), request.startAt(), request.endAt(), TripStatus.READY));
-        return InviteCodeResponse.from(issueCode(trip.getId()));
+        return TripCreatedResponse.from(trip);
     }
 
     @Transactional
