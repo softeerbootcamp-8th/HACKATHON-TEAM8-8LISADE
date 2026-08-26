@@ -21,3 +21,14 @@
 - 테스트: `AppHeader.test.tsx`에 렌더/클릭 2건, `App.test.tsx`에 통합 2건(교사 홈 → `POST /api/auth/logout` 호출·push 해제·`expireSession` 확인 후 시작 화면, 학생 홈 → `stopTracking` 확인 후 시작 화면). `setupTests.ts` 기본 fetch stub에 `/api/auth/logout`을 추가했다.
 
 검증: develop rebase 후 `npm test` 40 files / 253 tests 전부 pass, `npm run lint` 무경고, `npm run build`(tsc -b + vite build) 성공. 헤더 마크업을 dev server로 정적 렌더해 시안 pill과 대조 확인.
+
+# 학생 회원가입 보호자 동의 필수화 (#162)
+
+- Figma T-01-1과 정책 1.2(가정통신문 서면 동의를 앱이 재확인)에 따르면 "보호자 동의를 받았어요" 체크박스는 학생 회원가입의 필수 조건이다. [`SignUpScreen`](../../frontend/src/features/auth/AuthScreens.tsx)에 체크박스는 이미 있었지만 `가입하기` 버튼에 아무 조건이 없어, 체크하지 않은 채로도 버튼을 누를 수 있었다.
+- `SignUpScreen`에 `guardianConsentMissing = input.role === 'STUDENT' && !input.guardianConsent`를 두고 `<button type="submit">`에 `disabled`로 걸었다. 교사는 체크박스 자체가 렌더되지 않으므로(`input.role === 'STUDENT' &&` 조건부 렌더) `role === 'STUDENT'` 판정에서 걸러져 영향받지 않는다.
+- [`App.handleSignUp`](../../frontend/src/App.tsx)의 기존 가드(`role === 'STUDENT' && !guardianConsent` → `'보호자 동의가 필요합니다.'`)는 그대로 남겼다. 버튼 비활성화는 UX 계층이고, 폼 상태로 submit에 도달하는 다른 경로(Enter 키 등)를 위한 방어선은 유지하는 편이 낫다.
+- 서버 측 검증은 이미 존재했다 — [`UserSignUpService.validateRoleProfile`](../../backend/src/main/java/com/palisade/travel/domain/user/service/UserSignUpService.java)이 `role == STUDENT`에서 `guardianConsent`가 true가 아니면 `GUARDIAN_CONSENT_REQUIRED`를 던지고, `UserSignUpControllerTest.studentSignUpRejectsMissingGuardianConsent`가 400 + 에러 코드를 검증한다. 최종 방어선이 서버에 있음을 확인했으므로 백엔드는 수정하지 않았다.
+- 테스트: `AuthScreens.test.tsx`를 새로 추가해 4건 — 학생 미체크 시 버튼 disabled / 체크 시 enabled / 교사는 체크박스 없이 enabled / 체크박스 클릭이 `guardianConsent: true`를 전달.
+- 기존 `App.test.tsx` 2건이 새 동작과 충돌해 수정했다. `requires a guardian consent...`는 클릭 후 에러 메시지를 기대했지만 이제 버튼이 눌리지 않으므로 "미체크 → disabled, 체크 → enabled" 검증으로 바꿨다. `blocks sign-up when password confirmation does not match`는 학생(기본 role)으로 submit하던 테스트라 체크박스를 먼저 클릭해 동의 게이트를 통과시킨 뒤 비밀번호 불일치 검증에 도달하게 했다.
+
+검증: develop rebase 후 `npm test` 41 files / 255 tests 전부 pass, `npx tsc -b`·`npm run lint` 무경고, 백엔드 `./gradlew test --tests '*UserSignUpControllerTest*'` BUILD SUCCESSFUL.
