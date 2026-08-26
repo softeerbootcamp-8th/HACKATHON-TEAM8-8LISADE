@@ -1,5 +1,6 @@
 package com.palisade.travel.global.sse;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -9,16 +10,13 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class SseConnectionService {
 
     private static final long TIMEOUT_MILLIS = 30 * 60 * 1000L;
     private static final long HEARTBEAT_FIXED_RATE_MILLIS = 15 * 1000L;
 
     private final SseEmitterRepository emitterRepository;
-
-    public SseConnectionService(SseEmitterRepository emitterRepository) {
-        this.emitterRepository = emitterRepository;
-    }
 
     public SseEmitter connect(Long userId) {
         SseEmitter emitter = new SseEmitter(TIMEOUT_MILLIS);

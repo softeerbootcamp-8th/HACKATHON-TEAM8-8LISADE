@@ -8,6 +8,7 @@ import com.palisade.travel.domain.geo.repository.CurrentLocationRepository;
 import com.palisade.travel.domain.geo.repository.GeofencePointRepository;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.repository.TripRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,19 +16,12 @@ import java.util.List;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class LocationQueryService {
 
     private final TripRepository tripRepository;
     private final CurrentLocationRepository currentLocationRepository;
     private final GeofencePointRepository geofencePointRepository;
-
-    public LocationQueryService(TripRepository tripRepository,
-                                CurrentLocationRepository currentLocationRepository,
-                                GeofencePointRepository geofencePointRepository) {
-        this.tripRepository = tripRepository;
-        this.currentLocationRepository = currentLocationRepository;
-        this.geofencePointRepository = geofencePointRepository;
-    }
 
     public List<StudentLocationResponse> snapshot(Long teacherId, Long tripId) {
         findOwnedTrip(teacherId, tripId);

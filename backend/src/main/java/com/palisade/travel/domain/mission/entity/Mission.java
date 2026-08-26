@@ -1,13 +1,18 @@
 package com.palisade.travel.domain.mission.entity;
 
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @Table(name = "mission")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class Mission {
 
     @Id
@@ -39,22 +44,6 @@ public class Mission {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
-    protected Mission() {
-    }
-
-    public Mission(Long id, Long tripId, String title, String description, MissionType type,
-                   String attendancePin, LocalDateTime startAt, LocalDateTime endAt, LocalDateTime createdAt) {
-        this.id = id;
-        this.tripId = tripId;
-        this.title = title;
-        this.description = description;
-        this.type = type;
-        this.attendancePin = attendancePin;
-        this.startAt = startAt;
-        this.endAt = endAt;
-        this.createdAt = createdAt;
-    }
 
     public static Mission create(Long tripId, String title, String description, MissionType type,
                                  LocalDateTime startAt, LocalDateTime endAt) {

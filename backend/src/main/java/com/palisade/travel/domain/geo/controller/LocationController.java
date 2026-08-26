@@ -6,6 +6,7 @@ import com.palisade.travel.domain.geo.service.LocationService;
 import com.palisade.travel.global.api.ApiResponse;
 import com.palisade.travel.global.security.UserPrincipal;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -14,13 +15,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/student/locations")
+@RequiredArgsConstructor
 public class LocationController {
 
     private final LocationService locationService;
-
-    public LocationController(LocationService locationService) {
-        this.locationService = locationService;
-    }
 
     @PostMapping
     public ApiResponse<LocationUpdateResponse> update(Authentication authentication,

@@ -9,6 +9,7 @@ import com.palisade.travel.domain.trip.service.TripService;
 import com.palisade.travel.global.api.ApiResponse;
 import com.palisade.travel.global.security.UserPrincipal;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,12 +24,9 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/teacher/trips")
+@RequiredArgsConstructor
 public class TeacherTripController {
     private final TripService tripService;
-
-    public TeacherTripController(TripService tripService) {
-        this.tripService = tripService;
-    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

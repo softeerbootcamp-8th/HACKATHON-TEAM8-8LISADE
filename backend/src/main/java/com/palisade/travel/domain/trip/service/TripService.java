@@ -20,6 +20,7 @@ import com.palisade.travel.domain.trip.repository.TripRepository;
 import com.palisade.travel.domain.user.entity.User;
 import com.palisade.travel.domain.user.repository.UserRepository;
 import com.palisade.travel.global.error.ApiException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +32,7 @@ import java.util.Map;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class TripService {
     private static final long INVITE_CODE_EXPIRES_MINUTES = 5;
 
@@ -42,20 +44,6 @@ public class TripService {
     private final UserRepository userRepository;
     private final Clock clock;
     private final InviteCodeGenerator inviteCodeGenerator;
-
-    public TripService(TripRepository tripRepository, InviteCodeRepository inviteCodeRepository,
-                       TripParticipantRepository participantRepository, GeofenceRepository geofenceRepository,
-                       GeofencePointRepository geofencePointRepository, UserRepository userRepository, Clock clock,
-                       InviteCodeGenerator inviteCodeGenerator) {
-        this.tripRepository = tripRepository;
-        this.inviteCodeRepository = inviteCodeRepository;
-        this.participantRepository = participantRepository;
-        this.geofenceRepository = geofenceRepository;
-        this.geofencePointRepository = geofencePointRepository;
-        this.userRepository = userRepository;
-        this.clock = clock;
-        this.inviteCodeGenerator = inviteCodeGenerator;
-    }
 
     @Transactional
     public InviteCodeResponse create(Long teacherId, CreateTripRequest request) {

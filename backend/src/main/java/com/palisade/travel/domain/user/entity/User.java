@@ -8,13 +8,18 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @Table(name = "users")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class User {
 
     @Id
@@ -52,24 +57,6 @@ public class User {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
-    protected User() {
-    }
-
-    public User(Long id, String loginId, String passwordHash, String email, String name, UserRole role,
-                String phoneNumber, String parentNumber, Boolean guardianConsent, boolean enabled, LocalDateTime createdAt) {
-        this.id = id;
-        this.loginId = loginId;
-        this.passwordHash = passwordHash;
-        this.email = email;
-        this.name = name;
-        this.role = role;
-        this.phoneNumber = phoneNumber;
-        this.parentNumber = parentNumber;
-        this.guardianConsent = guardianConsent;
-        this.enabled = enabled;
-        this.createdAt = createdAt;
-    }
 
     public static User create(String loginId, String passwordHash, String name, UserRole role,
                               String phoneNumber, String parentNumber, Boolean guardianConsent) {

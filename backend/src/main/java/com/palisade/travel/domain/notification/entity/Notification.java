@@ -8,13 +8,18 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @Table(name = "notification")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class Notification {
 
     @Id
@@ -43,21 +48,6 @@ public class Notification {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
-    protected Notification() {
-    }
-
-    public Notification(Long id, Long userId, Long tripId, Long missionId, NotificationType type,
-                        String title, String message, LocalDateTime createdAt) {
-        this.id = id;
-        this.userId = userId;
-        this.tripId = tripId;
-        this.missionId = missionId;
-        this.type = type;
-        this.title = title;
-        this.message = message;
-        this.createdAt = createdAt;
-    }
 
     public static Notification create(Long userId, Long tripId, Long missionId, NotificationType type,
                                       String title, String message) {

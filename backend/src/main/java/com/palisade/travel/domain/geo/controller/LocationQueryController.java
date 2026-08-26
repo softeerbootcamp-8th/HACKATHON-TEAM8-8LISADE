@@ -5,6 +5,7 @@ import com.palisade.travel.domain.geo.dto.StudentLocationResponse;
 import com.palisade.travel.domain.geo.service.LocationQueryService;
 import com.palisade.travel.global.api.ApiResponse;
 import com.palisade.travel.global.security.UserPrincipal;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,13 +16,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/teacher/trips/{tripId}")
+@RequiredArgsConstructor
 public class LocationQueryController {
 
     private final LocationQueryService locationQueryService;
-
-    public LocationQueryController(LocationQueryService locationQueryService) {
-        this.locationQueryService = locationQueryService;
-    }
 
     @GetMapping("/locations")
     public ApiResponse<List<StudentLocationResponse>> snapshot(Authentication authentication,

@@ -8,6 +8,7 @@ import com.google.firebase.messaging.MessagingErrorCode;
 import com.google.firebase.messaging.Notification;
 import com.palisade.travel.domain.notification.entity.Device;
 import com.palisade.travel.domain.notification.repository.DeviceRepository;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -17,15 +18,12 @@ import java.util.List;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class PushNotificationService {
 
     private static final Logger log = LoggerFactory.getLogger(PushNotificationService.class);
 
     private final DeviceRepository deviceRepository;
-
-    public PushNotificationService(DeviceRepository deviceRepository) {
-        this.deviceRepository = deviceRepository;
-    }
 
     @Transactional
     public void sendToUser(Long userId, String title, String body) {

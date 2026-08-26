@@ -13,6 +13,7 @@ import com.palisade.travel.global.security.UserPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -27,19 +28,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class UserAuthController {
 
     private final AuthenticationManager authenticationManager;
     private final SessionAuthenticationService sessionAuthenticationService;
     private final UserSignUpService userSignUpService;
-
-    public UserAuthController(AuthenticationManager authenticationManager,
-                              SessionAuthenticationService sessionAuthenticationService,
-                              UserSignUpService userSignUpService) {
-        this.authenticationManager = authenticationManager;
-        this.sessionAuthenticationService = sessionAuthenticationService;
-        this.userSignUpService = userSignUpService;
-    }
 
     @PostMapping("/signup")
     public ApiResponse<Void> signUp(@Valid @RequestBody SignUpRequest request) {
