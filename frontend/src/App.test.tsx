@@ -132,7 +132,7 @@ describe('App', () => {
     expect(screen.queryByRole('button', { name: '로그인' })).not.toBeInTheDocument()
   })
 
-  it('Given_만료된_세션_When_앱을_재실행하면_Then_로그인_화면으로_보낸다', async () => {
+  it('Given_세션_없는_첫_진입_When_세션_조회가_401이면_Then_시작_화면에_머문다', async () => {
     // given
     const fetchMock = vi.fn(async () => apiResponse({ success: false, message: '인증이 필요합니다.' }, 401))
     vi.stubGlobal('fetch', fetchMock)
@@ -142,8 +142,27 @@ describe('App', () => {
 
     // then
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/auth/me', { credentials: 'include' }))
-    expect(screen.getByRole('heading', { name: '로그인' })).toBeInTheDocument()
-    expect(locationTrackingMock.expireSession).toHaveBeenCalledOnce()
+    expect(screen.getByRole('heading', { name: '두리번' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '로그인' })).not.toBeInTheDocument()
+    expect(locationTrackingMock.expireSession).not.toHaveBeenCalled()
+  })
+
+  it('Given_사용_중인_세션_When_내부_API가_401이면_Then_로그인_화면으로_보낸다', async () => {
+    // given
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL) => {
+      const path = input.toString()
+      if (path === '/api/auth/me') {
+        return apiResponse({ success: true, data: { id: 1, loginId: 'teacher01', name: '고심', phoneNumber: '01012341234', role: 'TEACHER' } })
+      }
+      return apiResponse({ success: false, message: '인증이 필요합니다.' }, 401)
+    })
+
+    // when
+    render(<App />)
+
+    // then
+    expect(await screen.findByRole('heading', { name: '로그인' })).toBeInTheDocument()
+    expect(locationTrackingMock.expireSession).toHaveBeenCalled()
   })
 
   it('shows the login form after choosing to log in from the start screen', () => {

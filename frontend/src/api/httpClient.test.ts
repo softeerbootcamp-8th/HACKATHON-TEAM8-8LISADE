@@ -29,4 +29,18 @@ describe('HTTP 세션 만료 처리', () => {
     expect(listener).not.toHaveBeenCalled()
     window.removeEventListener(SESSION_EXPIRED_EVENT, listener)
   })
+
+  it('Given_세션_없는_첫_진입_When_세션_조회가_401이면_Then_세션_만료로_처리하지_않는다', async () => {
+    // given
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 401 })))
+    const listener = vi.fn()
+    window.addEventListener(SESSION_EXPIRED_EVENT, listener)
+
+    // when
+    await apiFetch('/api/auth/me')
+
+    // then
+    expect(listener).not.toHaveBeenCalled()
+    window.removeEventListener(SESSION_EXPIRED_EVENT, listener)
+  })
 })
