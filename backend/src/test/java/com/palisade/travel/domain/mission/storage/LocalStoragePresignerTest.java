@@ -24,4 +24,12 @@ class LocalStoragePresignerTest {
 
         assertThat(viewUrl).isEqualTo("http://localhost:8080/mock-storage/upload/missions/12/students/3/photo.jpg");
     }
+
+    @Test
+    void doesNothingWhenDeletingAnObject() {
+        LocalStoragePresigner presigner = new LocalStoragePresigner();
+
+        org.assertj.core.api.Assertions.assertThatCode(() -> presigner.deleteObject("upload/missions/12/students/3/photo.jpg"))
+                .doesNotThrowAnyException();
+    }
 }
