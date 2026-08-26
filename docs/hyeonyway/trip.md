@@ -47,3 +47,13 @@
 - Figma 시안의 "학부모 전화번호" 입력란은 `ManualParticipantRequest`에 대응 필드가 없어 제외했다. 학생 정보 카드의 전화번호도 현재 참가자 조회 계약에 없어 후속 이슈 대상이다.
 
 검증: `npm test`(103 passed), `npm run lint`, `npm run build`, `cd backend && ./gradlew test`
+
+## App.tsx 실제 위치 브리지 연동 (#105)
+
+- `#15`에서 "교체 지점"으로 남겨둔 `LocationTrackingAdapter` mock을 `App.tsx`에서 완전히 제거했다. `#1`에서 이미 구현된 실제 Capacitor 브리지(`backgroundLocation.ts`)가 있었지만 `App.tsx`가 여전히 mock만 참조하고 있어 실제로는 한 번도 연결된 적이 없었다.
+- `native/backgroundLocation.ts`에 네이티브 `TrackingStatus`(reason 기반) → 화면용 `LocationTrackingState`(permission/sendStatus) 순수 변환 함수 `toLocationTrackingState`를 추가했다. `PERMISSION_DENIED`/`LOCATION_DISABLED`는 `DENIED`, `SESSION_EXPIRED`/`SESSION_MISSING`은 세션 문제로 `STOPPED`, 세션 미동기화·비네이티브(`UNAVAILABLE`)는 `NO_PERMISSION`으로 매핑한다.
+- `App.tsx`: `handleLogin`은 `backgroundLocation.getStatus()`, `allowLocation`은 `syncSession → startTracking` 순서로 실제 브리지를 호출한 뒤 위 함수로 매핑한다.
+- 네이티브 플러그인에 OS 설정 화면을 여는 메서드가 없어 `LocationBlockedScreen`의 "설정으로 이동"은 새 Android 인텐트를 추가하는 대신 `allowLocation`(권한 재시도)을 재사용했다. 실제 `ACTION_APPLICATION_DETAILS_SETTINGS` 연동은 후속 이슈로 남겼다.
+- `mockLocationTrackingAdapter`와 `api/locationTrackingApi.ts`는 더 이상 참조하는 곳이 없어 삭제했다.
+
+검증: `npm test`(165 passed), `npm run lint`, `npm run build`
