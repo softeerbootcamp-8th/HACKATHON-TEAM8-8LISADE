@@ -107,6 +107,38 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: '회원가입' })).toBeInTheDocument()
   })
 
+  it('Given_유효한_교사_세션_When_앱을_재실행하면_Then_로그인_없이_교사_홈을_연다', async () => {
+    // given
+    const fetchAfterRestore = teacherFetch({ success: true, data: [] })
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL) => {
+      if (input.toString() === '/api/auth/me') {
+        return apiResponse({ success: true, data: { id: 1, loginId: 'teacher01', name: '고심', phoneNumber: '01012341234', role: 'TEACHER' } })
+      }
+      return fetchAfterRestore(input)
+    })
+
+    // when
+    render(<App />)
+
+    // then
+    expect(await screen.findByRole('heading', { name: '교사 홈' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '로그인' })).not.toBeInTheDocument()
+  })
+
+  it('Given_만료된_세션_When_앱을_재실행하면_Then_로그인_화면으로_보낸다', async () => {
+    // given
+    const fetchMock = vi.fn(async () => apiResponse({ success: false, message: '인증이 필요합니다.' }, 401))
+    vi.stubGlobal('fetch', fetchMock)
+
+    // when
+    render(<App />)
+
+    // then
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/auth/me', { credentials: 'include' }))
+    expect(screen.getByRole('heading', { name: '로그인' })).toBeInTheDocument()
+    expect(locationTrackingMock.expireSession).toHaveBeenCalledOnce()
+  })
+
   it('shows the login form after choosing to log in from the start screen', () => {
     renderApp()
 

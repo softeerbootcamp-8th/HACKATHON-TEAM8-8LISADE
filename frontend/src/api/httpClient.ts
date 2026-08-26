@@ -1,3 +1,5 @@
+import { apiUrl } from './apiUrl'
+
 export interface CsrfToken {
   token: string
   headerName: string
@@ -10,9 +12,19 @@ type ApiResponse<T> = {
 }
 
 const FAILURE_MESSAGE = '요청 처리에 실패했습니다.'
+export const SESSION_EXPIRED_EVENT = 'session-expired'
+
+export async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+  const response = await fetch(apiUrl(path), { credentials: 'include', ...init })
+  // 로그인 실패 401은 세션 만료가 아니라 입력 오류이므로 폼에서 그대로 처리한다.
+  if (response.status === 401 && path !== '/api/auth/login') {
+    window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
+  }
+  return response
+}
 
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(apiUrl(path), { credentials: 'include', ...init })
+  const response = await apiFetch(path, init)
   const body = await response.json().catch(() => null) as ApiResponse<T> | null
 
   if (!response.ok || !body?.success) {
@@ -33,9 +45,8 @@ export async function csrfJsonHeaders(): Promise<Record<string, string>> {
 
 /** 204 No Content로 응답하는 엔드포인트용 — 성공 본문을 파싱하지 않는다. */
 export async function sendJson(path: string, method: string, payload: unknown): Promise<void> {
-  const response = await fetch(apiUrl(path), {
+  const response = await apiFetch(path, {
     method,
-    credentials: 'include',
     headers: await csrfJsonHeaders(),
     body: JSON.stringify(payload),
   })
@@ -45,4 +56,3 @@ export async function sendJson(path: string, method: string, payload: unknown): 
     throw new Error(body?.message ?? FAILURE_MESSAGE)
   }
 }
-import { apiUrl } from './apiUrl'

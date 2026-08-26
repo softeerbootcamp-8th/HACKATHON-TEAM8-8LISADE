@@ -1,5 +1,6 @@
 import type { GeoPoint } from '../types/teacherTrip'
 import { apiUrl } from './apiUrl'
+import { apiFetch } from './httpClient'
 
 type ApiResponse<T> = {
   success: boolean
@@ -32,7 +33,7 @@ export type TeacherLocationContext = {
 }
 
 async function request<T>(path: string): Promise<T> {
-  const response = await fetch(apiUrl(path), { credentials: 'include' })
+  const response = await apiFetch(path)
   const body = await response.json().catch(() => null) as ApiResponse<T> | null
   if (!response.ok || !body?.success) {
     throw new Error(body?.message ?? '학생 위치를 불러오지 못했습니다.')

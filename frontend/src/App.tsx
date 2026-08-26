@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { authApi } from './api/authApi'
+import { SESSION_EXPIRED_EVENT } from './api/httpClient'
 import { locationTrackingAdapter } from './api/locationTrackingApi'
 import { missionApi } from './api/missionApi'
 import { studentTripApi } from './api/studentTripApi'
@@ -74,10 +75,25 @@ export default function App() {
     }))
   }, [])
 
+  const showLoginForExpiredSession = useCallback(() => {
+    void locationTrackingAdapter.expireSession().catch(() => undefined)
+    setCurrentUser(null)
+    setStudentTrip(null)
+    setLocationState(null)
+    setCurrentMission(null)
+    setAvailableMissions([])
+    setScreen('LOGIN')
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener(SESSION_EXPIRED_EVENT, showLoginForExpiredSession)
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, showLoginForExpiredSession)
+  }, [showLoginForExpiredSession])
+
   useEffect(() => {
     void authApi.me()
       .then(enterAuthenticatedUser)
-      .catch(() => locationTrackingAdapter.expireSession().catch(() => undefined))
+      .catch(() => undefined)
   }, [enterAuthenticatedUser])
 
   useEffect(() => {
@@ -87,10 +103,7 @@ export default function App() {
       try {
         let tracking = await locationTrackingAdapter.getState()
         if (tracking.reason === 'SESSION_EXPIRED') {
-          setCurrentUser(null)
-          setStudentTrip(null)
-          setLocationState(tracking)
-          setScreen('START')
+          showLoginForExpiredSession()
           return
         }
         if (tracking.reason === 'TRIP_ENDED') {
@@ -111,7 +124,7 @@ export default function App() {
 
     const interval = window.setInterval(() => { void refreshTrackingState() }, 2_000)
     return () => window.clearInterval(interval)
-  }, [currentUser?.role, screen, studentTrip])
+  }, [currentUser?.role, screen, showLoginForExpiredSession, studentTrip])
 
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); setError('')
