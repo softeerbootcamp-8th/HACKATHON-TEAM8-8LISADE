@@ -9,6 +9,7 @@ export interface StudentRosterEntry {
   type: StudentParticipantType
   outside: boolean
   lastSentAt: string | null
+  joinedAt: string
 }
 
 export interface TeacherStudentApi {
@@ -65,6 +66,7 @@ async function loadRoster(tripId: string): Promise<StudentRosterEntry[]> {
       type: participant.type,
       outside: location?.outside ?? false,
       lastSentAt: location?.updatedAt ?? null,
+      joinedAt: participant.createdAt,
     }
   })
 }

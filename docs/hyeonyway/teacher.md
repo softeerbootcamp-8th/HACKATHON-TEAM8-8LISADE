@@ -20,3 +20,13 @@
 - 파일명 함정: 같은 디렉터리에 `teacherHomeProgress.ts`(순수 함수, 소문자 시작)와 `TeacherHomeProgress.tsx`(컴포넌트)를 두자 vitest에서 `vi.mock`이 다른 모듈을 하나라도 mocking하는 순간 컴포넌트 import가 조용히 다른 파일로 뒤바뀌어 `undefined`가 되는 문제가 있었다 — 케이스만 다른 동명 파일은 같은 디렉터리에 두지 않는다(`teacherHomeAttention.ts`로 개명해 해결).
 
 검증: `npx vitest run`(33 files, 198 passed), `npm run lint`, `npm run build` 통과. 실제 배포 백엔드 연동 확인(로그인 → 교사 홈 탭 실제 화면)은 이번 세션에 로컬 백엔드가 없어 수행하지 못했다 — RTL 테스트로만 검증했다.
+
+## 학생 상세 화면에 참여 시각·미션 완료 현황 추가 (#18)
+
+- Issue #18 최신화 과정에서 발견한 원 요구사항 미충족분("학생 상세에서 Trip 참여 시각·미션 상태 확인") 처리. `StudentDetailScreen`(`TeacherStudents.tsx`)이 현재/마지막 위치만 보여주고 참여 시각·미션 상태는 아예 없었다.
+- `teacherStudentApi.ts`의 `StudentRosterEntry`에 `joinedAt`(참가자 `createdAt` 그대로 노출) 필드 추가.
+- `frontend/src/features/teacher/studentMissionSummary.ts`: `summarizeMissionCompletion(userId, boards)` — `userId`가 없으면(`MANUAL`) `null`, 있으면 전체 미션 수 대비 `notSubmitted`에 없는 미션 수를 완료로 센다. `#115`의 `teacherHomeAttention.ts`와 같은 `getStatusBoard` 병렬 조회 패턴을 재사용.
+- `StudentDetailScreen`: 참여 시각은 학생 타입 무관하게 항상 표시, 미션 완료 건수는 `APP` 타입에만 표시(`MANUAL`은 미션 제출 주체가 아니므로 제외 — `#115`와 동일 가정).
+- 이번 스코프는 완료 건수 요약(`N / M`)만 다룬다. 미션별 개별 제목·상태 나열은 범위 밖.
+
+검증: `npx vitest run`(35 files, 209 passed), `npm run lint`, `npm run build` 통과.
