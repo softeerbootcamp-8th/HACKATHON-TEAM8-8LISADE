@@ -155,4 +155,36 @@ describe('teacherTripApi', () => {
       body: JSON.stringify({}),
     })
   })
+
+  it('예정된_체험학습을_시작하면_새_초대코드를_받는다', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: { token: 'csrf-token', headerName: 'X-CSRF-TOKEN' } }))
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: { code: 'EF9012', expiresAt: '2026-08-25T09:15:00' } }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const inviteCode = await teacherTripApi.start(1)
+
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/teacher/trips/1/start', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': 'csrf-token' },
+    })
+    expect(inviteCode.code).toBe('EF9012')
+  })
+
+  it('예정된_체험학습을_삭제한다', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: { token: 'csrf-token', headerName: 'X-CSRF-TOKEN' } }))
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: null }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await teacherTripApi.delete(1)
+
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/teacher/trips/1', {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': 'csrf-token' },
+      body: JSON.stringify({}),
+    })
+  })
 })

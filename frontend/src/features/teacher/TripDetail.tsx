@@ -13,19 +13,25 @@ function formatSchedule(startAt: string | null) {
   return `${formattedDate} (${weekday})`
 }
 
-export function TripDetail({ trip, teacherName, onBack, onAddStudent, onFinished }: {
+export function TripDetail({ trip, teacherName, onBack, onAddStudent, onStarted, onDeleted, onFinished }: {
   trip: TeacherTrip
   teacherName: string
   onBack: () => void
   onAddStudent: () => void
+  onStarted: () => void
+  onDeleted: () => void
   onFinished: () => void
 }) {
   const [inviteCode, setInviteCode] = useState<string | null>(null)
   const [participantCount, setParticipantCount] = useState<number | null>(null)
   const [confirmingEnd, setConfirmingEnd] = useState(false)
   const [ending, setEnding] = useState(false)
+  const [starting, setStarting] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
   const isActive = trip.status === 'ACTIVE'
+  const isReady = trip.status === 'READY'
 
   useEffect(() => {
     let active = true
@@ -60,6 +66,31 @@ export function TripDetail({ trip, teacherName, onBack, onAddStudent, onFinished
       setError(caught instanceof Error ? caught.message : '현장체험학습 종료에 실패했습니다.')
       setEnding(false)
       setConfirmingEnd(false)
+    }
+  }
+
+  const start = async () => {
+    setError('')
+    setStarting(true)
+    try {
+      await teacherTripApi.start(trip.id)
+      onStarted()
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : '현장체험학습 시작에 실패했습니다.')
+      setStarting(false)
+    }
+  }
+
+  const confirmDelete = async () => {
+    setError('')
+    setDeleting(true)
+    try {
+      await teacherTripApi.delete(trip.id)
+      onDeleted()
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : '현장체험학습 삭제에 실패했습니다.')
+      setDeleting(false)
+      setConfirmingDelete(false)
     }
   }
 
@@ -100,6 +131,19 @@ export function TripDetail({ trip, teacherName, onBack, onAddStudent, onFinished
           </div>
         </div>
         : <button type="button" className="end-trip-button" onClick={() => setConfirmingEnd(true)}>현장체험학습 종료</button>}
+    </footer>}
+
+    {isReady && <footer className="trip-create-footer">
+      <button type="button" className="trip-primary-button" onClick={start} disabled={starting}>{starting ? '시작하는 중...' : '현장체험학습 시작'}</button>
+      {confirmingDelete
+        ? <div className="end-trip-confirm">
+          <p>정말 삭제할까요? 삭제 후에는 되돌릴 수 없어요.</p>
+          <div className="end-trip-confirm-actions">
+            <button type="button" className="text-button" onClick={() => setConfirmingDelete(false)}>취소</button>
+            <button type="button" className="danger-button" onClick={confirmDelete} disabled={deleting}>{deleting ? '삭제하는 중...' : '삭제하기'}</button>
+          </div>
+        </div>
+        : <button type="button" className="danger-button" style={{ marginTop: 8 }} onClick={() => setConfirmingDelete(true)}>삭제하기</button>}
     </footer>}
   </main>
 }

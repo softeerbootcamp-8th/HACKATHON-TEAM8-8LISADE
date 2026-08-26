@@ -83,7 +83,7 @@ describe('TripCreationFlow', () => {
         { latitude: 37.523, longitude: 126.983 },
       ],
     }))
-    expect(onCreated).toHaveBeenCalledWith('AB1234')
+    expect(onCreated).toHaveBeenCalledWith()
   })
 
 })

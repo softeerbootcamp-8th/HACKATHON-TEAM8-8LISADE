@@ -57,4 +57,13 @@ export const teacherTripApi = {
   async end(tripId: number): Promise<void> {
     return sendJson(`/api/teacher/trips/${tripId}/end`, 'POST', {})
   },
+  async start(tripId: number): Promise<InviteCode> {
+    return request<InviteCode>(`/api/teacher/trips/${tripId}/start`, {
+      method: 'POST',
+      headers: await csrfJsonHeaders(),
+    })
+  },
+  async delete(tripId: number): Promise<void> {
+    return sendJson(`/api/teacher/trips/${tripId}`, 'DELETE', {})
+  },
 }
