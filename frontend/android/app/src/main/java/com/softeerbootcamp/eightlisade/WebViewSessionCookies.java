@@ -2,6 +2,7 @@ package com.softeerbootcamp.eightlisade;
 
 import android.webkit.CookieManager;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
@@ -27,7 +28,8 @@ final class WebViewSessionCookies {
             return;
         }
         CookieManager cookieManager = CookieManager.getInstance();
-        cookieManager.setCookie(endpoint, "JSESSIONID=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax");
+        boolean secure = "https".equalsIgnoreCase(URI.create(endpoint).getScheme());
+        cookieManager.setCookie(endpoint, SessionCookie.expired(secure));
         cookieManager.flush();
     }
 }

@@ -19,4 +19,8 @@ final class SessionCookie {
         }
         return null;
     }
+
+    static String expired(boolean secure) {
+        return "JSESSIONID=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax" + (secure ? "; Secure" : "");
+    }
 }
