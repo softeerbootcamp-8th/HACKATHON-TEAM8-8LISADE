@@ -14,6 +14,7 @@ import com.palisade.travel.domain.notification.entity.Notification;
 import com.palisade.travel.domain.notification.entity.NotificationType;
 import com.palisade.travel.domain.notification.repository.NotificationRepository;
 import com.palisade.travel.domain.notification.service.PushNotificationService;
+import com.palisade.travel.domain.notification.service.UnreachableAlertService;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
 import com.palisade.travel.domain.trip.entity.TripParticipantType;
@@ -83,6 +84,9 @@ class LocationServiceTest {
     @Mock
     private NotificationRepository notificationRepository;
 
+    @Mock
+    private UnreachableAlertService unreachableAlertService;
+
     private LocationService locationService;
 
     @BeforeEach
@@ -96,7 +100,8 @@ class LocationServiceTest {
                 sseConnectionService,
                 userRepository,
                 pushNotificationService,
-                notificationRepository
+                notificationRepository,
+                unreachableAlertService
         );
     }
 
