@@ -40,6 +40,13 @@ describe('TripDetail', () => {
     expect(screen.getByText('진행 중')).toBeInTheDocument()
   })
 
+  it('일정에 시간 없이 날짜와 요일만 보여준다(시간 입력을 받지 않으므로)', async () => {
+    render(<TripDetail trip={activeTrip} teacherName="고심" onBack={vi.fn()} onAddStudent={vi.fn()} onFinished={vi.fn()} />)
+
+    expect(await screen.findByText('2026. 09. 12 (토)')).toBeInTheDocument()
+    expect(screen.queryByText(/\d{2}:\d{2}/)).not.toBeInTheDocument()
+  })
+
   it('완료된 체험학습은 초대 코드와 종료 버튼을 보여주지 않는다', async () => {
     render(<TripDetail trip={finishedTrip} teacherName="고심" onBack={vi.fn()} onAddStudent={vi.fn()} onFinished={vi.fn()} />)
 

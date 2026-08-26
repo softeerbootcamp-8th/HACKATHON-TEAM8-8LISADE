@@ -10,8 +10,7 @@ function formatSchedule(startAt: string | null) {
   const date = new Date(startAt)
   const weekday = new Intl.DateTimeFormat('ko-KR', { weekday: 'short' }).format(date)
   const formattedDate = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date).replace(/\.$/, '')
-  const time = new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false }).format(date)
-  return `${formattedDate} (${weekday}) ${time}`
+  return `${formattedDate} (${weekday})`
 }
 
 export function TripDetail({ trip, teacherName, onBack, onAddStudent, onFinished }: {
@@ -72,7 +71,7 @@ export function TripDetail({ trip, teacherName, onBack, onAddStudent, onFinished
     </header>
     <section className="trip-create-content trip-detail-content">
       <div className="trip-detail-card">
-        <div><span className="label">시간</span><span className="value">{formatSchedule(trip.startAt)}</span></div>
+        <div><span className="label">날짜</span><span className="value">{formatSchedule(trip.startAt)}</span></div>
         <div><span className="label">장소</span><span className="value">{trip.place}</span></div>
         <div><span className="label">담당자</span><span className="value">{teacherName} 선생님</span></div>
         <div><span className="label">참여 학생</span><span className="value">{participantCount === null ? '-' : `${participantCount}명`}</span></div>
