@@ -15,6 +15,7 @@ backend/out/
 !backend/gradle/wrapper/gradle-wrapper.jar
 *.class
 *.log
+backend/logs/
 HELP.md
 
 # ---- Frontend (Node/Vite) ----
