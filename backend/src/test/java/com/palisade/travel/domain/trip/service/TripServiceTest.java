@@ -119,6 +119,21 @@ class TripServiceTest {
     }
 
     @Test
+    void 이미_다른_체험학습이_ACTIVE인_교사는_예정_체험학습을_시작할_수_없다() {
+        // given
+        Trip trip = new Trip(1L, 10L, null, "경복궁", "서울", null, null, null, TripStatus.READY,
+                LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
+        given(tripRepository.findById(1L)).willReturn(Optional.of(trip));
+        given(tripRepository.existsByTeacherIdAndStatus(10L, TripStatus.ACTIVE)).willReturn(true);
+
+        // when & then
+        assertThatThrownBy(() -> tripService.start(10L, 1L))
+                .hasMessageContaining("이미 진행 중인 체험학습이 있습니다");
+        assertThat(trip.getStatus()).isEqualTo(TripStatus.READY);
+        verify(tripRepository, never()).save(any());
+    }
+
+    @Test
     void 예정_체험학습을_삭제하면_지오펜스와_초대코드까지_함께_삭제한다() {
         // given
         Trip trip = new Trip(1L, 10L, 7L, "경복궁", "서울", null, null, null, TripStatus.READY,

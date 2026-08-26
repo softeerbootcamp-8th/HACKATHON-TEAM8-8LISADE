@@ -12,6 +12,7 @@ public enum TripErrorCode implements ErrorCode {
     ACTIVE_TRIP_ALREADY_JOINED(HttpStatus.CONFLICT, "ACTIVE_TRIP_ALREADY_JOINED", "이미 참여 중인 체험학습이 있습니다."),
     TRIP_NOT_ACTIVE(HttpStatus.CONFLICT, "TRIP_NOT_ACTIVE", "진행 중인 체험학습이 아닙니다."),
     TRIP_NOT_READY(HttpStatus.CONFLICT, "TRIP_NOT_READY", "준비 상태의 체험학습이 아닙니다."),
+    TEACHER_ALREADY_HAS_ACTIVE_TRIP(HttpStatus.CONFLICT, "TEACHER_ALREADY_HAS_ACTIVE_TRIP", "이미 진행 중인 체험학습이 있습니다."),
     INVITE_CODE_GENERATION_FAILED(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "INVITE_CODE_GENERATION_FAILED",
