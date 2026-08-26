@@ -66,6 +66,12 @@ const missionPhotoRecoveryMock = vi.hoisted(() => ({
 
 vi.mock('./native/missionPhotoRecovery', () => missionPhotoRecoveryMock)
 
+const studentNotificationApiMock = vi.hoisted(() => ({ list: vi.fn() }))
+
+vi.mock('./api/studentNotificationApi', () => ({
+  studentNotificationApi: studentNotificationApiMock,
+}))
+
 import App from './App'
 
 describe('App', () => {
@@ -97,6 +103,7 @@ describe('App', () => {
     missionPhotoRecoveryMock.captureMissionPhoto.mockResolvedValue({ uri: 'mock://mission-photo.jpg' })
     missionPhotoRecoveryMock.clearPendingMissionPhoto.mockResolvedValue(undefined)
     missionPhotoRecoveryMock.listenForRestoredMissionPhoto.mockResolvedValue({ remove: vi.fn() })
+    studentNotificationApiMock.list.mockReset().mockResolvedValue([])
   })
 
   it('shows the start screen before a session is established', () => {
@@ -561,6 +568,43 @@ describe('App', () => {
 
     expect(screen.queryByText('반려된 사진 미션')).not.toBeInTheDocument()
     expect(screen.queryByText('경복궁 출석 체크')).not.toBeInTheDocument()
+  })
+
+  it('opens the notification list from the bell icon and lists notifications', async () => {
+    studentNotificationApiMock.list.mockResolvedValue([
+      { id: 1, type: 'MISSION_CREATED', title: '새 미션 알림', message: "'어디서 사진 찍기' 미션이 등록됐어요.", createdAt: new Date().toISOString() },
+    ])
+    await openStudentHome()
+
+    fireEvent.click(screen.getByRole('button', { name: '알림' }))
+
+    expect(await screen.findByText("'어디서 사진 찍기' 미션이 등록됐어요.")).toBeInTheDocument()
+    expect(screen.getByText('새 미션')).toBeInTheDocument()
+  })
+
+  it('deep-links a mission notification to the current mission screen', async () => {
+    studentNotificationApiMock.list.mockResolvedValue([
+      { id: 1, type: 'DEADLINE_IMMINENT', title: '마감 임박 알림', message: "'서버 사진 미션' 마감이 5분 남았어요.", createdAt: new Date().toISOString() },
+    ])
+    await openStudentHome()
+    fireEvent.click(screen.getByRole('button', { name: '알림' }))
+
+    fireEvent.click(await screen.findByRole('button', { name: /마감이 5분 남았어요/ }))
+
+    expect(await screen.findByRole('heading', { name: '서버 사진 미션' })).toBeInTheDocument()
+    expect(missionApiMock.getCurrentMissions).toHaveBeenCalledWith(1)
+  })
+
+  it('deep-links a location exit notification back to the student home', async () => {
+    studentNotificationApiMock.list.mockResolvedValue([
+      { id: 1, type: 'RANGE_EXIT', title: '안전 구역 이탈 알림', message: '안전 구역을 벗어났어요.', createdAt: new Date().toISOString() },
+    ])
+    await openStudentHome()
+    fireEvent.click(screen.getByRole('button', { name: '알림' }))
+
+    fireEvent.click(await screen.findByRole('button', { name: /안전 구역을 벗어났어요/ }))
+
+    expect(await screen.findByRole('heading', { name: '학생 홈' })).toBeInTheDocument()
   })
 })
 

@@ -7,10 +7,12 @@ import { studentTripApi } from './api/studentTripApi'
 import { resolvePostLoginScreen, type Screen } from './features/app/appFlow'
 import { LoginScreen, SignUpScreen, StartScreen } from './features/auth/AuthScreens'
 import { ActivityConfirmation, ActivityMissionScreen, CheckMissionScreen, InviteCodeScreen, LocationBlockedScreen, StudentHome, type CurrentMission } from './features/student/StudentScreens'
+import { StudentNotifications } from './features/student/StudentNotifications'
 import { TeacherDashboard } from './features/teacher/TeacherDashboard'
 import { pushNotifications } from './notifications/pushNotifications'
 import { clearPendingMissionPhoto, listenForRestoredMissionPhoto } from './native/missionPhotoRecovery'
 import type { CurrentUser, SignUpInput } from './types/auth'
+import type { StudentNotification } from './types/notification'
 import type { LocationTrackingState, StudentTrip } from './types/studentTrip'
 
 const initialSignUpInput: SignUpInput = { role: 'STUDENT', name: '', loginId: '', password: '', passwordConfirmation: '', phoneNumber: '', parentNumber: '', guardianConsent: false }
@@ -57,7 +59,9 @@ export default function App() {
     const missions = await missionApi.getCurrentMissions(tripId)
     const current = missions.map((mission) => ({ ...mission, isResubmission: false }))
     setAvailableMissions(current)
-    setCurrentMission(current[0] ?? null)
+    const next = current[0] ?? null
+    setCurrentMission(next)
+    return next
   }
 
   const enterAuthenticatedUser = useCallback(async (user: CurrentUser) => {
@@ -174,9 +178,26 @@ export default function App() {
     setScreen(locationReady(tracking) ? 'STUDENT_HOME' : 'STUDENT_PERMISSION_BLOCKED')
   }
 
+  // 알림 탭 시 딥링크(S-06 §6.2): 미션류(새 미션·마감 임박·다시 하기)는 현재 미션을 다시 불러와 그 수행
+  // 화면으로, 위치 이탈은 학생 홈(이탈 배너)으로 이동한다.
+  const openStudentNotification = async (notification: StudentNotification) => {
+    if (notification.type !== 'RANGE_EXIT' && studentTrip) {
+      try {
+        const mission = await loadCurrentMission(studentTrip.id)
+        setScreen(mission ? (mission.type === 'CHECK' ? 'CHECK_MISSION' : 'ACTIVITY_MISSION') : 'STUDENT_HOME')
+      } catch (caughtError) {
+        setMissionNotice(caughtError instanceof Error ? caughtError.message : '미션을 불러오지 못했습니다.')
+        setScreen('STUDENT_HOME')
+      }
+      return
+    }
+    setScreen('STUDENT_HOME')
+  }
+
   if (screen === 'STUDENT_INVITE') return <InviteCodeScreen onSubmit={joinTrip} />
   if (screen === 'STUDENT_PERMISSION_BLOCKED') return <LocationBlockedScreen onOpenSettings={async () => { setLocationState(await locationTrackingAdapter.openSettings()) }} />
-  if (screen === 'STUDENT_HOME' && studentTrip && locationState) return <StudentHome trip={studentTrip} location={locationState} notice={missionNotice} currentMission={currentMission} onCurrentMission={() => setScreen(currentMission?.type === 'CHECK' ? 'CHECK_MISSION' : 'ACTIVITY_MISSION')} />
+  if (screen === 'STUDENT_HOME' && studentTrip && locationState) return <StudentHome trip={studentTrip} location={locationState} notice={missionNotice} currentMission={currentMission} onCurrentMission={() => setScreen(currentMission?.type === 'CHECK' ? 'CHECK_MISSION' : 'ACTIVITY_MISSION')} onBellClick={() => setScreen('STUDENT_NOTIFICATIONS')} />
+  if (screen === 'STUDENT_NOTIFICATIONS') return <StudentNotifications onBack={() => setScreen('STUDENT_HOME')} onSelect={openStudentNotification} />
   if (screen === 'ACTIVITY_MISSION' && currentMission) return <ActivityMissionScreen mission={currentMission} onCaptured={(uri) => { setCapturedPhotoUri(uri); setScreen('ACTIVITY_CONFIRMATION') }} />
   if (screen === 'ACTIVITY_CONFIRMATION') return <ActivityConfirmation isResubmission={currentMission?.isResubmission ?? false} photoUri={capturedPhotoUri} onRetake={() => setScreen('ACTIVITY_MISSION')} onSubmit={async () => {
     if (!currentMission) throw new Error('현재 미션을 찾을 수 없습니다.')

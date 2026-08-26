@@ -4,6 +4,10 @@ import com.palisade.travel.domain.mission.entity.*;
 import com.palisade.travel.domain.mission.repository.MissionRepository;
 import com.palisade.travel.domain.mission.repository.MissionSubmissionRepository;
 import com.palisade.travel.domain.mission.storage.StoragePresigner;
+import com.palisade.travel.domain.notification.entity.Notification;
+import com.palisade.travel.domain.notification.entity.NotificationType;
+import com.palisade.travel.domain.notification.repository.NotificationRepository;
+import com.palisade.travel.domain.notification.service.PushNotificationService;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
 import com.palisade.travel.domain.trip.repository.TripParticipantRepository;
@@ -33,13 +37,30 @@ public class MissionService {
     private final TripParticipantRepository participantRepository;
     private final UserRepository userRepository;
     private final StoragePresigner storagePresigner;
+    private final NotificationRepository notificationRepository;
+    private final PushNotificationService pushNotificationService;
 
     @Transactional
     public Mission create(Long tripId, Long teacherId, String title, String description, MissionType type, LocalDateTime startAt, LocalDateTime endAt) {
         requireTeacher(tripId, teacherId);
         if (endAt != null && startAt != null && endAt.isBefore(startAt)) throw new ApiException(CommonErrorCode.INVALID_REQUEST);
         Mission mission = type == MissionType.CHECK ? Mission.createCheck(tripId, title, description, startAt, endAt, String.format("%04d", ThreadLocalRandom.current().nextInt(10_000))) : Mission.create(tripId, title, description, type, startAt, endAt);
-        return missionRepository.save(mission);
+        mission = missionRepository.save(mission);
+        notifyNewMission(mission);
+        return mission;
+    }
+
+    /** 새 미션 알림(§6.2) — 등록 즉시 참여 학생 전원에게 발송한다. */
+    private void notifyNewMission(Mission mission) {
+        String title = "새 미션 알림";
+        String body = "'%s' 미션이 등록됐어요.".formatted(mission.getTitle());
+        participantRepository.findAllByTripIdOrderByCreatedAtAsc(mission.getTripId()).stream()
+                .map(TripParticipant::getUserId)
+                .filter(studentId -> studentId != null)
+                .forEach(studentId -> {
+                    notificationRepository.save(Notification.create(studentId, mission.getTripId(), mission.getId(), NotificationType.MISSION_CREATED, title, body));
+                    pushNotificationService.sendToUser(studentId, title, body);
+                });
     }
     public List<Mission> getTeacherMissions(Long tripId, Long teacherId) { requireTeacher(tripId, teacherId); return missionRepository.findByTripIdOrderByStartAtAsc(tripId); }
     @Transactional
@@ -67,7 +88,23 @@ public class MissionService {
     }
     public StoragePresigner.PresignedUpload preparePhotoUpload(Long missionId, Long studentId) { Mission mission=getStudentMission(missionId,studentId); if (mission.getType()!=MissionType.ACTIVITY || mission.isExpiredAt(LocalDateTime.now())) throw new ApiException(CommonErrorCode.INVALID_REQUEST); return storagePresigner.presignPut("upload/missions/"+missionId+"/students/"+studentId+"/"+java.util.UUID.randomUUID()+".jpg"); }
     @Transactional
-    public void reject(Long missionId, Long studentId, Long teacherId, String reason) { Mission mission=findMission(missionId); requireTeacher(mission.getTripId(),teacherId); MissionSubmission submission=submissionRepository.findByMissionIdAndUserId(missionId,studentId).orElseThrow(() -> new ApiException(CommonErrorCode.INVALID_REQUEST)); submission.reject(reason); }
+    public void reject(Long missionId, Long studentId, Long teacherId, String reason) {
+        Mission mission = findMission(missionId);
+        requireTeacher(mission.getTripId(), teacherId);
+        MissionSubmission submission = submissionRepository.findByMissionIdAndUserId(missionId, studentId).orElseThrow(() -> new ApiException(CommonErrorCode.INVALID_REQUEST));
+        submission.reject(reason);
+        notifyRejected(mission, studentId, reason);
+    }
+
+    /** 다시 하기 알림(§6.2) — 교사가 활동 미션 제출을 반려했을 때 해당 학생에게 발송한다. */
+    private void notifyRejected(Mission mission, Long studentId, String reason) {
+        String title = "다시 하기 알림";
+        String body = (reason == null || reason.isBlank())
+                ? "'%s' 미션이 반려됐어요. 다시 제출해 주세요.".formatted(mission.getTitle())
+                : "'%s' 미션이 반려됐어요: %s".formatted(mission.getTitle(), reason);
+        notificationRepository.save(Notification.create(studentId, mission.getTripId(), mission.getId(), NotificationType.MISSION_REJECTED, title, body));
+        pushNotificationService.sendToUser(studentId, title, body);
+    }
     @Transactional
     public void delete(Long missionId, Long teacherId) { Mission mission=findMission(missionId); requireTeacher(mission.getTripId(), teacherId); missionRepository.delete(mission); }
     public String getPin(Long missionId, Long teacherId) { Mission mission=findMission(missionId); requireTeacher(mission.getTripId(), teacherId); if (mission.getType()!=MissionType.CHECK) throw new ApiException(CommonErrorCode.INVALID_REQUEST); return mission.getAttendancePin(); }
