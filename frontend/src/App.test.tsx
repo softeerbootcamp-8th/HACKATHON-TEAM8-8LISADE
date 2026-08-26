@@ -691,6 +691,38 @@ describe('App', () => {
 
     expect(await screen.findByRole('heading', { name: '학생 홈' })).toBeInTheDocument()
   })
+
+  it('Given_교사_홈_When_상단바_로그아웃을_누르면_Then_세션과_위치_전송을_함께_끊고_시작_화면으로_돌아간다', async () => {
+    // given
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    renderApp()
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+    await screen.findByRole('heading', { name: '교사 홈' })
+
+    // when
+    fireEvent.click(screen.getByRole('button', { name: '로그아웃' }))
+
+    // then
+    expect(await screen.findByRole('heading', { name: '두리번' })).toBeInTheDocument()
+    expect(fetchSpy).toHaveBeenCalledWith('/api/auth/logout', expect.objectContaining({ method: 'POST' }))
+    expect(pushNotificationsMock.unregister).toHaveBeenCalled()
+    expect(locationTrackingMock.expireSession).toHaveBeenCalled()
+  })
+
+  it('Given_학생_홈_When_로그아웃하면_Then_참여_중인_Trip_상태까지_비우고_시작_화면으로_돌아간다', async () => {
+    // given
+    await openStudentHome()
+    expect(screen.getByRole('heading', { name: '학생 홈' })).toBeInTheDocument()
+
+    // when
+    fireEvent.click(screen.getByRole('button', { name: '로그아웃' }))
+
+    // then
+    expect(await screen.findByRole('heading', { name: '두리번' })).toBeInTheDocument()
+    expect(locationTrackingMock.stopTracking).toHaveBeenCalled()
+  })
 })
 
 function renderApp() {

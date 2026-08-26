@@ -32,6 +32,10 @@ beforeEach(() => {
       ] })
     }
 
+    if (path === '/api/auth/logout') {
+      return jsonResponse({ success: true, data: null })
+    }
+
     if (path === '/api/auth/signup') {
       return jsonResponse({ success: true, data: null })
     }

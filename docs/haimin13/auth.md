@@ -7,3 +7,17 @@
 - 회귀 테스트: `App.test.tsx`의 기존 "만료된 세션 → 로그인 화면"은 부팅 시나리오로 작성되어 있어 두 케이스로 분리했다 — 첫 진입(시작 화면 유지, `expireSession` 미호출) / 사용 중 만료(`/api/auth/me` 200 이후 내부 API 401 → 로그인 화면). `httpClient.test.ts`에는 세션 조회 401 예외 케이스를 추가했다.
 
 검증: `npm test` 37 files / 225 tests 전부 pass, `npm run build`(tsc -b + vite build) 성공, 변경 파일 `npx eslint` 무경고.
+
+# 공통 헤더 로그아웃 버튼 (#21)
+
+- [`features/auth/logout.ts`](../../frontend/src/features/auth/logout.ts)의 `logout`(push 해제 → 위치 전송 중지 → `POST /api/auth/logout` → 세션 만료)은 #40에서 만들어졌지만 어느 UI에서도 호출되지 않고 있었다. 진입점만 없던 상태라 이번 변경은 로직을 다시 쓰지 않고 버튼과 화면 복귀만 붙인다.
+- Figma(`노동장`, node `198:1333`) 기준 로그아웃은 별도 "내 정보" 화면이 아니라 **공통 헤더 우측 pill**이다. 시안에서 pill이 있는 프레임은 T-02 홈(미생성/예정/진행중), T-04 학생, T-05 미션, T-06 위치(+툴팁), T-03 관리, S-03 학생 홈(참여 전/후) 10개이고, 알림 화면과 `BackHeader`를 쓰는 상세/생성 화면에는 없다.
+- [`AppHeader`](../../frontend/src/shared/ui/AppHeader.tsx)에 `onLogout` optional prop을 추가하고, 넘어온 경우에만 `.header-logout-button`을 렌더한다. prop이 없으면 버튼이 없으므로 알림 화면 등 시안에 없는 헤더는 호출부를 바꾸지 않는 것만으로 그대로 유지된다.
+- 스타일은 [`index.css`](../../frontend/src/index.css)의 기존 `.avatar-chip`과 같은 계열이다 — `--color-accent-soft` 배경, 30px 높이, radius 15px, 11px/700. 시안 값(55×30, `#fff3d6`, `#27303a`)과 일치하고, 전역 `button`의 `min-height: 54px`/`box-shadow`를 각각 30px/`none`으로 덮어야 pill 높이가 나온다.
+- 호출부는 교사 홈([`TeacherDashboard`](../../frontend/src/features/teacher/TeacherDashboard.tsx)) 1곳과 학생 화면 2곳([`InviteCodeScreen`](../../frontend/src/features/student/StudentScreens.tsx), `StudentHome`). 교사 하단 탭 5개는 같은 `AppHeader` 아래에서 렌더되므로 헤더 1곳이 시안 7개 프레임을 덮는다.
+- [`App.handleLogout`](../../frontend/src/App.tsx)이 `logout()`을 호출한 뒤 `currentUser`/`studentTrip`/`locationState`/`currentMission`/`availableMissions`/입력값을 비우고 `START`로 보낸다. 서버 호출 실패는 `try/catch`로 삼킨다 — 세션 쿠키가 이미 죽었는데 화면이 로그인 상태로 남는 쪽이 더 나쁘다. 상태를 비우므로 학생 위치 폴링·미션 폴링 effect도 함께 멈춘다.
+- 복귀 화면은 `LOGIN`이 아니라 `START`다. Issue 본문은 "로그인 화면"이라고 적혀 있으나 시안이 로그아웃 상태 진입점을 시작 화면(`▶ 진입: 앱 최초 실행 · 로그아웃 상태에서 앱 열기`)으로 정의한다. 기존 세션 만료 경로(`showLoginForExpiredSession` → `LOGIN`)는 건드리지 않았다 — 만료는 재로그인을 유도하는 상황이라 화면이 달라야 한다.
+- 시안에 확인 다이얼로그가 없고 프로젝트에 modal 패턴 자체가 없어 확인 단계는 넣지 않았다. Issue의 "내 정보 화면"도 현재 시안에 존재하지 않아 이번 범위에서 제외했다.
+- 테스트: `AppHeader.test.tsx`에 렌더/클릭 2건, `App.test.tsx`에 통합 2건(교사 홈 → `POST /api/auth/logout` 호출·push 해제·`expireSession` 확인 후 시작 화면, 학생 홈 → `stopTracking` 확인 후 시작 화면). `setupTests.ts` 기본 fetch stub에 `/api/auth/logout`을 추가했다.
+
+검증: develop rebase 후 `npm test` 40 files / 253 tests 전부 pass, `npm run lint` 무경고, `npm run build`(tsc -b + vite build) 성공. 헤더 마크업을 dev server로 정적 렌더해 시안 pill과 대조 확인.

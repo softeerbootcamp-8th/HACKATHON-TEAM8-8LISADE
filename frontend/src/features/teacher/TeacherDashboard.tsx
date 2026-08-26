@@ -42,7 +42,7 @@ function notificationTargetTab(type: TeacherNotification['type']): TeacherTab {
   return type === 'RANGE_EXIT' || type === 'UNREACHABLE' ? 'LOCATION' : 'MISSIONS'
 }
 
-export function TeacherDashboard({ user }: { user: CurrentUser }) {
+export function TeacherDashboard({ user, onLogout }: { user: CurrentUser; onLogout?: () => void }) {
   const [tab, setTab] = useState<TeacherTab>('HOME')
   const [manageView, setManageView] = useState<ManageView>({ name: 'LIST' })
   const [notice, setNotice] = useState('')
@@ -118,7 +118,7 @@ export function TeacherDashboard({ user }: { user: CurrentUser }) {
   </ScreenCard>
 
   return <ScreenCard title="교사 홈">
-    <AppHeader hasUnread={hasUnread} onBellClick={() => { markRead(); setShowNotifications(true) }} />
+    <AppHeader hasUnread={hasUnread} onBellClick={() => { markRead(); setShowNotifications(true) }} onLogout={onLogout} />
     <NotificationToast notification={toast} onDismiss={dismissToast} />
     {tab === 'MANAGE'
       ? <ManagementTab

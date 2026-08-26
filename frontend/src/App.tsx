@@ -6,6 +6,7 @@ import { missionApi } from './api/missionApi'
 import { studentTripApi } from './api/studentTripApi'
 import { resolvePostLoginScreen, type Screen } from './features/app/appFlow'
 import { LoginScreen, SignUpScreen, StartScreen } from './features/auth/AuthScreens'
+import { logout } from './features/auth/logout'
 import { ActivityConfirmation, ActivityMissionScreen, CheckMissionScreen, InviteCodeScreen, LocationBlockedScreen, StudentHome, type CurrentMission } from './features/student/StudentScreens'
 import { StudentNotifications } from './features/student/StudentNotifications'
 import { TeacherDashboard } from './features/teacher/TeacherDashboard'
@@ -167,6 +168,24 @@ export default function App() {
     } catch (caughtError) { setError(caughtError instanceof Error ? caughtError.message : '회원가입에 실패했습니다.') }
   }
 
+  // 로그아웃은 push 해제 → 위치 전송 중지 → 세션 종료 순서(features/auth/logout)를 그대로 쓰고,
+  // 서버 호출이 실패하더라도 로컬 세션 상태는 반드시 비워 로그아웃 상태로 되돌린다.
+  const handleLogout = async () => {
+    try { await logout() } catch { /* 서버 로그아웃 실패가 화면 복귀를 막지 않는다. */ }
+    setCurrentUser(null)
+    setStudentTrip(null)
+    setLocationState(null)
+    setCurrentMission(null)
+    setAvailableMissions([])
+    setCapturedPhotoUri('')
+    setMissionNotice('')
+    setError('')
+    setNotice('')
+    setLoginId('')
+    setPassword('')
+    setScreen('START')
+  }
+
   const joinTrip = async (code: string) => {
     const trip = await studentTripApi.joinWithInviteCode(code)
     const tracking = await locationTrackingAdapter.startTracking()
@@ -200,9 +219,9 @@ export default function App() {
     setScreen('STUDENT_HOME')
   }
 
-  if (screen === 'STUDENT_INVITE') return <InviteCodeScreen onSubmit={joinTrip} />
+  if (screen === 'STUDENT_INVITE') return <InviteCodeScreen onSubmit={joinTrip} onLogout={() => { void handleLogout() }} />
   if (screen === 'STUDENT_PERMISSION_BLOCKED') return <LocationBlockedScreen onOpenSettings={retryLocationPermission} />
-  if (screen === 'STUDENT_HOME' && studentTrip && locationState) return <StudentHome trip={studentTrip} location={locationState} notice={missionNotice} currentMission={currentMission} onCurrentMission={() => setScreen(currentMission?.type === 'CHECK' ? 'CHECK_MISSION' : 'ACTIVITY_MISSION')} onBellClick={() => setScreen('STUDENT_NOTIFICATIONS')} />
+  if (screen === 'STUDENT_HOME' && studentTrip && locationState) return <StudentHome trip={studentTrip} location={locationState} notice={missionNotice} currentMission={currentMission} onCurrentMission={() => setScreen(currentMission?.type === 'CHECK' ? 'CHECK_MISSION' : 'ACTIVITY_MISSION')} onBellClick={() => setScreen('STUDENT_NOTIFICATIONS')} onLogout={() => { void handleLogout() }} />
   if (screen === 'STUDENT_NOTIFICATIONS') return <StudentNotifications onBack={() => setScreen('STUDENT_HOME')} onSelect={openStudentNotification} />
   if (screen === 'ACTIVITY_MISSION' && currentMission) return <ActivityMissionScreen mission={currentMission} onBack={() => setScreen('STUDENT_HOME')} onCaptured={(uri) => { setCapturedPhotoUri(uri); setScreen('ACTIVITY_CONFIRMATION') }} />
   if (screen === 'ACTIVITY_CONFIRMATION') return <ActivityConfirmation isResubmission={currentMission?.isResubmission ?? false} photoUri={capturedPhotoUri} onRetake={() => setScreen('ACTIVITY_MISSION')} onSubmit={async () => {
@@ -222,7 +241,7 @@ export default function App() {
     setMissionNotice('출석 체크를 완료했습니다.')
     setScreen('STUDENT_HOME')
   }} />
-  if (screen === 'TEACHER_HOME' && currentUser) return <TeacherDashboard user={currentUser} />
+  if (screen === 'TEACHER_HOME' && currentUser) return <TeacherDashboard user={currentUser} onLogout={() => { void handleLogout() }} />
   if (screen === 'SIGN_UP') return <SignUpScreen input={signUpInput} error={error} onChange={setSignUpInput} onSubmit={handleSignUp} onCancel={showLogin} />
   if (screen === 'LOGIN') return <LoginScreen loginId={loginId} password={password} notice={notice} error={error} onLoginIdChange={setLoginId} onPasswordChange={setPassword} onSubmit={handleLogin} onShowSignUp={showSignUp} />
   return <StartScreen onShowLogin={showLogin} onShowSignUp={showSignUp} />
