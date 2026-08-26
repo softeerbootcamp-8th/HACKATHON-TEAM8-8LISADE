@@ -115,3 +115,13 @@
 - 이번 세션에는 Figma MCP 연결이 끊겨 있어 시안의 실제 색상 값을 조회하지 못했다. 대신 `index.css`에 이미 있는 두 가지 톤을 재사용했다: `badge-type--activity`는 `.upcoming-trip-badge`와 같은 계열의 앰버(연한 배경 `var(--color-accent-soft)` + 텍스트 `#a16207`), `badge-type--check`는 이 앱에 아직 없던 청색 계열(연한 배경 `rgb(59 130 246 / 12%)` + 텍스트 `#3b5bdb`)을 새로 추가했다. 둘 다 옆의 상태 배지(`badge-status-active`의 초록, `noti-badge`류의 빨강/주황)와 색이 겹치지 않도록 골랐다. 실제 Figma 값과 다를 수 있으므로 디자인 확인 시 재조정이 필요하다.
 
 검증: 프런트 `npx vitest run`(42파일 279개), `npm run lint`, `npm run build` 모두 통과.
+
+## 미션 시각 비교/표시가 오프셋 없는 서버 시각을 로컬로 잘못 해석하던 문제 수정 (#216)
+
+- Issue #191/PR #197이 "오프셋 없는 서버 ISO 시각은 UTC로 저장된 값으로 해석한다"는 계약(`shared/dateTime.ts`의 `parseServerDate`/`formatKoreanClock`)을 만들었지만, 학생 알림/교사 알림/위치 수신 시각에만 적용됐고 미션 쪽 두 파일은 여전히 `new Date(rawString)`을 직접 썼다. `Mission`/`MissionSubmission`의 `startAt`/`endAt`/`createdAt`이 모두 `LocalDateTime.now()`(오프셋 없음)라 위치/알림 시각과 동일한 패턴인데도 빠져 있었다.
+- `TeacherMissions.tsx`: `formatSubmittedAt`이 `new Date(submittedAt).getHours()/getMinutes()`로 실행 환경의 로컬 시간대를 그대로 읽어 UTC 원본 숫자를 표시하던 것을 `formatKoreanClock`으로 교체(항상 Asia/Seoul 기준). `missionDispatchStatus`(대기/진행중 판정)와 `formatCountdown`의 `remainingMs`(마감 카운트다운)는 `new Date(startAt/endAt)` 대신 `parseServerDate`로 절대 시점을 구해 비교하도록 고쳤다 — 두 함수 모두 "지금"은 여전히 `new Date()`/`Date.now()`를 그대로 쓴다(현재 시각 자체는 파싱 모호성이 없다).
+- `studentMissionSummary.ts`의 `isClosed` 판정(마감 시각과 비교해 미제출/진행 중을 가르는 로직)도 같은 이유로 `parseServerDate(board.mission.endAt)`로 교체.
+- 기존 `studentMissionSummary.test.ts`의 한 테스트가 `now` 인자를 오프셋 없이(`new Date('2026-08-26T10:00:00')`) 만들어 두고 있었다 — 수정 전에는 `endAt`도 같은 방식으로(로컬로) 파싱돼 우연히 상대적으로 일관됐지만, `endAt`을 절대 시점으로 고치면서 이 픽스처만 `now`에 `Z`를 명시하지 않으면 실행 환경 시간대에 따라 결과가 달라지는 상태였다 — `Z`를 붙여 명확한 절대 시점으로 교정했다.
+- 회귀 테스트는 `vi.setSystemTime`으로 "지금"을 고정하고, 이 개발 환경의 실제 시간대(Asia/Seoul)에서 수정 전 코드가 실제로 9시간 어긋난 결과를 내는 것을 먼저 확인(RED)한 뒤 고쳤다. vitest 4.1.11의 `useFakeTimers`는 `timezone` 옵션을 지원하지 않는다(타입에도 없고 런타임에서도 조용히 무시된다) — 실행 환경 자체의 시간대에 의존해서만 이 버그를 재현할 수 있었다는 뜻이며, `parseServerDate` 기반 수정 후에는 `Z` 접미사 덕에 실행 환경 시간대와 무관하게 항상 옳은 결과를 낸다.
+
+검증: 프런트 `npx vitest run`(42파일 286개 통과), `npm run lint`(0 errors — `export` 추가로 인한 `react-refresh/only-export-components` warning 3개는 기존에도 같은 패턴을 쓰는 다른 파일들처럼 파일 분리로 없앨 수 있으나 이번 수정 범위 밖으로 남겨둠), `npm run build` 모두 통과.
