@@ -16,6 +16,10 @@ function missionDispatchStatus(mission: TeacherMission): '대기' | '진행중' 
   return mission.startAt && new Date(mission.startAt) > new Date() ? '대기' : '진행중'
 }
 
+function missionTypeBadgeClass(type: MissionType): string {
+  return type === 'ACTIVITY' ? 'badge-type--activity' : 'badge-type--check'
+}
+
 function missionStatusBadgeClass(status: '대기' | '진행중' | '완료'): string {
   if (status === '진행중') return 'badge-status-active'
   if (status === '완료') return 'badge-status-done'
@@ -90,7 +94,7 @@ export default function TeacherMissions({ tripId }: { tripId: string }) {
         return <li key={mission.id}>
           <button className="mission-list-card" onClick={() => setView({ name: 'STATUS', missionId: mission.id })}>
             <div className="mission-list-card-badges">
-              <span className="badge badge-type">{mission.type === 'ACTIVITY' ? '활동' : '출석 체크'}</span>
+              <span className={`badge badge-type ${missionTypeBadgeClass(mission.type)}`}>{mission.type === 'ACTIVITY' ? '활동' : '출석 체크'}</span>
               <span className={`badge badge-status ${missionStatusBadgeClass(missionDispatchStatus(mission))}`}>{missionDispatchStatus(mission)}</span>
             </div>
             <p className="mission-list-card-title">{mission.title}</p>

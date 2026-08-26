@@ -51,6 +51,11 @@ describe('TeacherMissions', () => {
     expect(screen.getByText('2/5명 완료')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /15시 출발 버스 출석체크/ })).toBeInTheDocument()
     expect(screen.getByText('0/5명 완료')).toBeInTheDocument()
+
+    expect(screen.getByText('활동')).toHaveClass('badge-type--activity')
+    expect(screen.getByText('출석 체크')).toHaveClass('badge-type--check')
+    expect(screen.getByText('활동').className).not.toContain('badge-type--check')
+    expect(screen.getByText('출석 체크').className).not.toContain('badge-type--activity')
   })
 
   it('creates an activity mission and shows the end-time field only for activity missions', async () => {
