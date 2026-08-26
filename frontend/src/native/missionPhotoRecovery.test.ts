@@ -5,10 +5,11 @@ const get = vi.hoisted(() => vi.fn())
 const set = vi.hoisted(() => vi.fn())
 const remove = vi.hoisted(() => vi.fn())
 const takePhoto = vi.hoisted(() => vi.fn())
+const pickFromGallery = vi.hoisted(() => vi.fn())
 
 vi.mock('@capacitor/app', () => ({ App: { addListener } }))
 vi.mock('@capacitor/preferences', () => ({ Preferences: { get, set, remove } }))
-vi.mock('../api/cameraAdapter', () => ({ cameraAdapter: { takePhoto } }))
+vi.mock('../api/cameraAdapter', () => ({ cameraAdapter: { takePhoto, pickFromGallery } }))
 
 import { captureMissionPhoto, clearPendingMissionPhoto, listenForRestoredMissionPhoto, savePendingMissionPhoto } from './missionPhotoRecovery'
 
@@ -27,6 +28,14 @@ describe('mission photo recovery', () => {
 
     await expect(captureMissionPhoto(mission)).resolves.toEqual({ uri: 'capacitor://mission.jpg' })
     expect(set.mock.invocationCallOrder[0]).toBeLessThan(takePhoto.mock.invocationCallOrder[0])
+  })
+
+  it('records the mission before opening the gallery when the gallery source is picked', async () => {
+    set.mockResolvedValue(undefined)
+    pickFromGallery.mockResolvedValue({ uri: 'capacitor://gallery.jpg' })
+
+    await expect(captureMissionPhoto(mission, 'gallery')).resolves.toEqual({ uri: 'capacitor://gallery.jpg' })
+    expect(set.mock.invocationCallOrder[0]).toBeLessThan(pickFromGallery.mock.invocationCallOrder[0])
   })
 
   it('restores a Camera takePhoto result into its pending mission', async () => {

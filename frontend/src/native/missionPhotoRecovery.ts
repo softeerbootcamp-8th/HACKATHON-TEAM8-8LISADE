@@ -6,6 +6,7 @@ import { cameraAdapter } from '../api/cameraAdapter'
 const PENDING_MISSION_PHOTO_KEY = 'pending-mission-photo'
 
 export type PendingMissionPhoto = StudentMission & { isResubmission: boolean }
+export type PhotoSource = 'camera' | 'gallery'
 
 export async function savePendingMissionPhoto(mission: PendingMissionPhoto): Promise<void> {
   await Preferences.set({ key: PENDING_MISSION_PHOTO_KEY, value: JSON.stringify(mission) })
@@ -15,9 +16,9 @@ export async function clearPendingMissionPhoto(): Promise<void> {
   await Preferences.remove({ key: PENDING_MISSION_PHOTO_KEY })
 }
 
-export async function captureMissionPhoto(mission: PendingMissionPhoto): Promise<{ uri: string }> {
+export async function captureMissionPhoto(mission: PendingMissionPhoto, source: PhotoSource = 'camera'): Promise<{ uri: string }> {
   await savePendingMissionPhoto(mission)
-  return cameraAdapter.takePhoto()
+  return source === 'gallery' ? cameraAdapter.pickFromGallery() : cameraAdapter.takePhoto()
 }
 
 async function loadPendingMissionPhoto(): Promise<PendingMissionPhoto | null> {
