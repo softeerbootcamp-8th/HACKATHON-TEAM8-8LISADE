@@ -93,6 +93,8 @@ public class MissionService {
         requireTeacher(mission.getTripId(), teacherId);
         MissionSubmission submission = submissionRepository.findByMissionIdAndUserId(missionId, studentId).orElseThrow(() -> new MissionException(MissionErrorCode.SUBMISSION_NOT_FOUND));
         submission.reject(reason);
+        String imageKey = submission.getImageKey();
+        if (imageKey != null && !imageKey.isBlank()) storagePresigner.deleteObject(imageKey);
         notifyRejected(mission, studentId, reason);
     }
 

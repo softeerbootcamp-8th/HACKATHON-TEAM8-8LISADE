@@ -202,6 +202,32 @@ class MissionServiceTest {
     }
 
     @Test
+    void rejectingASubmissionDeletesTheImageFromStorage() {
+        Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, null);
+        MissionSubmission submission = MissionSubmission.photo(2L, 10L, "upload/missions/2/students/10/a.jpg");
+        when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
+        when(tripRepository.findById(1L)).thenReturn(Optional.of(trip(100L)));
+        when(submissionRepository.findByMissionIdAndUserId(2L, 10L)).thenReturn(Optional.of(submission));
+
+        missionService.reject(2L, 10L, 100L, "사진이 흐릿합니다.");
+
+        then(storagePresigner).should(times(1)).deleteObject("upload/missions/2/students/10/a.jpg");
+    }
+
+    @Test
+    void rejectingACheckSubmissionWithNoImageDoesNotAttemptStorageDeletion() {
+        Mission mission = Mission.createCheck(1L, "출석", "", null, null, "1234");
+        MissionSubmission submission = MissionSubmission.completedCheck(2L, 10L);
+        when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
+        when(tripRepository.findById(1L)).thenReturn(Optional.of(trip(100L)));
+        when(submissionRepository.findByMissionIdAndUserId(2L, 10L)).thenReturn(Optional.of(submission));
+
+        missionService.reject(2L, 10L, 100L, "사유");
+
+        then(storagePresigner).should(org.mockito.Mockito.never()).deleteObject(any());
+    }
+
+    @Test
     void creatingAMissionNotifiesEveryParticipatingStudent() {
         when(tripRepository.findById(1L)).thenReturn(Optional.of(trip(100L)));
         when(participantRepository.findAllByTripIdOrderByCreatedAtAsc(1L)).thenReturn(List.of(

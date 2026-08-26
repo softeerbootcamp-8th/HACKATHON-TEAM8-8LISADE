@@ -69,3 +69,12 @@
 - 자료 내보내기, 마감 시각 기준 자동 완료 전환은 이번 범위에서 다루지 않는다.
 
 검증: 백엔드 `MissionServiceTest`에 4개 케이스 추가(수동 완료, 중복 완료 거부, 완료된 미션 학생 접근 차단, 완료된 미션이 학생 현재 미션 목록에서 제외) 후 `./gradlew test` 전체 통과. 프론트 `TeacherMissions.test.tsx`에 완료 처리 플로우 테스트 추가 후 `npm test`(41파일 256개), `npm run lint` 모두 통과.
+
+## 반려된 미션 제출 이미지 S3 삭제 (#172)
+
+- 교사가 사진 제출을 반려해도 `MissionService.reject()`는 상태만 `REJECTED`로 바꾸고 S3 object는 그대로 방치됐다. 재제출(`resubmit`) 시에도 DB의 `imageKey`만 새 값으로 덮어써서, 반려된 이전 이미지는 버킷에 영구히 고아로 남아 있었다.
+- `StoragePresigner`에 `deleteObject(String objectKey)`를 추가했다. `S3StoragePresigner`는 새로 주입받은 `S3Client`(presigner와 별개, 실제 delete 호출용)로 `DeleteObjectRequest`를 실행한다. `S3Exception`은 잡아서 로그만 남기고 삼킨다 — 반려는 DB 상태 변경이 핵심이고 S3 정리는 부가 작업이므로, 삭제 실패가 반려 트랜잭션 자체를 막으면 안 된다. `LocalStoragePresigner`는 no-op.
+- `S3PresignerConfig`에 `S3Client` 빈을 추가했다(`DefaultCredentialsProvider` 재사용, 기존 `S3Presigner`와 동일한 자격 증명 체인).
+- `MissionService.reject()`에서 `submission.reject(reason)` 직후 `imageKey`가 비어있지 않을 때만(`CHECK` 미션은 imageKey가 빈 문자열) `deleteObject`를 호출한다.
+
+검증: `./gradlew test`(`S3StoragePresignerTest`에 delete 성공/예외 삼킴 케이스 추가, `MissionServiceTest`에 반려 시 삭제 호출/미호출 케이스 추가), `./gradlew build` 모두 통과.
