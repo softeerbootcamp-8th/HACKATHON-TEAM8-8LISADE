@@ -172,14 +172,13 @@ export function TeacherLocationMap({ trips }: { trips: TeacherTrip[] }) {
   useEffect(() => {
     const maps = mapsRef.current
     const map = mapRef.current
-    if (!ready || !maps || !map || !displayedContext || !autoCenter) return
-    const points = displayedContext.locations.length > 0 ? displayedContext.locations : displayedContext.geofence
-    if (points.length === 0) return
+    const points = context?.geofence ?? []
+    if (!ready || !maps || !map || !autoCenter || points.length === 0) return
 
     const bounds = new maps.LatLngBounds()
     points.forEach(point => bounds.extend(new maps.LatLng(point.latitude, point.longitude)))
     map.setBounds(bounds, 112, 28, 76, 28)
-  }, [autoCenter, displayedContext, ready])
+  }, [autoCenter, context?.geofence, ready])
 
   return <section className="teacher-location-tab" aria-label="학생 실시간 위치">
     <div className="teacher-location-controls">
