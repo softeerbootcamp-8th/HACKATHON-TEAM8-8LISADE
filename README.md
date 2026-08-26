@@ -180,4 +180,4 @@ erDiagram
 | 김현문 | [@hyeonyway](https://github.com/hyeonyway) | Frontend 리드 · 인증/세션 · Trip 참여 및 미션 제출 플로우 · 배포 관리 |
 | 김근성 | [@rootachieve](https://github.com/rootachieve) | 위치 추적(GPS/안전 구역 이탈 판정) · Android 백그라운드 위치 파이프라인 · 인프라 |
 | 박민서 | [@minseo6753](https://github.com/minseo6753) | Backend 도메인 모델링(JPA) · 알림(Notification) · 실시간 위치 SSE |
-| 임하민 | [@haimin13](https://github.com/haimin13) | FCM Push 연동 · 미션 관리 화면/API · CI/CD |
+| 임하민 | [@haimin13](https://github.com/haimin13) | FCM Push/SSE 연동 · 미션 관리 화면/API · CI/CD |
