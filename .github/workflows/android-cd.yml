@@ -1,4 +1,4 @@
-name: Deploy Android APK
+name: Release Android APK
 
 on:
   push:
@@ -9,33 +9,42 @@ on:
       version:
         description: '배포할 버전 (예: 1.0.0). 태그 없이 수동 배포할 때만 사용.'
         required: true
+      prerelease:
+        description: 'prerelease로 표시 (latest URL을 갱신하지 않음)'
+        type: boolean
+        default: true
 
 concurrency:
-  group: android-deploy
+  group: android-release
   cancel-in-progress: false
 
-env:
-  AWS_REGION: ap-northeast-2
-
 jobs:
-  deploy:
+  release:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
+      # prerelease는 latest 다운로드 URL을 갱신하지 않는다.
+      # v1.0.0-rc1 처럼 하이픈이 있는(semver prerelease) 태그는 자동으로 prerelease 처리한다.
       - name: Resolve version
         id: version
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             VERSION="${{ inputs.version }}"
+            PRERELEASE="${{ inputs.prerelease }}"
           else
             VERSION="${GITHUB_REF_NAME#v}"
+            case "$VERSION" in
+              *-*) PRERELEASE=true ;;
+              *)   PRERELEASE=false ;;
+            esac
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "배포 버전: $VERSION (versionCode=${{ github.run_number }})"
+          echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
+          echo "버전 $VERSION (versionCode=${{ github.run_number }}, prerelease=$PRERELEASE)"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -49,7 +58,7 @@ jobs:
         run: npm ci
 
       # VITE_* 값은 빌드 시점에 번들에 박힌다. 누락되면 빌드는 성공하지만
-      # 설치된 앱의 해당 기능이 조용히 죽는다 (#112 참고).
+      # 설치된 앱의 해당 기능이 조용히 죽는다 (#112).
       - name: Bundle web assets
         working-directory: frontend
         run: npm run mobile:android
@@ -104,58 +113,53 @@ jobs:
 
       # 서명이 빠지면 gradle은 app-release-unsigned.apk를 만들고 빌드는 성공한다.
       # 그대로 배포하면 설치 자체가 불가능하므로 여기서 끊는다.
-      - name: Verify APK is signed
-        working-directory: frontend/android
+      # 자산 파일명은 고정이어야 한다 — QR코드가 가리키는 URL의 일부이기 때문.
+      - name: Verify APK and stage asset
+        id: apk
         run: |
           set -euo pipefail
-          APK=app/build/outputs/apk/release/app-release.apk
-          if [ ! -f "$APK" ]; then
-            echo "::error::$APK 없음. 서명이 걸리지 않았다 (ANDROID_KEYSTORE_* secret 확인)."
-            ls -l app/build/outputs/apk/release/ || true
+          BUILT=frontend/android/app/build/outputs/apk/release/app-release.apk
+          if [ ! -f "$BUILT" ]; then
+            echo "::error::$BUILT 없음. 서명이 걸리지 않았다 (ANDROID_KEYSTORE_* secret 확인)."
+            ls -l frontend/android/app/build/outputs/apk/release/ || true
             exit 1
           fi
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -r | head -1)
-          "$APKSIGNER" verify --print-certs "$APK"
+          "$APKSIGNER" verify --print-certs "$BUILT"
+          cp "$BUILT" "$RUNNER_TEMP/8lisade.apk"
+          echo "path=$RUNNER_TEMP/8lisade.apk" >> "$GITHUB_OUTPUT"
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Upload to S3
-        working-directory: frontend/android
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+          APK: ${{ steps.apk.outputs.path }}
         run: |
           set -euo pipefail
-          APK=app/build/outputs/apk/release/app-release.apk
-          VERSION="${{ steps.version.outputs.version }}"
-          BUCKET="${{ secrets.APK_S3_BUCKET }}"
-          CT="application/vnd.android.package-archive"
+          TAG="${GITHUB_REF_NAME}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="v$VERSION"
+            git tag "$TAG" && git push origin "$TAG"
+          fi
 
-          # 버전별 백업 (롤백용) — 먼저 올려서 실패 시 latest가 오염되지 않게 한다
-          aws s3 cp "$APK" "s3://$BUCKET/app/archive/app-v$VERSION.apk" \
-            --content-type "$CT"
+          FLAGS=(--generate-notes --title "v$VERSION")
+          if [ "$PRERELEASE" = "true" ]; then
+            FLAGS+=(--prerelease)
+          fi
 
-          # QR코드가 가리키는 고정 경로. 파일명이 고정이므로 캐시를 막아야 한다
-          aws s3 cp "$APK" "s3://$BUCKET/app/latest.apk" \
-            --content-type "$CT" \
-            --cache-control "no-cache, no-store, must-revalidate"
+          gh release create "$TAG" "$APK" "${FLAGS[@]}"
 
-          cat > version.json <<EOF
+          REPO_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
           {
-            "version": "$VERSION",
-            "versionCode": ${{ github.run_number }},
-            "commit": "$GITHUB_SHA",
-            "builtAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          }
-          EOF
-          aws s3 cp version.json "s3://$BUCKET/app/latest-version.json" \
-            --content-type "application/json" \
-            --cache-control "no-cache, no-store, must-revalidate"
-
-          echo "### APK 배포 완료" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 버전: \`$VERSION\` (versionCode ${{ github.run_number }})" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 고정 URL: \`s3://$BUCKET/app/latest.apk\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 백업: \`s3://$BUCKET/app/archive/app-v$VERSION.apk\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "### APK 릴리즈 완료"
+            echo ""
+            echo "- 버전: \`v$VERSION\` (versionCode ${{ github.run_number }})"
+            echo "- prerelease: \`$PRERELEASE\`"
+            echo "- 이 릴리즈: $REPO_URL/releases/tag/$TAG"
+            if [ "$PRERELEASE" = "false" ]; then
+              echo "- **고정 다운로드 URL (QR코드용)**: $REPO_URL/releases/latest/download/8lisade.apk"
+            else
+              echo "- prerelease이므로 고정 \`latest\` URL은 갱신되지 않았다."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
