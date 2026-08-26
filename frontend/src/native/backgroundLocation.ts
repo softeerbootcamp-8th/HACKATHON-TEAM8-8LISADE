@@ -1,4 +1,5 @@
 import { Capacitor, registerPlugin } from '@capacitor/core'
+import type { LocationTrackingState } from '../types/studentTrip'
 
 export type TrackingReason =
   | 'LOCATION_DISABLED'
@@ -53,3 +54,19 @@ export const backgroundLocation = createBackgroundLocation(
   NativeBackgroundLocation,
   Capacitor.isNativePlatform(),
 )
+
+export function toLocationTrackingState(status: TrackingStatus): LocationTrackingState {
+  if (status.reason === 'PERMISSION_DENIED' || status.reason === 'LOCATION_DISABLED') {
+    return { permission: 'DENIED', sendStatus: 'NO_PERMISSION', lastSentAt: null }
+  }
+  if (status.reason === 'SESSION_EXPIRED' || status.reason === 'SESSION_MISSING') {
+    return { permission: 'PENDING', sendStatus: 'STOPPED', lastSentAt: null }
+  }
+  if (status.reason === 'UNAVAILABLE' || !status.sessionAvailable) {
+    return { permission: 'PENDING', sendStatus: 'NO_PERMISSION', lastSentAt: null }
+  }
+  if (status.tracking) {
+    return { permission: 'GRANTED', sendStatus: 'NORMAL', lastSentAt: null }
+  }
+  return { permission: 'GRANTED', sendStatus: 'STOPPED', lastSentAt: null }
+}
