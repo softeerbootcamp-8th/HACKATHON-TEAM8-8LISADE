@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import TeacherStudents from './TeacherStudents'
 
@@ -51,6 +51,34 @@ describe('TeacherStudents', () => {
     expect(screen.getByText('전체 학생 4')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /이서연/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /김직접/ })).toBeInTheDocument()
+  })
+
+  it('shows both a location tag and a mission tag for a student with both reasons', async () => {
+    stubRoster([{ id: 101, tripId: 5, title: '사진 미션', description: '', type: 'ACTIVITY', startAt: null, endAt: null }])
+    render(<TeacherStudents tripId="5" />)
+
+    const row = await screen.findByRole('button', { name: /박서준/ })
+    expect(within(row).getByText('위치 확인 필요')).toBeInTheDocument()
+    expect(within(row).getByText('미완료')).toBeInTheDocument()
+  })
+
+  it('adds a student with a normal location but an incomplete mission to the attention list', async () => {
+    stubRoster(
+      [{ id: 101, tripId: 5, title: '사진 미션', description: '', type: 'ACTIVITY', startAt: null, endAt: null }],
+      {
+        101: {
+          mission: { id: 101, tripId: 5, title: '사진 미션', description: '', type: 'ACTIVITY', startAt: null, endAt: null },
+          totalStudentCount: 3,
+          submitted: [],
+          notSubmitted: [{ studentId: 22, studentName: '이서연', rejectionReason: null }],
+        },
+      },
+    )
+    render(<TeacherStudents tripId="5" />)
+
+    expect(await screen.findByText('확인이 필요한 학생 3')).toBeInTheDocument()
+    const row = await screen.findByRole('button', { name: /이서연/ })
+    expect(within(row).getByText('미완료')).toBeInTheDocument()
   })
 
   it('shows an empty trip with no students', async () => {

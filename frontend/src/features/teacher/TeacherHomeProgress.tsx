@@ -61,7 +61,7 @@ export function TeacherHomeProgress({ tripId, onViewStudents, onFinished }: {
         {attention.length === 0
           ? <p className="student-list-empty">확인이 필요한 학생이 없습니다.</p>
           : attention.map((student) => <button type="button" key={student.participantId} className="student-row" onClick={onViewStudents}>
-            <span className="student-name">{student.name}<span className={`student-tag ${reasonTagClass[student.reason]}`}>{reasonLabel[student.reason]}</span></span>
+            <span className="student-name">{student.name}{student.reasons.map((reason) => <span key={reason} className={`student-tag ${reasonTagClass[reason]}`}>{reasonLabel[reason]}</span>)}</span>
             <span className="chevron" aria-hidden="true">›</span>
           </button>)}
       </>}
