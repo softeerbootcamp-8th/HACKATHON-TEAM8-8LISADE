@@ -245,6 +245,7 @@ h2 { font-size: 17px; margin: 0; }
 .photo-grid { display: grid; gap: 12px; grid-template-columns: repeat(2, 1fr); list-style: none; margin: 8px 0 16px; padding: 0; }
 .photo-tile { background: #f4f7fb; border-radius: 12px; padding: 10px; text-align: center; }
 .photo-placeholder { background: linear-gradient(135deg, #ffe9a8, #cfe8d8); border-radius: 8px; height: 90px; margin-bottom: 8px; }
+.photo-thumbnail { background: #e9eef5; border-radius: 8px; display: block; height: 90px; margin-bottom: 8px; object-fit: cover; width: 100%; }
 .danger-button { background: #fff; border: 1px solid #f0b3b6; color: #b4232a; width: 100%; }
 .danger-button:hover { background: #fff0f1; }
 .sr-only { height: 1px; margin: -1px; overflow: hidden; padding: 0; position: absolute; width: 1px; clip: rect(0, 0, 0, 0); white-space: nowrap; }

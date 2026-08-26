@@ -90,7 +90,9 @@ public class MissionService {
             String studentName = namesByStudent.getOrDefault(studentId, participant.getParticipantName());
             MissionSubmission submission = submissionsByStudent.get(studentId);
             if (submission != null && submission.getStatus() == SubmissionStatus.COMPLETED) {
-                submitted.add(new SubmittedEntry(studentId, studentName, submission.getImageKey(), submission.getCreatedAt()));
+                String imageKey = submission.getImageKey();
+                String imageUrl = imageKey == null || imageKey.isBlank() ? null : storagePresigner.presignGet(imageKey);
+                submitted.add(new SubmittedEntry(studentId, studentName, imageKey, imageUrl, submission.getCreatedAt()));
             } else {
                 String rejectionReason = submission != null && submission.getStatus() == SubmissionStatus.REJECTED ? submission.getRejectionReason() : null;
                 notSubmitted.add(new NotSubmittedEntry(studentId, studentName, rejectionReason));
@@ -115,6 +117,6 @@ public class MissionService {
     private void requireTeacher(Long tripId, Long teacherId) { Trip trip=tripRepository.findById(tripId).orElseThrow(() -> new ApiException(CommonErrorCode.INVALID_REQUEST)); if (!trip.getTeacherId().equals(teacherId)) throw new ApiException(CommonErrorCode.FORBIDDEN); }
     public record SubmissionResult(Long submissionId, SubmissionStatus status, String imageKey) { static SubmissionResult from(MissionSubmission submission, Mission mission) { return new SubmissionResult(submission.getId(), submission.currentStatus(LocalDateTime.now(),mission), submission.getImageKey()); } }
     public record StatusBoard(Mission mission, int totalStudentCount, List<SubmittedEntry> submitted, List<NotSubmittedEntry> notSubmitted) {}
-    public record SubmittedEntry(Long studentId, String studentName, String imageKey, LocalDateTime submittedAt) {}
+    public record SubmittedEntry(Long studentId, String studentName, String imageKey, String imageUrl, LocalDateTime submittedAt) {}
     public record NotSubmittedEntry(Long studentId, String studentName, String rejectionReason) {}
 }

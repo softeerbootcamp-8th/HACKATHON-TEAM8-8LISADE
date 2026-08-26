@@ -56,6 +56,30 @@ EC2 instance profile이 AWS 자격증명을 제공하고, Compose가 버킷 이�
 `8lisade-mission-image-upload-762794225137-ap-northeast-2-an`이며, 다른 환경은
 `S3_BUCKET` 환경변수로 덮어쓸 수 있다. Access key를 Compose나 CI 환경변수에 넣지 않는다.
 
+### 버킷 CORS (#92)
+
+버킷은 비공개를 유지하고, 교사 화면의 제출 사진은 서버가 발급한 30분 만료 presigned
+GET URL로만 조회한다(업로드용 PUT은 5분). EC2 instance profile에는 이미 `s3:GetObject`가 포함되어 있어
+서명 발급 자체는 문제가 없다.
+
+다만 **버킷 CORS 규칙에 `PUT`만 등록되어 있어 브라우저에서 조회 URL을 `fetch`/XHR로
+읽으면 preflight에서 차단된다.** `GET`(과 preflight를 위한 `HEAD`)을 추가한다.
+
+```json
+[
+  {
+    "AllowedOrigins": ["https://8lisade.site", "https://www.8lisade.site"],
+    "AllowedMethods": ["PUT", "GET", "HEAD"],
+    "AllowedHeaders": ["*"],
+    "ExposeHeaders": []
+  }
+]
+```
+
+`<img src="...">`로 표시만 할 때는 CORS가 필요 없다. 사진을 `fetch`로 받아 blob으로
+다루거나 canvas에 그리는 경우에만 위 규칙이 필요하므로, 프론트 구현 방식에 따라
+적용 시점을 판단한다.
+
 ## 배포 후 확인
 
 ```bash

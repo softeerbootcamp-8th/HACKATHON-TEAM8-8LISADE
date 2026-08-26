@@ -18,8 +18,8 @@ public record MissionStatusBoardResponse(
         );
     }
 
-    public record SubmittedEntry(Long studentId, String studentName, String imageKey, LocalDateTime submittedAt) {
-        static SubmittedEntry from(MissionService.SubmittedEntry entry) { return new SubmittedEntry(entry.studentId(), entry.studentName(), entry.imageKey(), entry.submittedAt()); }
+    public record SubmittedEntry(Long studentId, String studentName, String imageKey, String imageUrl, LocalDateTime submittedAt) {
+        static SubmittedEntry from(MissionService.SubmittedEntry entry) { return new SubmittedEntry(entry.studentId(), entry.studentName(), entry.imageKey(), entry.imageUrl(), entry.submittedAt()); }
     }
 
     public record NotSubmittedEntry(Long studentId, String studentName, String rejectionReason) {
