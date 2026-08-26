@@ -55,17 +55,16 @@ export function TeacherDashboard({ user }: { user: CurrentUser }) {
   const activeTripId = trips && trips.length > 0 ? String(trips[0].id) : null
 
   const refreshTrips = () => teacherTripApi.getTrips()
-    .then((loadedTrips) => { setTrips(loadedTrips); return loadedTrips })
+    .then((loadedTrips) => { setTrips(loadedTrips); setTripError(''); return loadedTrips })
     .catch((caught) => { setTripError(caught instanceof Error ? caught.message : '체험학습 목록을 불러오지 못했습니다.'); return null })
 
   useEffect(() => {
-    if (creating) return
     let active = true
     teacherTripApi.getTrips()
       .then((loadedTrips) => { if (active) { setTrips(loadedTrips); setTripError('') } })
       .catch((caught) => { if (active) setTripError(caught instanceof Error ? caught.message : '체험학습 목록을 불러오지 못했습니다.') })
     return () => { active = false }
-  }, [creating, tab])
+  }, [tab])
 
   const openNotification = (notification: TeacherNotification) => {
     setTab(notificationTargetTab(notification.type))
