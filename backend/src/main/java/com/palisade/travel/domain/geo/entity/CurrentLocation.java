@@ -74,4 +74,10 @@ public class CurrentLocation {
         this.updatedAt = updatedAt;
     }
 
+    public void updatePosition(BigDecimal latitude, BigDecimal longitude, LocalDateTime updatedAt) {
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.updatedAt = updatedAt;
+    }
+
 }
