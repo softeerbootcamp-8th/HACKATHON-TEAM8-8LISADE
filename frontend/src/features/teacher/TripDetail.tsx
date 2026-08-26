@@ -166,7 +166,7 @@ export function TripDetail({ trip, teacherName, onBack, onAddStudent, onStarted,
             <button type="button" className="danger-button" onClick={confirmDelete} disabled={deleting}>{deleting ? '삭제하는 중...' : '삭제하기'}</button>
           </div>
         </div>
-        : <button type="button" className="danger-button" style={isReady ? { marginTop: 8 } : undefined} onClick={() => setConfirmingDelete(true)}>삭제하기</button>}
+        : <button type="button" className="danger-button" onClick={() => setConfirmingDelete(true)}>삭제하기</button>}
     </footer>}
   </main>
 }

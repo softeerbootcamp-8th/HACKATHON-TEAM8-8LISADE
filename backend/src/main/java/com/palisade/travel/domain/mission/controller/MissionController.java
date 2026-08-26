@@ -24,6 +24,8 @@ public class MissionController {
     public ApiResponse<MissionResponse> update(@PathVariable Long missionId, @AuthenticationPrincipal UserPrincipal user, @Valid @RequestBody MissionCreateRequest request) { return ApiResponse.success(MissionResponse.from(missionService.update(missionId,user.userId(),request.title(),request.description(),request.startAt(),request.endAt()))); }
     @GetMapping("/trips/{tripId}/missions/current")
     public ApiResponse<List<MissionResponse>> currentMissions(@PathVariable Long tripId, @AuthenticationPrincipal UserPrincipal user) { return ApiResponse.success(missionService.getCurrentStudentMissions(tripId,user.userId()).stream().map(MissionResponse::from).toList()); }
+    @GetMapping("/trips/{tripId}/missions/overview")
+    public ApiResponse<StudentMissionOverviewResponse> studentMissionOverview(@PathVariable Long tripId, @AuthenticationPrincipal UserPrincipal user) { return ApiResponse.success(StudentMissionOverviewResponse.from(missionService.getStudentMissionOverview(tripId,user.userId()))); }
     @GetMapping("/missions/{missionId}")
     public ApiResponse<MissionResponse> studentMission(@PathVariable Long missionId, @AuthenticationPrincipal UserPrincipal user) { return ApiResponse.success(MissionResponse.from(missionService.getStudentMission(missionId,user.userId()))); }
     @GetMapping("/teacher/missions/{missionId}/pin")

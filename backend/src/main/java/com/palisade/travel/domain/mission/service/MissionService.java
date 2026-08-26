@@ -72,15 +72,21 @@ public class MissionService {
     }
     public Mission getStudentMission(Long missionId, Long studentId) { Mission mission = findMission(missionId); requireParticipant(mission, studentId); requireAccessible(mission); return mission; }
     public List<Mission> getCurrentStudentMissions(Long tripId, Long studentId) {
+        return getStudentMissionOverview(tripId, studentId).currentMissions();
+    }
+    public StudentMissionOverview getStudentMissionOverview(Long tripId, Long studentId) {
         if (!participantRepository.existsByTripIdAndUserId(tripId, studentId)) throw new MissionException(MissionErrorCode.NOT_A_TRIP_PARTICIPANT);
         LocalDateTime now = LocalDateTime.now();
-        List<Mission> accessible = missionRepository.findByTripIdOrderByStartAtAsc(tripId).stream().filter(m -> m.isAccessibleAt(now) && !m.isCompleted()).toList();
+        List<Mission> accessible = missionRepository.findByTripIdOrderByStartAtAsc(tripId).stream().filter(m -> m.isAccessibleAt(now)).toList();
         List<Long> missionIds = accessible.stream().map(Mission::getId).toList();
-        Set<Long> completedMissionIds = submissionRepository.findByMissionIdInAndUserId(missionIds, studentId).stream()
-                .filter(submission -> submission.getStatus() == SubmissionStatus.COMPLETED)
+        Set<Long> completedMissionIds = (missionIds.isEmpty() ? List.<MissionSubmission>of() : submissionRepository.findByMissionIdInAndUserId(missionIds, studentId)).stream()
+                .filter(submission -> submission.getStatus() == SubmissionStatus.COMPLETED || submission.getStatus() == SubmissionStatus.LATE)
                 .map(MissionSubmission::getMissionId)
                 .collect(Collectors.toSet());
-        return accessible.stream().filter(m -> !completedMissionIds.contains(m.getId())).toList();
+        List<Mission> currentMissions = accessible.stream()
+                .filter(mission -> !mission.isCompleted() && !completedMissionIds.contains(mission.getId()))
+                .toList();
+        return new StudentMissionOverview(currentMissions, completedMissionIds.size(), accessible.size());
     }
     @Transactional
     public SubmissionResult verifyPin(Long missionId, Long studentId, String pin) {
@@ -176,6 +182,7 @@ public class MissionService {
     private void requireAccessible(Mission mission) { if (!mission.isAccessibleAt(LocalDateTime.now()) || mission.isCompleted()) throw new MissionException(MissionErrorCode.MISSION_NOT_ACCESSIBLE); }
     private void requireTeacher(Long tripId, Long teacherId) { Trip trip=tripRepository.findById(tripId).orElseThrow(() -> new MissionException(MissionErrorCode.TRIP_NOT_FOUND)); if (!trip.getTeacherId().equals(teacherId)) throw new MissionException(MissionErrorCode.TRIP_ACCESS_FORBIDDEN); }
     public record SubmissionResult(Long submissionId, SubmissionStatus status, String imageKey) { static SubmissionResult from(MissionSubmission submission, Mission mission) { return new SubmissionResult(submission.getId(), submission.currentStatus(LocalDateTime.now(),mission), submission.getImageKey()); } }
+    public record StudentMissionOverview(List<Mission> currentMissions, int completedCount, int totalCount) {}
     public record StatusBoard(Mission mission, int totalStudentCount, List<SubmittedEntry> submitted, List<NotSubmittedEntry> notSubmitted) {}
     public record SubmittedEntry(Long studentId, String studentName, String imageKey, String imageUrl, LocalDateTime submittedAt, boolean late) {}
     public record NotSubmittedEntry(Long studentId, String studentName, String rejectionReason) {}

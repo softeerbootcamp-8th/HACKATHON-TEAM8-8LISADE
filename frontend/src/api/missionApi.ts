@@ -14,6 +14,12 @@ export interface StudentMission {
   endAt: string | null
 }
 
+export interface StudentMissionOverview {
+  currentMissions: StudentMission[]
+  completedCount: number
+  totalCount: number
+}
+
 export interface MissionSubmission {
   submissionId: number | null
   status: SubmissionStatus
@@ -94,6 +100,10 @@ async function uploadToStorage(uploadUrl: string, photo: Blob, contentType: stri
 }
 
 export const missionApi = {
+  getStudentMissionOverview(tripId: number) {
+    return request<StudentMissionOverview>(`/api/trips/${tripId}/missions/overview`)
+  },
+
   getCurrentMissions(tripId: number) {
     return request<StudentMission[]>(`/api/trips/${tripId}/missions/current`)
   },
