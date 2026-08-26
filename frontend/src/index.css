@@ -329,7 +329,7 @@ h2 { font-size: 17px; margin: 0; }
 
 /* Trip detail (T-03-1 / T-03-2) */
 .trip-create-header h1 { flex: 1; }
-.trip-detail-content { display: grid; gap: 16px; }
+.trip-detail-content { align-content: start; display: grid; gap: 16px; }
 .trip-detail-card { background: #fff; border-radius: 18px; box-shadow: var(--shadow-card); display: grid; gap: 12px; padding: 16px 18px; }
 .trip-detail-card > div { align-items: baseline; display: flex; gap: 10px; }
 .trip-detail-card .label { color: var(--color-text-muted); flex: 0 0 auto; font-size: 13px; font-weight: 500; }
