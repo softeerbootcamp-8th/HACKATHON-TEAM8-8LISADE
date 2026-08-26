@@ -6,6 +6,7 @@ type TeacherTripResponse = {
   title: string
   place: string
   startAt: string | null
+  endAt: string | null
   status: TeacherTripStatus
 }
 

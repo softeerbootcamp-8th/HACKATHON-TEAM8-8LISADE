@@ -109,9 +109,9 @@ class TripControllerTest {
         // given
         given(tripService.getTrips(10L)).willReturn(List.of(
                 new TeacherTripSummaryResponse(1L, "26년 5학년 2반", "국립중앙박물관",
-                        LocalDateTime.of(2026, 9, 12, 9, 0), TripStatus.ACTIVE),
+                        LocalDateTime.of(2026, 9, 12, 9, 0), LocalDateTime.of(2026, 9, 12, 16, 0), TripStatus.ACTIVE),
                 new TeacherTripSummaryResponse(2L, "현장체험학습 2", "경주 첨성대",
-                        LocalDateTime.of(2026, 10, 2, 9, 0), TripStatus.READY)
+                        LocalDateTime.of(2026, 10, 2, 9, 0), LocalDateTime.of(2026, 10, 2, 16, 0), TripStatus.READY)
         ));
 
         // when & then
@@ -120,7 +120,10 @@ class TripControllerTest {
                 .andExpect(jsonPath("$.data[0].tripId").value(1))
                 .andExpect(jsonPath("$.data[0].title").value("26년 5학년 2반"))
                 .andExpect(jsonPath("$.data[0].place").value("국립중앙박물관"))
+                .andExpect(jsonPath("$.data[0].startAt").value("2026-09-12T09:00:00"))
+                .andExpect(jsonPath("$.data[0].endAt").value("2026-09-12T16:00:00"))
                 .andExpect(jsonPath("$.data[0].status").value("ACTIVE"))
+                .andExpect(jsonPath("$.data[1].endAt").value("2026-10-02T16:00:00"))
                 .andExpect(jsonPath("$.data[1].status").value("READY"));
     }
 

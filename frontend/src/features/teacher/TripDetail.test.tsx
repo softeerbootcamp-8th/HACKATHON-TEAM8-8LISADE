@@ -16,9 +16,9 @@ vi.mock('../../api/teacherTripApi', () => ({
 import { teacherTripApi } from '../../api/teacherTripApi'
 import { AddStudentForm, TripDetail } from './TripDetail'
 
-const activeTrip: TeacherTrip = { id: 1, title: '경복궁 현장체험학습', place: '경복궁', startAt: '2026-09-12T09:00:00', status: 'ACTIVE' }
-const finishedTrip: TeacherTrip = { id: 2, title: '지난 체험학습', place: '국립중앙박물관', startAt: '2026-07-01T09:00:00', status: 'FINISHED' }
-const readyTrip: TeacherTrip = { id: 3, title: '예정된 체험학습', place: '경주', startAt: '2026-10-02T09:00:00', status: 'READY' }
+const activeTrip: TeacherTrip = { id: 1, title: '경복궁 현장체험학습', place: '경복궁', startAt: '2026-09-12T09:00:00', endAt: '2026-09-12T16:00:00', status: 'ACTIVE' }
+const finishedTrip: TeacherTrip = { id: 2, title: '지난 체험학습', place: '국립중앙박물관', startAt: '2026-07-01T09:00:00', endAt: '2026-07-01T16:00:00', status: 'FINISHED' }
+const readyTrip: TeacherTrip = { id: 3, title: '예정된 체험학습', place: '경주', startAt: '2026-10-02T09:00:00', endAt: '2026-10-02T16:00:00', status: 'READY' }
 
 describe('TripDetail', () => {
   beforeEach(() => {

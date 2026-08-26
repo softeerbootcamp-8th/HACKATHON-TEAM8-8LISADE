@@ -190,6 +190,31 @@ describe('TeacherDashboard', () => {
       expect(screen.queryByText(/진행 중인 현장체험학습이 없습니다/)).not.toBeInTheDocument()
     })
 
+    it('Given_시각이_지정된_체험학습_When_홈을_열면_Then_시작-종료_시간_범위를_보여준다', async () => {
+      vi.mocked(teacherTripApi.getTrips).mockResolvedValue([{
+        ...readyTrip(7, '26년 5학년 2반', 18),
+        startAt: '2026-09-12T09:00:00',
+        endAt: '2026-09-12T16:00:00',
+      }])
+
+      render(<TeacherDashboard user={user} />)
+
+      expect(await screen.findByText('2026. 09. 12 (토) 09:00 – 16:00')).toBeInTheDocument()
+    })
+
+    it('Given_시각_없이_일자만_만든_체험학습_When_홈을_열면_Then_날짜만_보여준다', async () => {
+      // 생성 화면이 일자만 받으므로 startAt/endAt이 자정~자정으로 저장된다. 00:00 – 23:59는 정보가 아니다.
+      vi.mocked(teacherTripApi.getTrips).mockResolvedValue([{
+        ...readyTrip(7, '26년 5학년 2반', 18),
+        startAt: '2026-09-12T00:00:00',
+        endAt: '2026-09-12T23:59:59',
+      }])
+
+      render(<TeacherDashboard user={user} />)
+
+      expect(await screen.findByText('2026. 09. 12 (토)')).toBeInTheDocument()
+    })
+
     it('Given_당일_시작하는_체험학습_When_홈을_열면_Then_D-DAY로_표시한다', async () => {
       vi.mocked(teacherTripApi.getTrips).mockResolvedValue([readyTrip(7, '오늘 체험학습', 0)])
 
@@ -261,7 +286,7 @@ describe('TeacherDashboard', () => {
 })
 
 function trip(id: number, title: string): TeacherTrip {
-  return { id, title, place: '경주', startAt: '2026-08-26T09:00:00', status: 'ACTIVE' }
+  return { id, title, place: '경주', startAt: '2026-08-26T09:00:00', endAt: '2026-08-26T16:00:00', status: 'ACTIVE' }
 }
 
 // D-day는 오늘 기준으로 계산되므로 고정 날짜 대신 상대 날짜로 만든다.
@@ -275,6 +300,7 @@ function readyTrip(id: number, title: string, daysFromToday: number, place = '�
     title,
     place,
     startAt: `${startAt.getFullYear()}-${pad(startAt.getMonth() + 1)}-${pad(startAt.getDate())}T09:00:00`,
+    endAt: `${startAt.getFullYear()}-${pad(startAt.getMonth() + 1)}-${pad(startAt.getDate())}T16:00:00`,
     status: 'READY',
   }
 }
