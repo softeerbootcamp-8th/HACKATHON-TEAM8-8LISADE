@@ -78,3 +78,13 @@
 - `MissionService.reject()`에서 `submission.reject(reason)` 직후 `imageKey`가 비어있지 않을 때만(`CHECK` 미션은 imageKey가 빈 문자열) `deleteObject`를 호출한다.
 
 검증: `./gradlew test`(`S3StoragePresignerTest`에 delete 성공/예외 삼킴 케이스 추가, `MissionServiceTest`에 반려 시 삭제 호출/미호출 케이스 추가), `./gradlew build` 모두 통과.
+
+## 완료한 미션이 현재 미션 목록에 계속 남던 버그 수정 (#176)
+
+- 원인은 두 가지였다.
+  1. `MissionService.getCurrentStudentMissions()`가 `Mission.isAccessibleAt(now)`만 필터링하고, 해당 학생이 이미 제출했는지(`MissionSubmission.status == COMPLETED`)는 전혀 확인하지 않았다. 사진 제출·PIN 인증 모두 성공 시 즉시 `COMPLETED`로 저장되는데, `/api/trips/{tripId}/missions/current`가 이를 무시하고 트립의 접근 가능한 미션을 그대로 반환해서, 새로고침·재로그인·20초 폴링마다 이미 완료한 미션이 다시 나타났다.
+  2. 프론트 `App.tsx`에서 출석체크(`CHECK_MISSION`) 완료 콜백이 `setCurrentMission(null)`로 무조건 초기화했다. 사진 미션 제출 콜백은 로컬에 캐시해 둔 `availableMissions` 배열에서 다음 미션을 찾아 넘어갔는데(그마저도 3개 이상 미션이 연쇄될 때는 stale 배열 때문에 이미 끝낸 미션으로 되돌아갈 수 있는 잠재 결함이 있었다), 출석체크는 이 로직조차 없었다.
+- 백엔드: `MissionSubmissionRepository`에 `findByMissionIdInAndUserId(missionIds, userId)`를 추가하고, `getCurrentStudentMissions`가 접근 가능한 미션 중 이 학생이 `COMPLETED`로 제출한 것만 제외하도록 했다. `REJECTED`는 그대로 남겨 재제출이 가능하다.
+- 프론트: 사진 제출·PIN 인증 콜백 둘 다 로컬 배열을 뒤지는 대신 기존에 있던 `loadCurrentMission(tripId)`(알림 딥링크 처리에서 이미 쓰던 함수)를 다시 호출해 서버에서 최신 목록을 받아오도록 통일했다. 이제 백엔드가 완료된 미션을 걸러주므로, 프론트는 단순히 다시 물어보기만 하면 되고 "다음 미션이 뭔지" 스스로 추론할 필요가 없다 — 위 잠재 결함도 이 통일로 함께 없어졌다. 더 이상 아무도 읽지 않는 `availableMissions` state는 제거했다.
+
+검증: 백엔드 `MissionServiceTest`에 2개 케이스 추가(완료한 미션 제외, 반려된 미션은 재제출 가능하도록 유지) 후 `./gradlew test` 전체 통과. 프론트 `App.test.tsx`에 출석체크 완료 후 다음 미션으로 전환되는 회귀 테스트 1개 추가, 기존 3개 테스트는 완료 후 재조회 결과를 모킹하도록 갱신 후 `npm test`(41파일 256개), `npm run lint`, `npx tsc -b --noEmit` 모두 통과.
