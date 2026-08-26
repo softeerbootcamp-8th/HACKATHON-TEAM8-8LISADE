@@ -391,8 +391,8 @@ h2 { font-size: 17px; margin: 0; }
 .trip-detail-finished { gap: 32px; padding: 16px; }
 .trip-detail-card { background: #fff; border-radius: 18px; box-shadow: var(--shadow-card); display: grid; gap: 12px; padding: 16px 18px; }
 .trip-detail-card > div { align-items: baseline; display: flex; gap: 10px; }
-.trip-detail-card .label { color: var(--color-text-muted); flex: 0 0 auto; font-size: 13px; font-weight: 500; }
-.trip-detail-card .value { color: var(--color-text); font-size: 14px; font-weight: 700; }
+.trip-detail-card .label { color: var(--color-text-muted); flex: 0 0 auto; font-size: 13px; font-weight: 500; line-height: 1.45; }
+.trip-detail-card .value { color: var(--color-text); font-size: 14px; font-weight: 700; line-height: 1.45; }
 .trip-invite-card { align-items: center; text-align: center; }
 .trip-invite-card .invite-title { font-size: 15px; font-weight: 700; margin: 0; }
 .invite-code-box { background: var(--color-accent-soft); border-radius: 12px; font-size: 26px; font-weight: 700; justify-content: center; letter-spacing: 5px; padding: 12px; width: 100%; }
