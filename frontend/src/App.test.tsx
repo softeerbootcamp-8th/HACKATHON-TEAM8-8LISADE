@@ -418,6 +418,53 @@ describe('App', () => {
     await waitFor(() => expect(locationTrackingMock.startTracking).toHaveBeenCalled())
   })
 
+  it('Given_기존_세션과_ACTIVE_Trip_When_앱을_재실행_Then_현재_미션을_불러온다', async () => {
+    // given
+    studentTripApiMock.getActiveTrip.mockResolvedValue(activeStudentTrip)
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL) => {
+      if (input.toString() === '/api/auth/me') {
+        return apiResponse({ success: true, data: { id: 2, loginId: 'student01', name: '학생', phoneNumber: '01012341234', role: 'STUDENT' } })
+      }
+      throw new Error(`Unexpected request: ${input.toString()}`)
+    })
+
+    // when
+    render(<App />)
+
+    // then
+    expect(await screen.findByRole('heading', { name: '서버 사진 미션' })).toBeInTheDocument()
+    expect(missionApiMock.getCurrentMissions).toHaveBeenCalledWith(1)
+  })
+
+  it('Given_ACTIVE_Trip에_참여한_학생_When_로그인_Then_현재_미션을_불러온다', async () => {
+    // given
+    studentTripApiMock.getActiveTrip.mockResolvedValue(activeStudentTrip)
+    renderApp()
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'student01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+
+    // when
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+
+    // then
+    expect(await screen.findByRole('heading', { name: '서버 사진 미션' })).toBeInTheDocument()
+    expect(missionApiMock.getCurrentMissions).toHaveBeenCalledWith(1)
+  })
+
+  it('Given_학생_홈이_열려_있을_때_When_시간이_지나면_Then_현재_미션을_주기적으로_다시_불러온다', async () => {
+    // given
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    await openStudentHome()
+    const callsAfterInitialLoad = missionApiMock.getCurrentMissions.mock.calls.length
+
+    // when
+    await vi.advanceTimersByTimeAsync(20_000)
+
+    // then
+    expect(missionApiMock.getCurrentMissions.mock.calls.length).toBeGreaterThan(callsAfterInitialLoad)
+    vi.useRealTimers()
+  })
+
   it('Given_초대_코드로_ACTIVE_Trip_참여_When_입장_성공_Then_위치_추적을_시작한다', async () => {
     // given
     renderApp()
