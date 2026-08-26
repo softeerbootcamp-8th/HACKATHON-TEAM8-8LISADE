@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { ReactElement } from 'react'
 import { teacherTripApi } from '../../api/teacherTripApi'
 import TeacherMissions from '../../components/TeacherMissions'
 import TeacherStudents from '../../components/TeacherStudents'
@@ -10,11 +11,7 @@ import { TeacherNotifications } from './TeacherNotifications'
 import type { TeacherNotification } from '../../types/notification'
 import type { CurrentUser } from '../../types/auth'
 import type { TeacherTrip, TeacherTripStatus } from '../../types/teacherTrip'
-import icHome from '../../assets/icons/ic-home.svg'
-import icStudents from '../../assets/icons/ic-students.svg'
-import icMission from '../../assets/icons/ic-mission.svg'
-import icPin from '../../assets/icons/ic-pin.svg'
-import icSliders from '../../assets/icons/ic-sliders.svg'
+import { HomeIcon, MissionIcon, PinIcon, SlidersIcon, StudentsIcon } from './TeacherTabIcons'
 import mascotLarge from '../../assets/icons/mascot-large.svg'
 import { TripCreationFlow } from './TripCreationFlow'
 import { AddStudentForm, TripDetail } from './TripDetail'
@@ -24,12 +21,12 @@ import { TeacherHomeProgress } from './TeacherHomeProgress'
 type TeacherTab = 'HOME' | 'STUDENTS' | 'MISSIONS' | 'LOCATION' | 'MANAGE'
 type ManageView = { name: 'LIST' } | { name: 'CREATE' } | { name: 'DETAIL'; tripId: number } | { name: 'ADD_STUDENT'; tripId: number }
 
-const tabs: Array<{ id: TeacherTab; label: string; icon: string }> = [
-  { id: 'HOME', label: '홈', icon: icHome },
-  { id: 'STUDENTS', label: '학생', icon: icStudents },
-  { id: 'MISSIONS', label: '미션', icon: icMission },
-  { id: 'LOCATION', label: '위치', icon: icPin },
-  { id: 'MANAGE', label: '관리', icon: icSliders },
+const tabs: Array<{ id: TeacherTab; label: string; Icon: () => ReactElement }> = [
+  { id: 'HOME', label: '홈', Icon: HomeIcon },
+  { id: 'STUDENTS', label: '학생', Icon: StudentsIcon },
+  { id: 'MISSIONS', label: '미션', Icon: MissionIcon },
+  { id: 'LOCATION', label: '위치', Icon: PinIcon },
+  { id: 'MANAGE', label: '관리', Icon: SlidersIcon },
 ]
 const teacherTripStatusLabels: Record<TeacherTripStatus, string> = {
   READY: '대기',
@@ -166,7 +163,7 @@ export function TeacherDashboard({ user, onLogout }: { user: CurrentUser; onLogo
           ? (activeTripId ? <TeacherMissions key={activeTripId} tripId={activeTripId} /> : <section className="stat-card"><p className="hint">체험학습을 먼저 만들어 주세요.</p></section>)
           : <section className="stat-card"><p className="hint">{tabs.find((item) => item.id === tab)?.label}</p><p>{currentTrip?.title ?? ''} 기준 화면입니다.</p></section>}
       </div>}
-    <nav aria-label="교사 하단 탭" className="teacher-tabs">{tabs.map((item) => <button key={item.id} onClick={() => setTab(item.id)} aria-pressed={tab === item.id}><img src={item.icon} alt="" />{item.label}</button>)}</nav>
+    <nav aria-label="교사 하단 탭" className="teacher-tabs">{tabs.map((item) => <button key={item.id} onClick={() => setTab(item.id)} aria-pressed={tab === item.id}><item.Icon />{item.label}</button>)}</nav>
   </ScreenCard>
 }
 

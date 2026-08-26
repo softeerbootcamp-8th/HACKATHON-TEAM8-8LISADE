@@ -41,8 +41,8 @@ input { border: 1.5px solid var(--color-border); border-radius: var(--radius-inp
 input::placeholder { color: var(--color-text-muted); }
 input:focus { border-color: var(--color-accent); outline: 3px solid var(--color-accent-soft); }
 
-.app-shell { display: flex; justify-content: center; min-height: 100vh; background: var(--color-bg); }
-.screen { width: 100%; max-width: 440px; min-height: 100vh; background: var(--color-bg); display: flex; flex-direction: column; padding-bottom: 32px; position: relative; }
+.app-shell { display: flex; justify-content: center; min-height: 100vh; min-height: 100dvh; background: var(--color-bg); }
+.screen { width: 100%; max-width: 440px; min-height: 100vh; min-height: 100dvh; background: var(--color-bg); display: flex; flex-direction: column; padding-bottom: 32px; position: relative; }
 .screen-pad { padding: 0 24px; }
 
 .page-title { font-size: 22px; font-weight: 700; margin: 28px 0 24px; padding: 0 24px; }
@@ -136,10 +136,10 @@ h2 { font-size: 17px; margin: 0; }
 
 /* Bottom nav (teacher) */
 .screen:has(.teacher-tabs) { padding-bottom: 0; }
-.teacher-tabs { align-items: center; background: var(--color-surface); border-top: 1px solid var(--color-border); bottom: 0; display: flex; gap: 4px; height: 74px; left: 0; padding: 8px 10px 0; position: sticky; right: 0; width: 100%; }
-.teacher-tabs button { align-items: center; background: transparent; border-radius: 14px; box-shadow: none; color: var(--color-text-muted); display: flex; flex: 1 0 0; flex-direction: column; font-size: 10px; gap: 2px; min-height: auto; padding: 5px; }
-.teacher-tabs button[aria-pressed="true"] { background: var(--color-accent-soft); color: var(--color-text); }
-.teacher-tabs button img { height: 24px; width: 24px; }
+.teacher-tabs { align-items: center; background: var(--color-surface); border-top: 1px solid var(--color-border); bottom: 0; display: flex; flex: 0 0 auto; gap: 4px; left: 0; margin-top: auto; min-height: 74px; padding: 8px 10px env(safe-area-inset-bottom); position: sticky; right: 0; width: 100%; }
+.teacher-tabs button { --tab-icon-hole: var(--color-surface); align-items: center; background: transparent; border-radius: 14px; box-shadow: none; color: var(--color-text-muted); display: flex; flex: 1 0 0; flex-direction: column; font-size: 10px; gap: 2px; min-height: auto; padding: 5px; }
+.teacher-tabs button[aria-pressed="true"] { --tab-icon-hole: var(--color-accent-soft); background: var(--color-accent-soft); color: var(--color-text); }
+.teacher-tabs button svg { display: block; height: 24px; width: 24px; }
 
 .teacher-body { display: grid; gap: 12px; padding: 16px 16px 24px; }
 .teacher-trip-select { -webkit-appearance: none; appearance: none; background: var(--color-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2327303a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center; border: 0; border-radius: 20px; box-shadow: var(--shadow-card); font-size: 14px; font-weight: 700; min-height: 40px; padding: 8px 40px 8px 14px; width: fit-content; }
