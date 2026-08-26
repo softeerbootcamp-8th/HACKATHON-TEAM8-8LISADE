@@ -30,11 +30,11 @@ public class S3StoragePresigner implements StoragePresigner {
     }
 
     @Override
-    public PresignedUpload presignPut(String objectKey) {
+    public PresignedUpload presignPut(String objectKey, String contentType) {
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(bucket)
                 .key(objectKey)
-                .contentType("image/jpeg")
+                .contentType(contentType)
                 .build();
         PresignedPutObjectRequest presignedRequest = s3Presigner.presignPutObject(PutObjectPresignRequest.builder()
                 .signatureDuration(UPLOAD_SIGNATURE_DURATION)

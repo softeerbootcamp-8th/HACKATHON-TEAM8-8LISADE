@@ -25,14 +25,30 @@ class S3StoragePresignerTest {
         when(request.url()).thenReturn(URI.create("https://bucket.s3.amazonaws.com/upload.jpg").toURL());
         S3StoragePresigner presigner = new S3StoragePresigner(client, "field-trip-photos");
 
-        StoragePresigner.PresignedUpload upload = presigner.presignPut("missions/12/students/3/photo.jpg");
+        StoragePresigner.PresignedUpload upload = presigner.presignPut("missions/12/students/3/photo.jpg", "image/jpeg");
 
         ArgumentCaptor<PutObjectPresignRequest> captor = ArgumentCaptor.forClass(PutObjectPresignRequest.class);
         org.mockito.Mockito.verify(client).presignPutObject(captor.capture());
         assertThat(captor.getValue().signatureDuration()).isEqualTo(java.time.Duration.ofMinutes(5));
         assertThat(captor.getValue().putObjectRequest().bucket()).isEqualTo("field-trip-photos");
         assertThat(captor.getValue().putObjectRequest().key()).isEqualTo("missions/12/students/3/photo.jpg");
+        assertThat(captor.getValue().putObjectRequest().contentType()).isEqualTo("image/jpeg");
         assertThat(upload.uploadUrl()).isEqualTo("https://bucket.s3.amazonaws.com/upload.jpg");
+    }
+
+    @Test
+    void signsWithThePngContentTypeWhenTheUploadIsAPng() throws Exception {
+        S3Presigner client = mock(S3Presigner.class);
+        PresignedPutObjectRequest request = mock(PresignedPutObjectRequest.class);
+        when(client.presignPutObject(any(PutObjectPresignRequest.class))).thenReturn(request);
+        when(request.url()).thenReturn(URI.create("https://bucket.s3.amazonaws.com/upload.png").toURL());
+        S3StoragePresigner presigner = new S3StoragePresigner(client, "field-trip-photos");
+
+        presigner.presignPut("missions/12/students/3/photo.png", "image/png");
+
+        ArgumentCaptor<PutObjectPresignRequest> captor = ArgumentCaptor.forClass(PutObjectPresignRequest.class);
+        org.mockito.Mockito.verify(client).presignPutObject(captor.capture());
+        assertThat(captor.getValue().putObjectRequest().contentType()).isEqualTo("image/png");
     }
 
     @Test

@@ -86,7 +86,7 @@ public class MissionService {
         MissionSubmission submission=submissionRepository.findByMissionIdAndUserId(missionId, studentId).map(s -> { if (s.getStatus()!=SubmissionStatus.REJECTED) throw new ApiException(CommonErrorCode.INVALID_REQUEST); s.resubmit(imageKey); return s; }).orElseGet(() -> submissionRepository.save(MissionSubmission.photo(missionId,studentId,imageKey)));
         return SubmissionResult.from(submission, mission);
     }
-    public StoragePresigner.PresignedUpload preparePhotoUpload(Long missionId, Long studentId) { Mission mission=getStudentMission(missionId,studentId); if (mission.getType()!=MissionType.ACTIVITY || mission.isExpiredAt(LocalDateTime.now())) throw new ApiException(CommonErrorCode.INVALID_REQUEST); return storagePresigner.presignPut("upload/missions/"+missionId+"/students/"+studentId+"/"+java.util.UUID.randomUUID()+".jpg"); }
+    public StoragePresigner.PresignedUpload preparePhotoUpload(Long missionId, Long studentId, String contentType) { Mission mission=getStudentMission(missionId,studentId); if (mission.getType()!=MissionType.ACTIVITY || mission.isExpiredAt(LocalDateTime.now())) throw new ApiException(CommonErrorCode.INVALID_REQUEST); String extension = "image/png".equals(contentType) ? "png" : "jpg"; return storagePresigner.presignPut("upload/missions/"+missionId+"/students/"+studentId+"/"+java.util.UUID.randomUUID()+"."+extension, contentType); }
     @Transactional
     public void reject(Long missionId, Long studentId, Long teacherId, String reason) {
         Mission mission = findMission(missionId);

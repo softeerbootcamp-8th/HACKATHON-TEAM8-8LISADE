@@ -283,10 +283,34 @@ class MissionServiceTest {
         Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, null);
         when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
         when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(true);
-        when(storagePresigner.presignPut(any())).thenReturn(new StoragePresigner.PresignedUpload("upload/missions/2/students/10/photo.jpg", "https://storage.example/upload"));
+        when(storagePresigner.presignPut(any(), any())).thenReturn(new StoragePresigner.PresignedUpload("upload/missions/2/students/10/photo.jpg", "https://storage.example/upload"));
 
-        missionService.preparePhotoUpload(2L, 10L);
+        missionService.preparePhotoUpload(2L, 10L, "image/jpeg");
 
-        org.mockito.Mockito.verify(storagePresigner).presignPut(org.mockito.ArgumentMatchers.startsWith("upload/missions/2/students/10/"));
+        org.mockito.Mockito.verify(storagePresigner).presignPut(org.mockito.ArgumentMatchers.startsWith("upload/missions/2/students/10/"), org.mockito.ArgumentMatchers.eq("image/jpeg"));
+    }
+
+    @Test
+    void photoUploadUsesAJpgExtensionForJpegContentType() {
+        Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, null);
+        when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
+        when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(true);
+        when(storagePresigner.presignPut(any(), any())).thenReturn(new StoragePresigner.PresignedUpload("upload/missions/2/students/10/photo.jpg", "https://storage.example/upload"));
+
+        missionService.preparePhotoUpload(2L, 10L, "image/jpeg");
+
+        org.mockito.Mockito.verify(storagePresigner).presignPut(org.mockito.ArgumentMatchers.endsWith(".jpg"), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void photoUploadUsesAPngExtensionForPngContentType() {
+        Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, null);
+        when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
+        when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(true);
+        when(storagePresigner.presignPut(any(), any())).thenReturn(new StoragePresigner.PresignedUpload("upload/missions/2/students/10/photo.png", "https://storage.example/upload"));
+
+        missionService.preparePhotoUpload(2L, 10L, "image/png");
+
+        org.mockito.Mockito.verify(storagePresigner).presignPut(org.mockito.ArgumentMatchers.endsWith(".png"), org.mockito.ArgumentMatchers.eq("image/png"));
     }
 }
