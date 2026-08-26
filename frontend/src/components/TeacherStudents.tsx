@@ -4,17 +4,31 @@ import { teacherMissionApi } from '../api/missionApi'
 import { computeStudentStatus, formatClockTime, formatMinutesAgo, type StudentLocationStatus } from '../features/teacher/studentStatus'
 import { summarizeStudentMissionStatuses, type StudentMissionStatus, type StudentMissionStatusItem } from '../features/teacher/studentMissionSummary'
 import { BackHeader } from '../shared/ui/BackHeader'
+import { collectIncompleteStudentIds } from '../features/teacher/teacherHomeAttention'
 
 type View = { name: 'LIST' } | { name: 'DETAIL'; participantId: number }
 type DisplayStatus = StudentLocationStatus | 'MANUAL'
+type StudentTag = DisplayStatus | 'MISSION_INCOMPLETE'
 
-const statusLabel: Record<DisplayStatus, string> = { NORMAL: '정상', OUTSIDE: '이탈', CHECK_NEEDED: '위치 확인 필요', MANUAL: '직접 확인' }
-const statusTagClass: Record<DisplayStatus, string> = { NORMAL: 'student-tag--success', OUTSIDE: 'student-tag--danger', CHECK_NEEDED: 'student-tag--neutral', MANUAL: 'student-tag--neutral' }
+const statusLabel: Record<StudentTag, string> = { NORMAL: '정상', OUTSIDE: '이탈', CHECK_NEEDED: '위치 확인 필요', MANUAL: '직접 확인', MISSION_INCOMPLETE: '미완료' }
+const statusTagClass: Record<StudentTag, string> = { NORMAL: 'student-tag--success', OUTSIDE: 'student-tag--danger', CHECK_NEEDED: 'student-tag--neutral', MANUAL: 'student-tag--neutral', MISSION_INCOMPLETE: 'student-tag--neutral' }
 const statusDotClass: Record<DisplayStatus, string> = { NORMAL: 'mini-map-dot--normal', OUTSIDE: 'mini-map-dot--outside', CHECK_NEEDED: 'mini-map-dot--neutral', MANUAL: 'mini-map-dot--neutral' }
 const missionStatusClass: Record<StudentMissionStatus, string> = { 제출: 'mission-status--submitted', 지각: 'mission-status--late', 미제출: 'mission-status--missing', '진행 중': 'mission-status--active' }
 
 function resolveStatus(type: StudentParticipantType, outside: boolean, lastSentAt: string | null): DisplayStatus {
   return type === 'MANUAL' ? 'MANUAL' : computeStudentStatus(outside, lastSentAt)
+}
+
+function isAttentionTag(tag: StudentTag): boolean {
+  return tag === 'OUTSIDE' || tag === 'CHECK_NEEDED' || tag === 'MISSION_INCOMPLETE'
+}
+
+function resolveTags(type: StudentParticipantType, outside: boolean, lastSentAt: string | null, isIncomplete: boolean): StudentTag[] {
+  const tags: StudentTag[] = []
+  const status = resolveStatus(type, outside, lastSentAt)
+  if (status !== 'NORMAL') tags.push(status)
+  if (isIncomplete) tags.push('MISSION_INCOMPLETE')
+  return tags
 }
 
 export default function TeacherStudents({ tripId }: { tripId: string }) {
@@ -25,12 +39,20 @@ export default function TeacherStudents({ tripId }: { tripId: string }) {
 
 function StudentListScreen({ tripId, onSelect }: { tripId: string; onSelect: (participantId: number) => void }) {
   const [students, setStudents] = useState<StudentRosterEntry[] | null>(null)
+  const [incompleteUserIds, setIncompleteUserIds] = useState<Set<number>>(new Set())
   const [error, setError] = useState('')
 
   useEffect(() => {
     let cancelled = false
-    teacherStudentApi.listStudents(tripId)
-      .then((result) => { if (!cancelled) setStudents(result) })
+    Promise.all([
+      teacherStudentApi.listStudents(tripId),
+      teacherMissionApi.listMissions(tripId).then((missions) => Promise.all(missions.map((mission) => teacherMissionApi.getStatusBoard(mission.id)))),
+    ])
+      .then(([result, boards]) => {
+        if (cancelled) return
+        setStudents(result)
+        setIncompleteUserIds(collectIncompleteStudentIds(boards))
+      })
       .catch((caught) => { if (!cancelled) setError(caught instanceof Error ? caught.message : '학생 목록을 불러오지 못했습니다.') })
     return () => { cancelled = true }
   }, [tripId])
@@ -38,9 +60,12 @@ function StudentListScreen({ tripId, onSelect }: { tripId: string; onSelect: (pa
   if (error) return <p className="error" role="alert">{error}</p>
   if (!students) return <p className="hint">불러오는 중...</p>
 
-  const withStatus = students.map((student) => ({ ...student, status: resolveStatus(student.type, student.outside, student.lastSentAt) }))
-  const needsCheck = withStatus.filter((student) => student.status === 'OUTSIDE' || student.status === 'CHECK_NEEDED')
-  const rest = withStatus.filter((student) => student.status === 'NORMAL' || student.status === 'MANUAL')
+  const withTags = students.map((student) => ({
+    ...student,
+    tags: resolveTags(student.type, student.outside, student.lastSentAt, student.userId !== null && incompleteUserIds.has(student.userId)),
+  }))
+  const needsCheck = withTags.filter((student) => student.tags.some(isAttentionTag))
+  const rest = withTags.filter((student) => !student.tags.some(isAttentionTag))
 
   return <>
     {needsCheck.length > 0 && <>
@@ -52,9 +77,9 @@ function StudentListScreen({ tripId, onSelect }: { tripId: string; onSelect: (pa
   </>
 }
 
-function StudentRow({ student, onSelect }: { student: StudentRosterEntry & { status: DisplayStatus }; onSelect: (participantId: number) => void }) {
+function StudentRow({ student, onSelect }: { student: StudentRosterEntry & { tags: StudentTag[] }; onSelect: (participantId: number) => void }) {
   return <button type="button" className="student-row" onClick={() => onSelect(student.participantId)}>
-    <span className="student-name">{student.name}{student.status !== 'NORMAL' && <span className={`student-tag ${statusTagClass[student.status]}`}>{statusLabel[student.status]}</span>}</span>
+    <span className="student-name">{student.name}{student.tags.map((tag) => <span key={tag} className={`student-tag ${statusTagClass[tag]}`}>{statusLabel[tag]}</span>)}</span>
     <span className="chevron" aria-hidden="true">›</span>
   </button>
 }
