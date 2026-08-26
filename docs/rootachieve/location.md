@@ -142,7 +142,7 @@
 ### 검증
 
 - `./gradlew test`: 백엔드 154개 테스트 통과
-- `npm test`: 프론트 39개 파일, 233개 테스트 통과
+- `npm test`: 프론트 39개 파일, 235개 테스트 통과
 - `npm run lint`, `npm run build`, `npm run mobile:android`: 통과
 - `./gradlew testDebugUnitTest assembleDebug`: Android 14개 테스트와 디버그 APK 조립 통과
 - Browser 합성 좌표 QA: 390×844 모바일·기본 데스크톱에서 다이얼로그 열기,
