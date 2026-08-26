@@ -31,3 +31,30 @@
 - 같이 정리: `missionApi.ts`의 미사용 `MissionApi` interface(#27 설계 문서가 언급한 이름이지만 실제 구현체는 다른 이름으로 나가서 orphan됨) 제거.
 
 검증: `npm test`(신규 `StudentScreens.test.tsx` 포함 34파일 199개 통과), `npm run lint`, `npm run build` 모두 통과.
+
+## 사진 업로드 Content-Type 서명 불일치 수정 (#132)
+
+- 운영 배포 후 실제 카메라로 촬영한 PNG 사진을 제출하니 S3 PUT이 403 `SignatureDoesNotMatch`로 실패했다. `S3StoragePresigner.presignPut`이 presigned URL을 항상 `Content-Type: image/jpeg`로 서명하는데, `uploadToStorage`는 `photo.type || 'image/jpeg'`로 실제 Blob의 MIME 타입을 그대로 헤더에 보내고 있었다 — 캡처 결과가 `image/jpeg`가 아니면(웹 파일 선택 등에서 흔함) SigV4 서명 검증이 어긋난다.
+- 403 응답의 `CanonicalRequest`에 `content-type:image/png`가 실제로 찍혀 있어 원인을 바로 특정했다.
+- `uploadToStorage`가 Blob의 실제 타입과 무관하게 항상 `image/jpeg`로 고정해서 보내도록 수정했다(백엔드가 항상 그 값으로 서명하므로).
+
+검증: `npm test`(신규 케이스 포함 37파일 222개 통과), `npm run lint`, `npm run build` 모두 통과.
+
+## 사진 업로드 실제 Content-Type 정식 지원 (#135)
+
+- #132의 "무조건 image/jpeg로 라벨링" 임시조치를 되돌리고, 실제 지원 형식을 정식으로 다뤘다. 웹 카메라 폴백이 진짜 PNG를 캡처하는 경로가 `@capacitor/camera`의 web 구현에 실제로 존재해서(`file.type === 'image/png'` 분기), S3에 잘못된 Content-Type 메타데이터를 저장하는 문제가 있었다.
+- `StoragePresigner.presignPut(objectKey, contentType)`으로 시그니처를 바꿔 `S3StoragePresigner`가 실제 넘어온 값으로 서명하도록 했다. `LocalStoragePresigner`는 로컬 mock이라 값 자체는 안 쓰지만 인터페이스는 맞춘다.
+- `POST /api/missions/{missionId}/photo-upload`에 `contentType` 요청 필드를 추가하고 `@Pattern(regexp = "image/jpeg|image/png")`로 허용 목록 밖 값을 400 `VALIDATION_ERROR`로 거부한다.
+- S3 object key 확장자를 실제 타입에 맞춰 생성한다(`image/png` → `.png`, 그 외 → `.jpg`).
+- 프론트 `missionApi.ts`는 캡처된 Blob의 `type`이 지원 목록(`image/jpeg`, `image/png`)에 있으면 그대로, 아니면 `image/jpeg`로 정규화해서 `/photo-upload` 요청 본문과 실제 S3 PUT 헤더 양쪽에 동일한 값을 쓴다(요청 한 번에 한 값만 계산해 재사용 — 두 곳에서 따로 판정하다 어긋나는 걸 방지).
+
+검증: 백엔드 `./gradlew build`(전체 통과, presigner 2종 + `MissionServiceTest` + 신규 `PhotoUploadPrepareRequestTest` 포함), 프론트 `npm test`(신규 케이스 포함 37파일 224개), `npm run lint`, `npm run build` 모두 통과. 로컬 백엔드를 직접 띄우고 curl로 `contentType: image/png` → objectKey가 `.png`로 발급되는 것과 `image/webp` → 400 거부를 실제로 확인했다.
+
+## 웹 카메라 촬영이 실제 카메라 뷰를 쓰도록 pwa-elements 등록 (#145)
+
+- #135에서 jpeg/png 외 형식(HEIC, WEBP, GIF 등)이 왜 올라올 수 있는지 추적하다가 근본 원인을 찾았다: `@ionic/pwa-elements`가 설치돼 있지 않아 Capacitor Camera가 웹에서 `<pwa-camera-modal>` 커스텀 엘리먼트를 못 찾고, 즉시(등록 여부만 확인하고) `accept` 속성도 없는 일반 `<input type=file>`로 폴백하고 있었다 — 즉 웹에서는 "카메라 촬영"이 아니라 사실상 기기의 아무 파일이나 고를 수 있는 상태였다.
+- `@ionic/pwa-elements`를 설치하고 `main.tsx`에서 `defineCustomElements(window)`를 호출해 등록했다. 이제 Capacitor Camera가 모달 존재를 확인하고 실제 `getUserMedia` 기반 라이브 카메라 뷰로 진입한다.
+- 브라우저로 직접 확인: 카메라 하드웨어가 없는 환경(이 개발 환경)에서는 모달이 "No camera found" 메시지와 "Choose image" 버튼을 명확히 보여주고(기존처럼 조용히 파일 선택창으로 새지 않음), 카메라 있는 환경에서는 라이브 뷰가 뜬다. 취소 시 앱은 깨지지 않고 원래 촬영 화면으로 돌아간다(다만 취소 자체에 대한 사용자 안내는 없음 — 별도 후속 작업으로 분리).
+- 네이티브 Android/iOS 빌드는 이미 실제 네이티브 카메라 API를 쓰므로 이 변경과 무관하다.
+
+검증: `npm test`(37파일 225개 통과), `npm run lint`, `npm run build` 모두 통과. 로컬 백엔드+프론트를 직접 띄우고 학생 계정으로 로그인해 실제 미션 촬영 화면에서 셔터를 눌러 pwa-camera-modal이 뜨는 것과 "No camera found" 처리, 취소 후 정상 복귀를 브라우저로 직접 확인했다.

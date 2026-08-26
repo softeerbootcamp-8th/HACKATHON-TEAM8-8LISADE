@@ -13,4 +13,7 @@ public interface MissionRepository extends JpaRepository<Mission, Long> {
 
     /** 마감(endAt)이 지난 특정 유형 미션 — 미완료 마감 알림 배치용. */
     List<Mission> findByTypeAndEndAtIsNotNullAndEndAtBefore(MissionType type, LocalDateTime time);
+
+    /** 마감(endAt)이 구간 내인 특정 유형 미션 — 마감 임박(§6.2) 알림 배치용. */
+    List<Mission> findByTypeAndEndAtIsNotNullAndEndAtBetween(MissionType type, LocalDateTime start, LocalDateTime end);
 }

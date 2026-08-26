@@ -22,8 +22,8 @@ export const teacherTripApi = {
     const trips = await request<TeacherTripResponse[]>('/api/teacher/trips')
     return trips.map(({ tripId, ...trip }) => ({ id: tripId, ...trip }))
   },
-  async create({ title, date, place, geofencePoints }: CreateTeacherTripInput): Promise<InviteCode> {
-    return request<InviteCode>('/api/teacher/trips', {
+  async create({ title, date, place, geofencePoints }: CreateTeacherTripInput): Promise<{ tripId: number }> {
+    return request<{ tripId: number }>('/api/teacher/trips', {
       method: 'POST',
       headers: await csrfJsonHeaders(),
       body: JSON.stringify({
@@ -48,13 +48,16 @@ export const teacherTripApi = {
   async getCurrentInviteCode(tripId: number): Promise<InviteCode | null> {
     return request<InviteCode | null>(`/api/teacher/trips/${tripId}/invite-code`)
   },
-  async reissueInviteCode(tripId: number): Promise<InviteCode> {
-    return request<InviteCode>(`/api/teacher/trips/${tripId}/invite-code`, {
+  async end(tripId: number): Promise<void> {
+    return sendJson(`/api/teacher/trips/${tripId}/end`, 'POST', {})
+  },
+  async start(tripId: number): Promise<InviteCode> {
+    return request<InviteCode>(`/api/teacher/trips/${tripId}/start`, {
       method: 'POST',
       headers: await csrfJsonHeaders(),
     })
   },
-  async end(tripId: number): Promise<void> {
-    return sendJson(`/api/teacher/trips/${tripId}/end`, 'POST', {})
+  async delete(tripId: number): Promise<void> {
+    return sendJson(`/api/teacher/trips/${tripId}`, 'DELETE', {})
   },
 }

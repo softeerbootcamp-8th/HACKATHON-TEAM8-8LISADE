@@ -10,23 +10,28 @@ function formatSchedule(startAt: string | null) {
   const date = new Date(startAt)
   const weekday = new Intl.DateTimeFormat('ko-KR', { weekday: 'short' }).format(date)
   const formattedDate = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date).replace(/\.$/, '')
-  const time = new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false }).format(date)
-  return `${formattedDate} (${weekday}) ${time}`
+  return `${formattedDate} (${weekday})`
 }
 
-export function TripDetail({ trip, teacherName, onBack, onAddStudent, onFinished }: {
+export function TripDetail({ trip, teacherName, onBack, onAddStudent, onStarted, onDeleted, onFinished }: {
   trip: TeacherTrip
   teacherName: string
   onBack: () => void
   onAddStudent: () => void
+  onStarted: () => void
+  onDeleted: () => void
   onFinished: () => void
 }) {
   const [inviteCode, setInviteCode] = useState<string | null>(null)
   const [participantCount, setParticipantCount] = useState<number | null>(null)
   const [confirmingEnd, setConfirmingEnd] = useState(false)
   const [ending, setEnding] = useState(false)
+  const [starting, setStarting] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
   const isActive = trip.status === 'ACTIVE'
+  const isReady = trip.status === 'READY'
 
   useEffect(() => {
     let active = true
@@ -41,16 +46,6 @@ export function TripDetail({ trip, teacherName, onBack, onAddStudent, onFinished
     return () => { active = false }
   }, [trip.id, isActive])
 
-  const reissue = async () => {
-    setError('')
-    try {
-      const code = await teacherTripApi.reissueInviteCode(trip.id)
-      setInviteCode(code.code)
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : '초대 코드 재발급에 실패했습니다.')
-    }
-  }
-
   const confirmEnd = async () => {
     setError('')
     setEnding(true)
@@ -64,6 +59,31 @@ export function TripDetail({ trip, teacherName, onBack, onAddStudent, onFinished
     }
   }
 
+  const start = async () => {
+    setError('')
+    setStarting(true)
+    try {
+      await teacherTripApi.start(trip.id)
+      onStarted()
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : '현장체험학습 시작에 실패했습니다.')
+      setStarting(false)
+    }
+  }
+
+  const confirmDelete = async () => {
+    setError('')
+    setDeleting(true)
+    try {
+      await teacherTripApi.delete(trip.id)
+      onDeleted()
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : '현장체험학습 삭제에 실패했습니다.')
+      setDeleting(false)
+      setConfirmingDelete(false)
+    }
+  }
+
   return <main className="trip-create-shell">
     <header className="trip-create-header">
       <button type="button" onClick={onBack} aria-label="관리 화면으로 돌아가기"><img src={chevronLeft} alt="" aria-hidden="true" /></button>
@@ -72,7 +92,7 @@ export function TripDetail({ trip, teacherName, onBack, onAddStudent, onFinished
     </header>
     <section className="trip-create-content trip-detail-content">
       <div className="trip-detail-card">
-        <div><span className="label">시간</span><span className="value">{formatSchedule(trip.startAt)}</span></div>
+        <div><span className="label">날짜</span><span className="value">{formatSchedule(trip.startAt)}</span></div>
         <div><span className="label">장소</span><span className="value">{trip.place}</span></div>
         <div><span className="label">담당자</span><span className="value">{teacherName} 선생님</span></div>
         <div><span className="label">참여 학생</span><span className="value">{participantCount === null ? '-' : `${participantCount}명`}</span></div>
@@ -83,7 +103,6 @@ export function TripDetail({ trip, teacherName, onBack, onAddStudent, onFinished
         <p className="hint">학생에게 코드를 알려 주세요</p>
         <div className="invite-code-box">{inviteCode ?? '발급 중...'}</div>
         <div className="invite-actions">
-          <button type="button" className="text-button" onClick={reissue}>코드 재발급</button>
           <button type="button" className="text-button" onClick={onAddStudent}>학생 직접 추가하기 ›</button>
         </div>
       </div>}
@@ -101,6 +120,19 @@ export function TripDetail({ trip, teacherName, onBack, onAddStudent, onFinished
           </div>
         </div>
         : <button type="button" className="end-trip-button" onClick={() => setConfirmingEnd(true)}>현장체험학습 종료</button>}
+    </footer>}
+
+    {isReady && <footer className="trip-create-footer">
+      <button type="button" className="trip-primary-button" onClick={start} disabled={starting}>{starting ? '시작하는 중...' : '현장체험학습 시작'}</button>
+      {confirmingDelete
+        ? <div className="end-trip-confirm">
+          <p>정말 삭제할까요? 삭제 후에는 되돌릴 수 없어요.</p>
+          <div className="end-trip-confirm-actions">
+            <button type="button" className="text-button" onClick={() => setConfirmingDelete(false)}>취소</button>
+            <button type="button" className="danger-button" onClick={confirmDelete} disabled={deleting}>{deleting ? '삭제하는 중...' : '삭제하기'}</button>
+          </div>
+        </div>
+        : <button type="button" className="danger-button" style={{ marginTop: 8 }} onClick={() => setConfirmingDelete(true)}>삭제하기</button>}
     </footer>}
   </main>
 }

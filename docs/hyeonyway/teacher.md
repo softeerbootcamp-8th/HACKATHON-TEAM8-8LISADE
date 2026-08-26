@@ -30,3 +30,12 @@
 - 이번 스코프는 완료 건수 요약(`N / M`)만 다룬다. 미션별 개별 제목·상태 나열은 범위 밖.
 
 검증: `npx vitest run`(35 files, 209 passed), `npm run lint`, `npm run build` 통과.
+
+## 위치 지도 중심을 지오펜스 기준으로 고정 (#125)
+
+- `#67`이 구현한 "자동 중심 추적"은 학생 위치가 SSE로 갱신될 때마다 지도 bounds를 다시 계산해, 실시간 위치가 들어올 때마다 지도가 계속 움직이는 문제가 있었다. 사용자 피드백을 받아 Trip 생성 시 정한 지오펜스 기준으로 중심을 고정하도록 바꿨다.
+- `TeacherLocationMap.tsx`의 중심 재계산 `useEffect` 의존성을 `displayedContext`(SSE로 갱신되는 `liveLocations`가 섞여 매 위치 업데이트마다 새 객체가 되는 값)에서 `context?.geofence`(Trip당 1회 로드돼 위치 업데이트로는 바뀌지 않는 안정적 참조)로 바꿨다. `points` 산출도 학생 위치 분기 없이 항상 지오펜스만 쓴다.
+- 학생 마커 자체(오버레이)는 별도 effect(`students` 의존)로 계속 실시간 갱신된다 — 이번 변경은 지도 중심·줌 재계산만 멈춘 것이다.
+- "중앙으로 복귀" 버튼과 드래그 시 자동 이동 정지 UX는 그대로 유지, 복귀 시에도 지오펜스 기준으로 돌아간다.
+
+검증: `npx vitest run`(36 files, 213 passed), `npm run lint`, `npm run build` 통과.

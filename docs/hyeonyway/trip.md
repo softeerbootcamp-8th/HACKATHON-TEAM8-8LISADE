@@ -47,3 +47,32 @@
 - Figma 시안의 "학부모 전화번호" 입력란은 `ManualParticipantRequest`에 대응 필드가 없어 제외했다. 학생 정보 카드의 전화번호도 현재 참가자 조회 계약에 없어 후속 이슈 대상이다.
 
 검증: `npm test`(103 passed), `npm run lint`, `npm run build`, `cd backend && ./gradlew test`
+
+## 체험학습 상세 시간 표시 제거 및 진행중 레이아웃 수정 (#127)
+
+- `TripDetail.tsx`의 "시간" 항목이 시:분까지 보여주고 있었는데, `TripCreationFlow`는 날짜만 입력받고 `teacherTripApi.create`가 `startAt`/`endAt`을 항상 `T00:00:00`/`T23:59:59`로 고정 생성한다 — 받지도 않는 시간을 보여준 것이라 `formatSchedule`에서 시:분 표시를 제거하고 라벨도 "시간"→"날짜"로 바꿨다.
+- "진행 중" 상세 화면이 늘어져 보이던 원인: `.trip-detail-content { display:grid; gap:16px }`가 `align-content` 기본값(그리드의 `normal`은 `stretch`처럼 동작)이라, 부모(`.trip-create-content`가 `.trip-create-shell`의 `1fr` 트랙에 들어가 화면 남는 세로 공간을 다 차지함)의 남는 공간을 두 카드(정보 카드/초대 카드) 트랙에 나눠 늘리고 있었다. 내용과 무관하게 각 카드가 화면을 꽉 채우도록 부풀려진 것 — `align-items`가 아니라 `align-content`(트랙 자체의 크기)가 원인이라 찾기 까다로웠다.
+- `.trip-detail-content { align-content: start }` 한 줄로 해결. jsdom은 실제 grid 트랙 크기를 계산하지 않아 자동화 테스트로는 못 잡는 문제라, 임시 디버그 진입점(`main.tsx`에 `TripDetail`을 직접 mount, 커밋 전 원복)으로 브라우저에서 실제 렌더링해 Figma 시안(T-03-1 진행중, node 80:613)과 대조하며 확인했다.
+
+검증: `npx vitest run`(37 files, 222 passed), `npm run lint`, `npm run build` 통과.
+
+## 체험학습을 예정 상태로 생성하고 시작/삭제 추가 (#128)
+
+- `TripService.create()`가 항상 `TripStatus.ACTIVE`로 생성해, 만들자마자 학생이 참여하고 위치 추적이 시작되던 문제 수정. `Trip.create(..., TripStatus.READY)`로 바꾸고 `Trip.start()`(`finish()`와 대칭) 엔티티 메서드를 추가했다.
+- `TripService.start(teacherId, tripId)`: READY가 아니면 `TRIP_NOT_READY`(409). 기존 미폐기 초대 코드가 있으면 폐기하고 새로 발급한다 — `create()`가 발급하는 코드는 5분 만료라 생성 직후 바로 시작하지 않으면 아무도 못 보고 죽으므로, 실제로 학생에게 보여줄 코드는 항상 `start()` 시점에 새로 발급하도록 설계했다.
+- `TripService.delete(teacherId, tripId)`: READY가 아니면 `TRIP_NOT_READY`. 초대 코드 전부 삭제 → 지오펜스 좌표·지오펜스 삭제 → Trip 삭제 순으로 정리한다. READY 상태에는 참가자·위치·미션 데이터가 없으므로(`join()`이 ACTIVE만 허용) 정리 대상이 이걸로 충분하다. 진행 중/종료 체험학습 삭제(Figma T-03-2에도 있음)는 참가자·위치·미션까지 정리해야 해서 스코프 밖 — 결과보고서 Issue #20에서 함께 다룬다.
+- `POST /api/teacher/trips/{tripId}/start`, `DELETE /api/teacher/trips/{tripId}` 컨트롤러 엔드포인트 추가. `InviteCodeRepository.deleteAllByTripId`, `GeofencePointRepository.deleteAllByGeofenceId` 파생 쿼리 추가.
+- 프론트 `TripDetail.tsx`: READY 상태에 "현장체험학습 시작"(`trip-primary-button` 재사용)과 "삭제하기"(`danger-button` 재사용, 종료와 동일한 2단계 확인) 버튼 추가. `TeacherDashboard.tsx`의 `onStarted`는 같은 상세 화면에 머물러 새로고침된 ACTIVE 상태를 보여주고, `onDeleted`는 목록으로 돌아간다.
+- `TripCreationFlow.tsx`/`TeacherDashboard.tsx`: 생성 완료 알림에서 초대 코드 노출을 뺐다 — 그 코드는 `start()` 시점에 폐기되고 새 코드로 교체되므로 미리 보여주면 혼란만 준다.
+- **PR 리뷰 반영**: 처음엔 "`create()`가 코드를 발급하되 화면엔 숨긴다"로 구현했는데, 리뷰에서 "애초에 발급을 안 하는 게 맞다"는 피드백을 받아 `create()`가 초대 코드를 아예 발급하지 않도록 바꿨다. 반환 타입도 `InviteCodeResponse` → 신규 `TripCreatedResponse(tripId)`로 교체(컨트롤러도 동일). 프론트 `teacherTripApi.create()` 반환 타입도 `{ tripId: number }`로 정정 — 원래 프론트가 그 값을 안 썼어서 동작 변화는 없다.
+
+검증: 백엔드 `./gradlew test` 전체 통과(READY 생성 + 코드 미발급, 시작 성공/이미 시작됨, 삭제 성공/진행중 삭제 시도), 프론트 `npx vitest run`(38 files, 236 passed), `npm run lint`, `npm run build` 통과.
+
+## 초대 코드 재발급 제거 및 만료시간 제거 (#155)
+
+- `InviteCode.isUsable()`이 `revokedAt == null`만 검사하도록 단순화했다 — 5분 시간 만료 개념을 제거했다. Trip이 `finish()`될 때만 코드가 무효화된다.
+- DB `expires_at` 컬럼은 `NOT NULL`이고 이 프로젝트에 마이그레이션 도구가 없어(`ddl-auto: update`만 사용) 컬럼은 남겨뒀다. `InviteCode.create(tripId, code)`가 내부적으로 2999-01-01 더미 값을 채워 제약만 만족시키고, 어떤 로직도 이 값을 더 이상 읽지 않는다.
+- `TripService.reissueInviteCode()`와 `POST /api/teacher/trips/{tripId}/invite-code`(재발급) 엔드포인트를 제거했다. `GET`(현재 코드 조회, `getCurrentInviteCode`)은 유지 — 만료가 없어졌으니 발급된 코드는 Trip이 끝날 때까지 계속 유효하게 조회된다.
+- 프론트 `TripDetail.tsx`에서 "코드 재발급" 버튼과 `teacherTripApi.reissueInviteCode`를 제거했다. `InviteCodeResponse`/`InviteCode` 타입에서 `expiresAt` 필드도 뺐다.
+
+검증: `cd backend && ./gradlew test` 전체 통과, `cd frontend && npm run lint && npx vitest run && npm run build` 통과(38 files, 235 passed).

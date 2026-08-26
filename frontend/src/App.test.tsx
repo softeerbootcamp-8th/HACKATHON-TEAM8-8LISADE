@@ -66,6 +66,12 @@ const missionPhotoRecoveryMock = vi.hoisted(() => ({
 
 vi.mock('./native/missionPhotoRecovery', () => missionPhotoRecoveryMock)
 
+const studentNotificationApiMock = vi.hoisted(() => ({ list: vi.fn() }))
+
+vi.mock('./api/studentNotificationApi', () => ({
+  studentNotificationApi: studentNotificationApiMock,
+}))
+
 import App from './App'
 
 describe('App', () => {
@@ -97,6 +103,7 @@ describe('App', () => {
     missionPhotoRecoveryMock.captureMissionPhoto.mockResolvedValue({ uri: 'mock://mission-photo.jpg' })
     missionPhotoRecoveryMock.clearPendingMissionPhoto.mockResolvedValue(undefined)
     missionPhotoRecoveryMock.listenForRestoredMissionPhoto.mockResolvedValue({ remove: vi.fn() })
+    studentNotificationApiMock.list.mockReset().mockResolvedValue([])
   })
 
   it('shows the start screen before a session is established', () => {
@@ -125,7 +132,7 @@ describe('App', () => {
     expect(screen.queryByRole('button', { name: '로그인' })).not.toBeInTheDocument()
   })
 
-  it('Given_만료된_세션_When_앱을_재실행하면_Then_로그인_화면으로_보낸다', async () => {
+  it('Given_세션_없는_첫_진입_When_세션_조회가_401이면_Then_시작_화면에_머문다', async () => {
     // given
     const fetchMock = vi.fn(async () => apiResponse({ success: false, message: '인증이 필요합니다.' }, 401))
     vi.stubGlobal('fetch', fetchMock)
@@ -135,8 +142,27 @@ describe('App', () => {
 
     // then
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/auth/me', { credentials: 'include' }))
-    expect(screen.getByRole('heading', { name: '로그인' })).toBeInTheDocument()
-    expect(locationTrackingMock.expireSession).toHaveBeenCalledOnce()
+    expect(screen.getByRole('heading', { name: '두리번' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '로그인' })).not.toBeInTheDocument()
+    expect(locationTrackingMock.expireSession).not.toHaveBeenCalled()
+  })
+
+  it('Given_사용_중인_세션_When_내부_API가_401이면_Then_로그인_화면으로_보낸다', async () => {
+    // given
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL) => {
+      const path = input.toString()
+      if (path === '/api/auth/me') {
+        return apiResponse({ success: true, data: { id: 1, loginId: 'teacher01', name: '고심', phoneNumber: '01012341234', role: 'TEACHER' } })
+      }
+      return apiResponse({ success: false, message: '인증이 필요합니다.' }, 401)
+    })
+
+    // when
+    render(<App />)
+
+    // then
+    expect(await screen.findByRole('heading', { name: '로그인' })).toBeInTheDocument()
+    expect(locationTrackingMock.expireSession).toHaveBeenCalled()
   })
 
   it('shows the login form after choosing to log in from the start screen', () => {
@@ -512,8 +538,33 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: '참여하기' }))
 
     expect(await screen.findByRole('heading', { name: '위치 권한 필요' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '설정으로 이동' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '위치 권한 다시 확인' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '학생 홈' })).not.toBeInTheDocument()
+  })
+
+  it('Given 위치 권한이 차단된 학생 When 권한을 다시 허용하면 Then 학생 홈으로 이동한다', async () => {
+    // given
+    locationTrackingMock.startTracking.mockResolvedValueOnce({
+      permission: 'DENIED',
+      locationEnabled: true,
+      sendStatus: 'NO_PERMISSION',
+      lastSentAt: null,
+      reason: 'PERMISSION_DENIED',
+    })
+    renderApp()
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'student01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+    await screen.findByRole('heading', { name: 'Trip 참여' })
+    fireEvent.change(screen.getByLabelText('초대 코드'), { target: { value: 'AB1234' } })
+    fireEvent.click(screen.getByRole('button', { name: '참여하기' }))
+    await screen.findByRole('heading', { name: '위치 권한 필요' })
+
+    // when
+    fireEvent.click(screen.getByRole('button', { name: '위치 권한 다시 확인' }))
+
+    // then
+    expect(await screen.findByRole('heading', { name: '학생 홈' })).toBeInTheDocument()
   })
 
   it('shows only the current mission and does not expose future missions', async () => {
@@ -556,11 +607,121 @@ describe('App', () => {
     expect(screen.getByText('2 / 3')).toBeInTheDocument()
   })
 
+  it('Given_사진_미션_화면_When_뒤로_가기를_누르면_Then_학생_홈으로_돌아간다', async () => {
+    await openStudentHome()
+
+    fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
+    expect(await screen.findByRole('button', { name: '촬영하기' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '뒤로 가기' }))
+
+    expect(await screen.findByRole('button', { name: '현재 미션 수행' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '촬영하기' })).not.toBeInTheDocument()
+    expect(screen.getByText('1 / 3')).toBeInTheDocument()
+  })
+
+  it('Given_사진_확인_화면_When_뒤로_가기를_누르면_Then_사진_미션_화면으로_돌아간다', async () => {
+    await openStudentHome()
+
+    fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
+    fireEvent.click(await screen.findByRole('button', { name: '촬영하기' }))
+    expect(await screen.findByRole('heading', { name: '사진 확인' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '뒤로 가기' }))
+
+    expect(await screen.findByRole('button', { name: '촬영하기' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '사진 확인' })).not.toBeInTheDocument()
+  })
+
+  it('Given_출석_체크_화면_When_뒤로_가기를_누르면_Then_학생_홈으로_돌아간다', async () => {
+    await openStudentHome()
+
+    await completePhotoMission()
+
+    fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
+    expect(await screen.findByRole('button', { name: '출석 체크' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '뒤로 가기' }))
+
+    expect(await screen.findByRole('button', { name: '현재 미션 수행' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '출석 체크' })).not.toBeInTheDocument()
+    expect(screen.getByText('2 / 3')).toBeInTheDocument()
+  })
+
   it('keeps the next mission hidden while the current mission is not completed', async () => {
     await openStudentHome()
 
     expect(screen.queryByText('반려된 사진 미션')).not.toBeInTheDocument()
     expect(screen.queryByText('경복궁 출석 체크')).not.toBeInTheDocument()
+  })
+
+  it('opens the notification list from the bell icon and lists notifications', async () => {
+    studentNotificationApiMock.list.mockResolvedValue([
+      { id: 1, type: 'MISSION_CREATED', title: '새 미션 알림', message: "'어디서 사진 찍기' 미션이 등록됐어요.", createdAt: new Date().toISOString() },
+    ])
+    await openStudentHome()
+
+    fireEvent.click(screen.getByRole('button', { name: '알림' }))
+
+    expect(await screen.findByText("'어디서 사진 찍기' 미션이 등록됐어요.")).toBeInTheDocument()
+    expect(screen.getByText('새 미션')).toBeInTheDocument()
+  })
+
+  it('deep-links a mission notification to the current mission screen', async () => {
+    studentNotificationApiMock.list.mockResolvedValue([
+      { id: 1, type: 'DEADLINE_IMMINENT', title: '마감 임박 알림', message: "'서버 사진 미션' 마감이 5분 남았어요.", createdAt: new Date().toISOString() },
+    ])
+    await openStudentHome()
+    fireEvent.click(screen.getByRole('button', { name: '알림' }))
+
+    fireEvent.click(await screen.findByRole('button', { name: /마감이 5분 남았어요/ }))
+
+    expect(await screen.findByRole('heading', { name: '서버 사진 미션' })).toBeInTheDocument()
+    expect(missionApiMock.getCurrentMissions).toHaveBeenCalledWith(1)
+  })
+
+  it('deep-links a location exit notification back to the student home', async () => {
+    studentNotificationApiMock.list.mockResolvedValue([
+      { id: 1, type: 'RANGE_EXIT', title: '안전 구역 이탈 알림', message: '안전 구역을 벗어났어요.', createdAt: new Date().toISOString() },
+    ])
+    await openStudentHome()
+    fireEvent.click(screen.getByRole('button', { name: '알림' }))
+
+    fireEvent.click(await screen.findByRole('button', { name: /안전 구역을 벗어났어요/ }))
+
+    expect(await screen.findByRole('heading', { name: '학생 홈' })).toBeInTheDocument()
+  })
+
+  it('Given_교사_홈_When_상단바_로그아웃을_누르면_Then_세션과_위치_전송을_함께_끊고_시작_화면으로_돌아간다', async () => {
+    // given
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    renderApp()
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+    await screen.findByRole('heading', { name: '교사 홈' })
+
+    // when
+    fireEvent.click(screen.getByRole('button', { name: '로그아웃' }))
+
+    // then
+    expect(await screen.findByRole('heading', { name: '두리번' })).toBeInTheDocument()
+    expect(fetchSpy).toHaveBeenCalledWith('/api/auth/logout', expect.objectContaining({ method: 'POST' }))
+    expect(pushNotificationsMock.unregister).toHaveBeenCalled()
+    expect(locationTrackingMock.expireSession).toHaveBeenCalled()
+  })
+
+  it('Given_학생_홈_When_로그아웃하면_Then_참여_중인_Trip_상태까지_비우고_시작_화면으로_돌아간다', async () => {
+    // given
+    await openStudentHome()
+    expect(screen.getByRole('heading', { name: '학생 홈' })).toBeInTheDocument()
+
+    // when
+    fireEvent.click(screen.getByRole('button', { name: '로그아웃' }))
+
+    // then
+    expect(await screen.findByRole('heading', { name: '두리번' })).toBeInTheDocument()
+    expect(locationTrackingMock.stopTracking).toHaveBeenCalled()
   })
 })
 

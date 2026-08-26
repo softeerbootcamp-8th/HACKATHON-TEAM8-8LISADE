@@ -6,11 +6,14 @@ import { missionApi } from './api/missionApi'
 import { studentTripApi } from './api/studentTripApi'
 import { resolvePostLoginScreen, type Screen } from './features/app/appFlow'
 import { LoginScreen, SignUpScreen, StartScreen } from './features/auth/AuthScreens'
+import { logout } from './features/auth/logout'
 import { ActivityConfirmation, ActivityMissionScreen, CheckMissionScreen, InviteCodeScreen, LocationBlockedScreen, StudentHome, type CurrentMission } from './features/student/StudentScreens'
+import { StudentNotifications } from './features/student/StudentNotifications'
 import { TeacherDashboard } from './features/teacher/TeacherDashboard'
 import { pushNotifications } from './notifications/pushNotifications'
 import { clearPendingMissionPhoto, listenForRestoredMissionPhoto } from './native/missionPhotoRecovery'
 import type { CurrentUser, SignUpInput } from './types/auth'
+import type { StudentNotification } from './types/notification'
 import type { LocationTrackingState, StudentTrip } from './types/studentTrip'
 
 const initialSignUpInput: SignUpInput = { role: 'STUDENT', name: '', loginId: '', password: '', passwordConfirmation: '', phoneNumber: '', parentNumber: '', guardianConsent: false }
@@ -57,7 +60,9 @@ export default function App() {
     const missions = await missionApi.getCurrentMissions(tripId)
     const current = missions.map((mission) => ({ ...mission, isResubmission: false }))
     setAvailableMissions(current)
-    setCurrentMission(current[0] ?? null)
+    const next = current[0] ?? null
+    setCurrentMission(next)
+    return next
   }
 
   const enterAuthenticatedUser = useCallback(async (user: CurrentUser) => {
@@ -163,6 +168,24 @@ export default function App() {
     } catch (caughtError) { setError(caughtError instanceof Error ? caughtError.message : '회원가입에 실패했습니다.') }
   }
 
+  // 로그아웃은 push 해제 → 위치 전송 중지 → 세션 종료 순서(features/auth/logout)를 그대로 쓰고,
+  // 서버 호출이 실패하더라도 로컬 세션 상태는 반드시 비워 로그아웃 상태로 되돌린다.
+  const handleLogout = async () => {
+    try { await logout() } catch { /* 서버 로그아웃 실패가 화면 복귀를 막지 않는다. */ }
+    setCurrentUser(null)
+    setStudentTrip(null)
+    setLocationState(null)
+    setCurrentMission(null)
+    setAvailableMissions([])
+    setCapturedPhotoUri('')
+    setMissionNotice('')
+    setError('')
+    setNotice('')
+    setLoginId('')
+    setPassword('')
+    setScreen('START')
+  }
+
   const joinTrip = async (code: string) => {
     const trip = await studentTripApi.joinWithInviteCode(code)
     const tracking = await locationTrackingAdapter.startTracking()
@@ -174,10 +197,33 @@ export default function App() {
     setScreen(locationReady(tracking) ? 'STUDENT_HOME' : 'STUDENT_PERMISSION_BLOCKED')
   }
 
-  if (screen === 'STUDENT_INVITE') return <InviteCodeScreen onSubmit={joinTrip} />
-  if (screen === 'STUDENT_PERMISSION_BLOCKED') return <LocationBlockedScreen onOpenSettings={async () => { setLocationState(await locationTrackingAdapter.openSettings()) }} />
-  if (screen === 'STUDENT_HOME' && studentTrip && locationState) return <StudentHome trip={studentTrip} location={locationState} notice={missionNotice} currentMission={currentMission} onCurrentMission={() => setScreen(currentMission?.type === 'CHECK' ? 'CHECK_MISSION' : 'ACTIVITY_MISSION')} />
-  if (screen === 'ACTIVITY_MISSION' && currentMission) return <ActivityMissionScreen mission={currentMission} onCaptured={(uri) => { setCapturedPhotoUri(uri); setScreen('ACTIVITY_CONFIRMATION') }} />
+  const retryLocationPermission = async () => {
+    const tracking = await locationTrackingAdapter.openSettings()
+    setLocationState(tracking)
+    if (locationReady(tracking)) setScreen('STUDENT_HOME')
+  }
+
+  // 알림 탭 시 딥링크(S-06 §6.2): 미션류(새 미션·마감 임박·다시 하기)는 현재 미션을 다시 불러와 그 수행
+  // 화면으로, 위치 이탈은 학생 홈(이탈 배너)으로 이동한다.
+  const openStudentNotification = async (notification: StudentNotification) => {
+    if (notification.type !== 'RANGE_EXIT' && studentTrip) {
+      try {
+        const mission = await loadCurrentMission(studentTrip.id)
+        setScreen(mission ? (mission.type === 'CHECK' ? 'CHECK_MISSION' : 'ACTIVITY_MISSION') : 'STUDENT_HOME')
+      } catch (caughtError) {
+        setMissionNotice(caughtError instanceof Error ? caughtError.message : '미션을 불러오지 못했습니다.')
+        setScreen('STUDENT_HOME')
+      }
+      return
+    }
+    setScreen('STUDENT_HOME')
+  }
+
+  if (screen === 'STUDENT_INVITE') return <InviteCodeScreen onSubmit={joinTrip} onLogout={() => { void handleLogout() }} />
+  if (screen === 'STUDENT_PERMISSION_BLOCKED') return <LocationBlockedScreen onOpenSettings={retryLocationPermission} />
+  if (screen === 'STUDENT_HOME' && studentTrip && locationState) return <StudentHome trip={studentTrip} location={locationState} notice={missionNotice} currentMission={currentMission} onCurrentMission={() => setScreen(currentMission?.type === 'CHECK' ? 'CHECK_MISSION' : 'ACTIVITY_MISSION')} onBellClick={() => setScreen('STUDENT_NOTIFICATIONS')} onLogout={() => { void handleLogout() }} />
+  if (screen === 'STUDENT_NOTIFICATIONS') return <StudentNotifications onBack={() => setScreen('STUDENT_HOME')} onSelect={openStudentNotification} />
+  if (screen === 'ACTIVITY_MISSION' && currentMission) return <ActivityMissionScreen mission={currentMission} onBack={() => setScreen('STUDENT_HOME')} onCaptured={(uri) => { setCapturedPhotoUri(uri); setScreen('ACTIVITY_CONFIRMATION') }} />
   if (screen === 'ACTIVITY_CONFIRMATION') return <ActivityConfirmation isResubmission={currentMission?.isResubmission ?? false} photoUri={capturedPhotoUri} onRetake={() => setScreen('ACTIVITY_MISSION')} onSubmit={async () => {
     if (!currentMission) throw new Error('현재 미션을 찾을 수 없습니다.')
     await missionApi.submitPhoto(currentMission.id, await photoUriToBlob(capturedPhotoUri))
@@ -187,7 +233,7 @@ export default function App() {
     setMissionNotice(currentMission.isResubmission ? '사진 미션을 재제출했습니다.' : '사진 미션을 제출했습니다.')
     setScreen('STUDENT_HOME')
   }} />
-  if (screen === 'CHECK_MISSION' && currentMission) return <CheckMissionScreen mission={currentMission} onCompleted={async (pin) => {
+  if (screen === 'CHECK_MISSION' && currentMission) return <CheckMissionScreen mission={currentMission} onBack={() => setScreen('STUDENT_HOME')} onCompleted={async (pin) => {
     if (!currentMission) throw new Error('현재 미션을 찾을 수 없습니다.')
     await missionApi.verifyPin(currentMission.id, pin)
     incrementMissionProgress()
@@ -195,7 +241,7 @@ export default function App() {
     setMissionNotice('출석 체크를 완료했습니다.')
     setScreen('STUDENT_HOME')
   }} />
-  if (screen === 'TEACHER_HOME' && currentUser) return <TeacherDashboard user={currentUser} />
+  if (screen === 'TEACHER_HOME' && currentUser) return <TeacherDashboard user={currentUser} onLogout={() => { void handleLogout() }} />
   if (screen === 'SIGN_UP') return <SignUpScreen input={signUpInput} error={error} onChange={setSignUpInput} onSubmit={handleSignUp} onCancel={showLogin} />
   if (screen === 'LOGIN') return <LoginScreen loginId={loginId} password={password} notice={notice} error={error} onLoginIdChange={setLoginId} onPasswordChange={setPassword} onSubmit={handleLogin} onShowSignUp={showSignUp} />
   return <StartScreen onShowLogin={showLogin} onShowSignUp={showSignUp} />

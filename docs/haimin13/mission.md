@@ -41,3 +41,13 @@
 - 운영 버킷은 비공개를 유지한다. public read로 여는 우회는 미성년자 얼굴·시각·장소가 결합된 사진이 인증 없이 영구 공개되고, `requireTeacher` 인가가 무의미해지며, 프론트 번들에 버킷명(AWS 계정 ID 포함)이 노출되어 채택하지 않았다.
 
 검증: `./gradlew build`(백엔드 전체 스위트 통과 — `MissionServiceTest`에 조회 URL 발급/사진 없는 제출은 `null`/담당 아닌 교사 거부 3개, `S3StoragePresignerTest`·`LocalStoragePresignerTest`에 GET 발급 각 1개 추가), `npm run lint`, `npm test`(27파일 156개 통과 — `TeacherMissions.test.tsx`에 사진 렌더링/placeholder 유지 2개 추가), `npm run build` 모두 통과.
+
+## 학생 미션 화면 뒤로가기 버튼 동작 (#140)
+
+- `shared/ui/BackHeader.tsx`가 chevron을 장식용 `<img alt="">`로만 렌더링해서, 이 헤더를 쓰는 학생 화면 3곳(사진 미션 `ACTIVITY_MISSION`, 사진 확인 `ACTIVITY_CONFIRMATION`, 출석 체크 `CHECK_MISSION`)의 뒤로가기 화살표가 클릭해도 아무 일도 하지 않았다. 사진 미션·출석 체크 화면에는 홈으로 나갈 다른 경로가 아예 없어서, 미션을 수행하지 않고 학생 홈으로 돌아가려면 앱을 다시 시작해야 했다.
+- `BackHeader`에 필수 prop `onBack`을 추가하고 chevron을 `<button type="button" aria-label="뒤로 가기">`로 감쌌다. 목적지는 화면 전환 state를 소유한 `App.tsx`가 주입한다 — 이미 정상 동작하던 `StudentNotifications`/`TripDetail`의 `onBack` 패턴과 동일하다. 사진 미션·출석 체크는 `setScreen('STUDENT_HOME')`, 사진 확인은 기존 "재촬영하기"와 같은 `onRetake`(→ `ACTIVITY_MISSION`)를 그대로 재사용했다.
+- `onBack`을 optional이 아닌 필수로 둬서, 앞으로 `BackHeader`를 쓰는 화면이 뒤로가기 목적지를 지정하지 않으면 타입 에러로 걸리게 했다 — 이번 버그가 "핸들러를 안 넘겨도 컴파일되는" 구조에서 나왔기 때문이다.
+- CSS는 `.back-header-button`으로 전역 `button` 스타일(노란 배경·shadow·min-height 54px)을 지우고 44px 터치 타깃을 확보했다. `margin-left: -12px`로 아이콘의 시각적 좌측 정렬은 기존과 동일하게 유지했다.
+- 교사 화면(`TripDetail.tsx`, `TripCreationFlow.tsx`)과 알림 목록의 뒤로가기는 이미 `<button onClick>`이라 손대지 않았다. Android 하드웨어 back 버튼은 이 작업 범위 밖이다(화면 속 UI 버튼만 다뤘다).
+
+검증: `npm test`(38파일 230개 통과 — 신규 `BackHeader.test.tsx` 2개, `App.test.tsx`에 화면별 뒤로가기 이동 3개 추가), `npm run lint`, `npm run build` 모두 통과. `App.test.tsx` 신규 테스트는 학생 홈 → 미션 화면 → 뒤로가기 → 홈 복귀를 실제 화면 전환으로 확인하고, 뒤로가기로 이탈해도 미션 진행률(`1 / 3`, `2 / 3`)이 변하지 않는 것까지 함께 검증한다.

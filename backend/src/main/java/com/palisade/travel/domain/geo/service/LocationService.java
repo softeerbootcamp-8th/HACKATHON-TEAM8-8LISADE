@@ -150,18 +150,31 @@ public class LocationService {
                 .map(User::getName)
                 .map("%s 학생"::formatted)
                 .orElse("학생");
-        String title = "안전 구역 이탈 알림";
-        String body = "%s이 안전 구역을 벗어났습니다.".formatted(studentLabel);
+        String teacherTitle = "안전 구역 이탈 알림";
+        String teacherBody = "%s이 안전 구역을 벗어났습니다.".formatted(studentLabel);
 
         notificationRepository.save(Notification.create(
                 trip.getTeacherId(),
                 trip.getId(),
                 null,
                 NotificationType.RANGE_EXIT,
-                title,
-                body
+                teacherTitle,
+                teacherBody
         ));
-        pushNotificationService.sendToUser(trip.getTeacherId(), title, body);
+        pushNotificationService.sendToUser(trip.getTeacherId(), teacherTitle, teacherBody);
+
+        // 학생 알림(§6.2) — 이탈 판정 시 학생 본인에게도 1회 발송한다.
+        String studentTitle = "안전 구역 이탈 알림";
+        String studentBody = "안전 구역을 벗어났어요. 안전한 곳으로 돌아와 주세요.";
+        notificationRepository.save(Notification.create(
+                studentId,
+                trip.getId(),
+                null,
+                NotificationType.RANGE_EXIT,
+                studentTitle,
+                studentBody
+        ));
+        pushNotificationService.sendToUser(studentId, studentTitle, studentBody);
     }
 
     private List<GeofencePoint> findGeofencePoints(Trip trip) {

@@ -3,6 +3,7 @@ package com.palisade.travel.domain.trip.controller;
 import com.palisade.travel.domain.trip.dto.CreateTripRequest;
 import com.palisade.travel.domain.trip.dto.InviteCodeResponse;
 import com.palisade.travel.domain.trip.dto.ManualParticipantRequest;
+import com.palisade.travel.domain.trip.dto.TripCreatedResponse;
 import com.palisade.travel.domain.trip.dto.TripParticipantResponse;
 import com.palisade.travel.domain.trip.dto.TeacherTripSummaryResponse;
 import com.palisade.travel.domain.trip.service.TripService;
@@ -12,6 +13,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,8 +32,8 @@ public class TeacherTripController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<InviteCodeResponse> create(@AuthenticationPrincipal UserPrincipal teacher,
-                                                   @Valid @RequestBody CreateTripRequest request) {
+    public ApiResponse<TripCreatedResponse> create(@AuthenticationPrincipal UserPrincipal teacher,
+                                                    @Valid @RequestBody CreateTripRequest request) {
         return ApiResponse.success(tripService.create(teacher.userId(), request));
     }
 
@@ -39,12 +41,6 @@ public class TeacherTripController {
     public ApiResponse<List<TeacherTripSummaryResponse>> getTrips(
             @AuthenticationPrincipal UserPrincipal teacher) {
         return ApiResponse.success(tripService.getTrips(teacher.userId()));
-    }
-
-    @PostMapping("/{tripId}/invite-code")
-    public ApiResponse<InviteCodeResponse> reissueInviteCode(@AuthenticationPrincipal UserPrincipal teacher,
-                                                              @PathVariable Long tripId) {
-        return ApiResponse.success(tripService.reissueInviteCode(teacher.userId(), tripId));
     }
 
     @GetMapping("/{tripId}/participants")
@@ -62,6 +58,17 @@ public class TeacherTripController {
     @PostMapping("/{tripId}/end")
     public ApiResponse<Void> end(@AuthenticationPrincipal UserPrincipal teacher, @PathVariable Long tripId) {
         tripService.finish(teacher.userId(), tripId);
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/{tripId}/start")
+    public ApiResponse<InviteCodeResponse> start(@AuthenticationPrincipal UserPrincipal teacher, @PathVariable Long tripId) {
+        return ApiResponse.success(tripService.start(teacher.userId(), tripId));
+    }
+
+    @DeleteMapping("/{tripId}")
+    public ApiResponse<Void> delete(@AuthenticationPrincipal UserPrincipal teacher, @PathVariable Long tripId) {
+        tripService.delete(teacher.userId(), tripId);
         return ApiResponse.success(null);
     }
 

@@ -35,6 +35,7 @@ describe('missionApi', () => {
       method: 'POST',
       credentials: 'include',
       headers: expect.objectContaining({ 'X-CSRF-TOKEN': 'csrf-token' }),
+      body: JSON.stringify({ contentType: 'image/jpeg' }),
     }))
     expect(fetchMock).toHaveBeenNthCalledWith(3, 'https://storage.example/upload', expect.objectContaining({
       method: 'PUT',
@@ -42,6 +43,46 @@ describe('missionApi', () => {
     }))
     expect(fetchMock).toHaveBeenNthCalledWith(5, '/api/missions/11/submissions/photo', expect.objectContaining({
       body: JSON.stringify({ objectKey: 'missions/11/students/2/photo.jpg' }),
+    }))
+  })
+
+  it('uploads a PNG capture (e.g. web camera fallback) with its real Content-Type, matching what the backend was asked to sign', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(apiResponse({ success: true, data: { token: 'csrf-token', headerName: 'X-CSRF-TOKEN' } }))
+      .mockResolvedValueOnce(apiResponse({ success: true, data: { objectKey: 'missions/11/students/2/photo.png', uploadUrl: 'https://storage.example/upload' } }))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }))
+      .mockResolvedValueOnce(apiResponse({ success: true, data: { token: 'csrf-token', headerName: 'X-CSRF-TOKEN' } }))
+      .mockResolvedValueOnce(apiResponse({ success: true, data: { submissionId: 9, status: 'WAITING', imageKey: 'missions/11/students/2/photo.png' } }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await missionApi.submitPhoto(11, new Blob(['photo'], { type: 'image/png' }))
+
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/missions/11/photo-upload', expect.objectContaining({
+      body: JSON.stringify({ contentType: 'image/png' }),
+    }))
+    expect(fetchMock).toHaveBeenNthCalledWith(3, 'https://storage.example/upload', expect.objectContaining({
+      method: 'PUT',
+      headers: { 'Content-Type': 'image/png' },
+    }))
+  })
+
+  it('falls back to image/jpeg when the captured Blob reports an unsupported or missing MIME type', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(apiResponse({ success: true, data: { token: 'csrf-token', headerName: 'X-CSRF-TOKEN' } }))
+      .mockResolvedValueOnce(apiResponse({ success: true, data: { objectKey: 'missions/11/students/2/photo.jpg', uploadUrl: 'https://storage.example/upload' } }))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }))
+      .mockResolvedValueOnce(apiResponse({ success: true, data: { token: 'csrf-token', headerName: 'X-CSRF-TOKEN' } }))
+      .mockResolvedValueOnce(apiResponse({ success: true, data: { submissionId: 9, status: 'WAITING', imageKey: 'missions/11/students/2/photo.jpg' } }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await missionApi.submitPhoto(11, new Blob(['photo'], { type: 'image/heic' }))
+
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/missions/11/photo-upload', expect.objectContaining({
+      body: JSON.stringify({ contentType: 'image/jpeg' }),
+    }))
+    expect(fetchMock).toHaveBeenNthCalledWith(3, 'https://storage.example/upload', expect.objectContaining({
+      method: 'PUT',
+      headers: { 'Content-Type': 'image/jpeg' },
     }))
   })
 

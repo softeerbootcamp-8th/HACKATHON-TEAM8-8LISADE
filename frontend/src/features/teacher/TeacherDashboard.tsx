@@ -42,7 +42,7 @@ function notificationTargetTab(type: TeacherNotification['type']): TeacherTab {
   return type === 'RANGE_EXIT' || type === 'UNREACHABLE' ? 'LOCATION' : 'MISSIONS'
 }
 
-export function TeacherDashboard({ user }: { user: CurrentUser }) {
+export function TeacherDashboard({ user, onLogout }: { user: CurrentUser; onLogout?: () => void }) {
   const [tab, setTab] = useState<TeacherTab>('HOME')
   const [manageView, setManageView] = useState<ManageView>({ name: 'LIST' })
   const [notice, setNotice] = useState('')
@@ -72,9 +72,9 @@ export function TeacherDashboard({ user }: { user: CurrentUser }) {
 
   if (manageView.name === 'CREATE') return <TripCreationFlow
     onCancel={() => setManageView({ name: 'LIST' })}
-    onCreated={async (code) => {
+    onCreated={async () => {
       await refreshTrips()
-      setNotice(`현장체험학습을 생성했습니다. 초대 코드: ${code}`)
+      setNotice('현장체험학습을 생성했습니다. "시작하기"를 누르면 학생을 초대할 수 있어요.')
       setManageView({ name: 'LIST' })
     }}
   />
@@ -93,6 +93,15 @@ export function TeacherDashboard({ user }: { user: CurrentUser }) {
       teacherName={user.name}
       onBack={() => setManageView({ name: 'LIST' })}
       onAddStudent={() => setManageView({ name: 'ADD_STUDENT', tripId: detailTrip.id })}
+      onStarted={async () => {
+        await refreshTrips()
+        setNotice('현장체험학습을 시작했습니다.')
+      }}
+      onDeleted={async () => {
+        await refreshTrips()
+        setNotice('현장체험학습을 삭제했습니다.')
+        setManageView({ name: 'LIST' })
+      }}
       onFinished={async () => {
         await refreshTrips()
         setNotice('현장체험학습을 종료했습니다.')
@@ -109,7 +118,7 @@ export function TeacherDashboard({ user }: { user: CurrentUser }) {
   </ScreenCard>
 
   return <ScreenCard title="교사 홈">
-    <AppHeader hasUnread={hasUnread} onBellClick={() => { markRead(); setShowNotifications(true) }} />
+    <AppHeader hasUnread={hasUnread} onBellClick={() => { markRead(); setShowNotifications(true) }} onLogout={onLogout} />
     <NotificationToast notification={toast} onDismiss={dismissToast} />
     {tab === 'MANAGE'
       ? <ManagementTab

@@ -10,7 +10,7 @@ class LocalStoragePresignerTest {
     void returnsALocalPutEndpointForTheIssuedObjectKey() {
         LocalStoragePresigner presigner = new LocalStoragePresigner();
 
-        StoragePresigner.PresignedUpload upload = presigner.presignPut("missions/12/students/3/photo.jpg");
+        StoragePresigner.PresignedUpload upload = presigner.presignPut("missions/12/students/3/photo.jpg", "image/jpeg");
 
         assertThat(upload.objectKey()).isEqualTo("missions/12/students/3/photo.jpg");
         assertThat(upload.uploadUrl()).isEqualTo("http://localhost:8080/mock-storage/missions/12/students/3/photo.jpg");

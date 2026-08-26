@@ -101,7 +101,7 @@ describe('TeacherLocationMap', () => {
     vi.mocked(loadKakaoMaps).mockReset().mockResolvedValue(sdk.maps as never)
   })
 
-  it('최신 위치가 있으면 지오펜스가 아니라 모든 학생 위치가 보이게 맞춘다', async () => {
+  it('학생 위치가 있어도 지오펜스 기준으로 중심을 맞춘다', async () => {
     // given & when
     render(<TeacherLocationMap trips={trips} />)
 
@@ -109,13 +109,13 @@ describe('TeacherLocationMap', () => {
     const map = await readyMap()
     await waitFor(() => expect(map.setBounds).toHaveBeenCalled())
     expect(lastBounds(map).points.map(point => [point.latitude, point.longitude])).toEqual([
-      [37.501, 127.001],
-      [37.502, 127.002],
-      [37.503, 127.003],
+      [37.4, 126.9],
+      [37.6, 126.9],
+      [37.5, 127.1],
     ])
   })
 
-  it('최신 위치가 비어 있으면 지오펜스 전체가 보이게 맞춘다', async () => {
+  it('최신 위치가 비어 있어도 지오펜스 전체가 보이게 맞춘다', async () => {
     // given
     locationApi.getContext.mockResolvedValue(context({ participants: [], locations: [] }))
 
@@ -187,7 +187,7 @@ describe('TeacherLocationMap', () => {
     expect(screen.getByRole('status', { name: '학생 위치 상태' })).toHaveTextContent('이서준 · 1분 경과')
   })
 
-  it('선택한 Trip의 정상 SSE 위치를 반영하고 학생 전체로 다시 맞춘다', async () => {
+  it('선택한 Trip의 정상 SSE 위치를 반영하되 지도 중심은 다시 맞추지 않는다', async () => {
     // given
     render(<TeacherLocationMap trips={trips} />)
     const map = await readyMap()
@@ -198,9 +198,8 @@ describe('TeacherLocationMap', () => {
     act(() => sseListener?.(location(7, 11, 37.55, 127.05, false, 1)))
 
     // then
-    await waitFor(() => expect(map.setBounds).toHaveBeenCalledTimes(fitCount + 1))
-    expect(lastBounds(map).points.some(point => point.latitude === 37.55 && point.longitude === 127.05)).toBe(true)
-    expect(screen.getByRole('button', { name: '김하늘 정상' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '김하늘 정상' })).toBeInTheDocument()
+    expect(map.setBounds).toHaveBeenCalledTimes(fitCount)
   })
 
   it('초기 스냅샷을 조회하는 동안 받은 SSE 위치를 유실하지 않는다', async () => {
@@ -215,9 +214,7 @@ describe('TeacherLocationMap', () => {
     act(() => resolveContext(context()))
 
     // then
-    const map = await readyMap()
-    await waitFor(() => expect(map.setBounds).toHaveBeenCalled())
-    expect(lastBounds(map).points.some(point => point.latitude === 37.55 && point.longitude === 127.05)).toBe(true)
+    expect(await screen.findByRole('button', { name: '김하늘 정상' })).toBeInTheDocument()
   })
 
   it('다른 Trip의 SSE 위치는 현재 지도에 반영하지 않는다', async () => {
@@ -235,7 +232,7 @@ describe('TeacherLocationMap', () => {
     expect(lastBounds(map).points.some(point => point.latitude === 37.8)).toBe(false)
   })
 
-  it('지도 드래그 뒤에는 자동 이동을 멈추고 중앙 복귀 뒤 다시 추적한다', async () => {
+  it('지도 드래그 뒤에는 자동 이동을 멈추고 중앙 복귀를 누르면 지오펜스 중심으로 되돌아간다', async () => {
     // given
     render(<TeacherLocationMap trips={trips} />)
     const map = await readyMap()
@@ -251,13 +248,15 @@ describe('TeacherLocationMap', () => {
     const recenter = screen.getByRole('button', { name: '중앙으로 복귀' })
     fireEvent.click(recenter)
     await waitFor(() => expect(map.setBounds).toHaveBeenCalledTimes(fitCount + 1))
-
-    act(() => sseListener?.(location(7, 11, 37.56, 127.06, false, 1)))
-    await waitFor(() => expect(map.setBounds).toHaveBeenCalledTimes(fitCount + 2))
     expect(screen.queryByRole('button', { name: '중앙으로 복귀' })).not.toBeInTheDocument()
+
+    // SSE 위치가 더 와도 지오펜스가 그대로면 중심을 다시 맞추지 않는다
+    act(() => sseListener?.(location(7, 11, 37.56, 127.06, false, 1)))
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(map.setBounds).toHaveBeenCalledTimes(fitCount + 1)
   })
 
-  it('드롭다운으로 Trip을 바꾸면 새 Trip의 마지막 위치를 조회한다', async () => {
+  it('드롭다운으로 Trip을 바꾸면 새 Trip의 지오펜스로 중심을 다시 맞춘다', async () => {
     // given
     locationApi.getContext.mockImplementation(async (tripId: number) => tripId === 7
       ? context()
@@ -274,7 +273,7 @@ describe('TeacherLocationMap', () => {
     // then
     await waitFor(() => expect(locationApi.getContext).toHaveBeenLastCalledWith(8))
     const map = sdk.mapInstances[0]
-    await waitFor(() => expect(lastBounds(map).points[0].latitude).toBe(38.1))
+    await waitFor(() => expect(lastBounds(map).points[0].latitude).toBe(38))
   })
 
   it('Trip 위치 초기 조회가 실패하면 지도에서 오류를 안내한다', async () => {

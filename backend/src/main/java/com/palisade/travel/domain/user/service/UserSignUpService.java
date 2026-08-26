@@ -4,8 +4,8 @@ import com.palisade.travel.domain.user.dto.SignUpRequest;
 import com.palisade.travel.domain.user.entity.User;
 import com.palisade.travel.domain.user.entity.UserRole;
 import com.palisade.travel.domain.user.exception.UserErrorCode;
+import com.palisade.travel.domain.user.exception.UserException;
 import com.palisade.travel.domain.user.repository.UserRepository;
-import com.palisade.travel.global.error.ApiException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -27,7 +27,7 @@ public class UserSignUpService {
         String parentNumber = request.role() == UserRole.STUDENT ? normalizePhoneNumber(request.parentNumber()) : null;
         validateRoleProfile(request, phoneNumber, parentNumber);
         if (userRepository.existsByLoginId(request.loginId())) {
-            throw new ApiException(UserErrorCode.DUPLICATE_LOGIN_ID);
+            throw new UserException(UserErrorCode.DUPLICATE_LOGIN_ID);
         }
 
         userRepository.save(User.create(
@@ -43,14 +43,14 @@ public class UserSignUpService {
 
     private void validateRoleProfile(SignUpRequest request, String phoneNumber, String parentNumber) {
         if (phoneNumber == null) {
-            throw new ApiException(UserErrorCode.ROLE_PROFILE_REQUIRED);
+            throw new UserException(UserErrorCode.ROLE_PROFILE_REQUIRED);
         }
         if (request.role() == UserRole.STUDENT) {
             if (parentNumber == null) {
-                throw new ApiException(UserErrorCode.ROLE_PROFILE_REQUIRED);
+                throw new UserException(UserErrorCode.ROLE_PROFILE_REQUIRED);
             }
             if (!Boolean.TRUE.equals(request.guardianConsent())) {
-                throw new ApiException(UserErrorCode.GUARDIAN_CONSENT_REQUIRED);
+                throw new UserException(UserErrorCode.GUARDIAN_CONSENT_REQUIRED);
             }
         }
     }
@@ -61,7 +61,7 @@ public class UserSignUpService {
 
     private void validatePassword(String password) {
         if (password.length() < 8 || password.length() > 20 || password.chars().anyMatch(Character::isWhitespace)) {
-            throw new ApiException(UserErrorCode.INVALID_PASSWORD);
+            throw new UserException(UserErrorCode.INVALID_PASSWORD);
         }
     }
 
@@ -71,7 +71,7 @@ public class UserSignUpService {
         }
         String normalized = phoneNumber.replaceAll("[-\\s]", "");
         if (!KOREAN_MOBILE_NUMBER.matcher(normalized).matches()) {
-            throw new ApiException(UserErrorCode.INVALID_PHONE_NUMBER);
+            throw new UserException(UserErrorCode.INVALID_PHONE_NUMBER);
         }
         return normalized;
     }

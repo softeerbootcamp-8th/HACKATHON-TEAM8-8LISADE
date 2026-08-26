@@ -12,4 +12,6 @@ public interface InviteCodeRepository extends JpaRepository<InviteCode, Long> {
     boolean existsByCode(String code);
 
     Optional<InviteCode> findByTripIdAndRevokedAtIsNull(Long tripId);
+
+    void deleteAllByTripId(Long tripId);
 }

@@ -7,6 +7,10 @@ import com.palisade.travel.domain.mission.entity.SubmissionStatus;
 import com.palisade.travel.domain.mission.repository.MissionRepository;
 import com.palisade.travel.domain.mission.repository.MissionSubmissionRepository;
 import com.palisade.travel.domain.mission.storage.StoragePresigner;
+import com.palisade.travel.domain.notification.entity.Notification;
+import com.palisade.travel.domain.notification.entity.NotificationType;
+import com.palisade.travel.domain.notification.repository.NotificationRepository;
+import com.palisade.travel.domain.notification.service.PushNotificationService;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
 import com.palisade.travel.domain.trip.entity.TripStatus;
@@ -18,6 +22,7 @@ import com.palisade.travel.domain.user.repository.UserRepository;
 import com.palisade.travel.global.error.ApiException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -29,6 +34,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,6 +48,8 @@ class MissionServiceTest {
     @Mock TripParticipantRepository participantRepository;
     @Mock UserRepository userRepository;
     @Mock StoragePresigner storagePresigner;
+    @Mock NotificationRepository notificationRepository;
+    @Mock PushNotificationService pushNotificationService;
     @InjectMocks MissionService missionService;
 
     private Trip trip(Long teacherId) {
@@ -172,6 +182,46 @@ class MissionServiceTest {
     }
 
     @Test
+    void rejectingASubmissionSendsAMissionRejectedNotificationToTheStudent() {
+        Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, null);
+        MissionSubmission submission = MissionSubmission.photo(2L, 10L, "upload/missions/2/students/10/a.jpg");
+        when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
+        when(tripRepository.findById(1L)).thenReturn(Optional.of(trip(100L)));
+        when(submissionRepository.findByMissionIdAndUserId(2L, 10L)).thenReturn(Optional.of(submission));
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+
+        missionService.reject(2L, 10L, 100L, "사진이 흐릿합니다.");
+
+        then(notificationRepository).should(times(1)).save(captor.capture());
+        Notification saved = captor.getValue();
+        assertThat(saved.getUserId()).isEqualTo(10L);
+        assertThat(saved.getTripId()).isEqualTo(1L);
+        assertThat(saved.getType()).isEqualTo(NotificationType.MISSION_REJECTED);
+        assertThat(saved.getMessage()).contains("사진이 흐릿합니다.");
+        then(pushNotificationService).should(times(1)).sendToUser(eq(10L), any(), any());
+    }
+
+    @Test
+    void creatingAMissionNotifiesEveryParticipatingStudent() {
+        when(tripRepository.findById(1L)).thenReturn(Optional.of(trip(100L)));
+        when(participantRepository.findAllByTripIdOrderByCreatedAtAsc(1L)).thenReturn(List.of(
+                TripParticipant.create(1L, 10L), TripParticipant.create(1L, 11L)));
+        when(missionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        missionService.create(1L, 100L, "사진 미션", "설명", MissionType.ACTIVITY, null, null);
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        then(notificationRepository).should(times(2)).save(captor.capture());
+        assertThat(captor.getAllValues()).extracting(Notification::getUserId).containsExactlyInAnyOrder(10L, 11L);
+        assertThat(captor.getAllValues()).allSatisfy(notification -> {
+            assertThat(notification.getType()).isEqualTo(NotificationType.MISSION_CREATED);
+            assertThat(notification.getTripId()).isEqualTo(1L);
+        });
+        then(pushNotificationService).should(times(1)).sendToUser(eq(10L), any(), any());
+        then(pushNotificationService).should(times(1)).sendToUser(eq(11L), any(), any());
+    }
+
+    @Test
     void studentCannotAccessFutureMission() {
         Mission mission = Mission.create(1L, "예약", "", MissionType.ACTIVITY,
                 LocalDateTime.now().plusMinutes(1), null);
@@ -233,10 +283,34 @@ class MissionServiceTest {
         Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, null);
         when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
         when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(true);
-        when(storagePresigner.presignPut(any())).thenReturn(new StoragePresigner.PresignedUpload("upload/missions/2/students/10/photo.jpg", "https://storage.example/upload"));
+        when(storagePresigner.presignPut(any(), any())).thenReturn(new StoragePresigner.PresignedUpload("upload/missions/2/students/10/photo.jpg", "https://storage.example/upload"));
 
-        missionService.preparePhotoUpload(2L, 10L);
+        missionService.preparePhotoUpload(2L, 10L, "image/jpeg");
 
-        org.mockito.Mockito.verify(storagePresigner).presignPut(org.mockito.ArgumentMatchers.startsWith("upload/missions/2/students/10/"));
+        org.mockito.Mockito.verify(storagePresigner).presignPut(org.mockito.ArgumentMatchers.startsWith("upload/missions/2/students/10/"), org.mockito.ArgumentMatchers.eq("image/jpeg"));
+    }
+
+    @Test
+    void photoUploadUsesAJpgExtensionForJpegContentType() {
+        Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, null);
+        when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
+        when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(true);
+        when(storagePresigner.presignPut(any(), any())).thenReturn(new StoragePresigner.PresignedUpload("upload/missions/2/students/10/photo.jpg", "https://storage.example/upload"));
+
+        missionService.preparePhotoUpload(2L, 10L, "image/jpeg");
+
+        org.mockito.Mockito.verify(storagePresigner).presignPut(org.mockito.ArgumentMatchers.endsWith(".jpg"), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void photoUploadUsesAPngExtensionForPngContentType() {
+        Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, null);
+        when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
+        when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(true);
+        when(storagePresigner.presignPut(any(), any())).thenReturn(new StoragePresigner.PresignedUpload("upload/missions/2/students/10/photo.png", "https://storage.example/upload"));
+
+        missionService.preparePhotoUpload(2L, 10L, "image/png");
+
+        org.mockito.Mockito.verify(storagePresigner).presignPut(org.mockito.ArgumentMatchers.endsWith(".png"), org.mockito.ArgumentMatchers.eq("image/png"));
     }
 }
