@@ -114,8 +114,8 @@
 
 ### 검증
 
-- `./gradlew test`: 백엔드 122개 테스트 통과
-- `npm test -- --run`: 프런트 26개 파일, 155개 테스트 통과
+- `./gradlew test`: 백엔드 135개 테스트 통과
+- `npm test -- --run`: 프런트 28개 파일, 166개 테스트 통과
 - `npm run lint`, `npm run build`, `npx cap sync android`: 통과
 - `./gradlew testDebugUnitTest assembleDebug`: Android 14개 테스트와 디버그 APK 조립 통과
 - `SM_S911N` 실측: ACTIVE Trip 재로그인 후 `12:15:05`부터 `12:15:55`까지
