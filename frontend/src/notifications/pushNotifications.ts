@@ -7,6 +7,7 @@ import { nativeFcm } from '../native/fcm'
 interface NativeFcmBridge {
   requestToken(): Promise<string | null>
   onTokenRefresh(callback: (token: string) => void): void
+  onForegroundMessage(): void
   deleteToken(): Promise<void>
 }
 
@@ -37,6 +38,7 @@ export function createPushNotifications(
       registeredToken = token
 
       if (isNative) {
+        native.onForegroundMessage()
         native.onTokenRefresh((refreshedToken) => {
           registeredToken = refreshedToken
           // 갱신 재등록은 배경 작업이라 실패해도 되돌릴 방법이 없다. 다음 로그인에서 다시 등록된다.
@@ -61,13 +63,16 @@ export function createPushNotifications(
   }
 }
 
+// 웹·Android 모두 수신한 포그라운드 알림을 구독 저장소로 넘겨 화면이 토스트/배지로 표시한다(#41).
 export const pushNotifications = createPushNotifications(
   Capacitor.isNativePlatform(),
-  nativeFcm,
+  {
+    ...nativeFcm,
+    onForegroundMessage: () => nativeFcm.onForegroundMessage(foregroundNotifications.publish),
+  },
   {
     requestToken: requestFcmToken,
     deleteToken: deleteFcmToken,
-    // 수신한 포그라운드 알림은 구독 저장소로 넘겨 화면이 토스트/배지로 표시한다(#41).
     listenForegroundMessages: () => listenForForegroundMessages(foregroundNotifications.publish),
   },
   notificationApi,
