@@ -15,3 +15,12 @@
 - `main` push 없이도 즉시 검증할 수 있도록 `workflow_dispatch` 트리거를 추가했다. 검증 완료 후에도 긴급 재배포/수동 확인 용도로 그대로 유지한다.
 
 검증: `gh workflow run vercel-deploy.yml --ref fix/#69-vercel-cd-author-mismatch`로 수동 실행 → [run #32870254807](https://github.com/softeerbootcamp-8th/HACKATHON-TEAM8-8LISADE/actions/runs/32870254807) 전 단계(author amend 포함) 성공, author 불일치 에러 없이 `https://8lisade.vercel.app`로 정상 배포됨을 확인.
+
+# Vercel 프론트-백엔드 API 연결 (#76)
+
+- 배포된 프론트(`https://8lisade.vercel.app`)가 `/api/...` 상대 경로로 fetch하는데, `vercel env ls production` 결과 환경변수가 없고 프로덕션용 rewrite 설정도 없어 실제 백엔드(EC2, `http://3.34.148.229:8080`)와 연결되어 있지 않았다.
+- 백엔드가 HTTP + IP 기반(HTTPS 미설정)이라, 프론트에서 절대 URL로 직접 호출하면 HTTPS 페이지에서 HTTP 리소스를 부르는 mixed content로 브라우저가 차단한다. `frontend/vercel.json`에 `/api/:path*` → `http://3.34.148.229:8080/api/:path*` rewrite를 추가해, 브라우저는 항상 `8lisade.vercel.app`(같은 origin)로만 요청하고 실제 백엔드 호출은 Vercel 서버가 대신 수행하도록 했다.
+- 이 방식이면 브라우저 관점에서 요청이 same-origin이라 백엔드 CORS(`SecurityConfig`의 `allowedOrigins`)를 건드릴 필요가 없다. 쿠키(`credentials: 'include'`)도 응답의 `Set-Cookie`에 별도 `Domain`이 없으므로 요청한 host(vercel.app 도메인) 기준으로 정상 동작한다.
+- **알려진 제약**: `3.34.148.229`는 EC2 Elastic IP가 아니면 인스턴스 재시작 시 바뀔 수 있다. IP가 바뀌면 `vercel.json`을 다시 수정해야 한다.
+
+검증: (배포 후 실제 로그인 등 API 호출 확인 예정)
