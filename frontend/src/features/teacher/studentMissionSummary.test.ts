@@ -36,7 +36,7 @@ describe('summarizeStudentMissionStatuses', () => {
       { ...board([12]), mission: { ...board([]).mission, id: 2, title: '지각 제출', endAt: '2026-08-26T12:00:00' }, submitted: [{ studentId: 11, studentName: '학생', imageKey: null, imageUrl: null, submittedAt: '2026-08-26T12:01:00', late: true }] },
       { ...board([11]), mission: { ...board([]).mission, id: 3, title: '마감 미제출', endAt: '2026-08-26T08:00:00' } },
       { ...board([11]), mission: { ...board([]).mission, id: 4, title: '진행 중', endAt: '2026-08-26T18:00:00' } },
-    ], new Date('2026-08-26T10:00:00'))
+    ], new Date('2026-08-26T10:00:00Z'))
 
     expect(statuses).toEqual([
       { missionId: 1, title: '정시 제출', status: '제출' },
@@ -48,5 +48,13 @@ describe('summarizeStudentMissionStatuses', () => {
 
   it('사용자 ID가 없으면 미션 상태 목록을 만들지 않는다', () => {
     expect(summarizeStudentMissionStatuses(null, [board([11])], new Date('2026-08-26T10:00:00'))).toBeNull()
+  })
+
+  it('오프셋 없는 UTC 마감 시각을 실행 환경 시간대와 무관하게 절대 시점으로 비교한다', () => {
+    const statuses = summarizeStudentMissionStatuses(11, [
+      { ...board([11]), mission: { ...board([]).mission, id: 1, title: '아직 진행 중', endAt: '2026-08-26T04:00:00' } },
+    ], new Date('2026-08-26T01:00:00Z'))
+
+    expect(statuses).toEqual([{ missionId: 1, title: '아직 진행 중', status: '진행 중' }])
   })
 })

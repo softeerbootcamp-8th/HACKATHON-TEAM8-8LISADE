@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { teacherMissionApi } from '../api/missionApi'
+import { formatKoreanClock, parseServerDate } from '../shared/dateTime'
 import type { MissionStatusBoard, MissionType, NotSubmittedStudent, TeacherMission } from '../types/mission'
 
 type View = { name: 'LIST' } | { name: 'REGISTER' } | { name: 'STATUS'; missionId: number }
@@ -11,9 +12,13 @@ const emptyFormInput: MissionFormInput = { title: '', type: 'ACTIVITY', startAt:
 
 type MissionProgress = { completed: number; total: number }
 
-function missionDispatchStatus(mission: TeacherMission): '대기' | '진행중' | '완료' {
+export function missionDispatchStatus(mission: TeacherMission): '대기' | '진행중' | '완료' {
   if (mission.completedAt) return '완료'
-  return mission.startAt && new Date(mission.startAt) > new Date() ? '대기' : '진행중'
+  return mission.startAt && parseServerDate(mission.startAt) > new Date() ? '대기' : '진행중'
+}
+
+function missionTypeBadgeClass(type: MissionType): string {
+  return type === 'ACTIVITY' ? 'badge-type--activity' : 'badge-type--check'
 }
 
 function missionStatusBadgeClass(status: '대기' | '진행중' | '완료'): string {
@@ -22,20 +27,19 @@ function missionStatusBadgeClass(status: '대기' | '진행중' | '완료'): str
   return ''
 }
 
-function formatCountdown(endAt: string | null): string {
+export function formatCountdown(endAt: string | null): string {
   if (!endAt) return '마감 없음'
-  const remainingMs = new Date(endAt).getTime() - Date.now()
+  const remainingMs = parseServerDate(endAt).getTime() - Date.now()
   if (remainingMs <= 0) return '마감됨'
   const totalMinutes = Math.floor(remainingMs / 60000)
   return `${String(Math.floor(totalMinutes / 60)).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`
 }
 
 /** The backend returns submittedAt as a full LocalDateTime string (e.g. "2026-08-25T20:49:42.115219"); the design only calls for a clock time. */
-function formatSubmittedAt(submittedAt: string | null): string {
+export function formatSubmittedAt(submittedAt: string | null): string {
   if (!submittedAt) return ''
-  const date = new Date(submittedAt)
-  if (Number.isNaN(date.getTime())) return submittedAt
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+  if (Number.isNaN(parseServerDate(submittedAt).getTime())) return submittedAt
+  return formatKoreanClock(submittedAt)
 }
 
 export default function TeacherMissions({ tripId }: { tripId: string }) {
@@ -90,7 +94,7 @@ export default function TeacherMissions({ tripId }: { tripId: string }) {
         return <li key={mission.id}>
           <button className="mission-list-card" onClick={() => setView({ name: 'STATUS', missionId: mission.id })}>
             <div className="mission-list-card-badges">
-              <span className="badge badge-type">{mission.type === 'ACTIVITY' ? '활동' : '출석 체크'}</span>
+              <span className={`badge badge-type ${missionTypeBadgeClass(mission.type)}`}>{mission.type === 'ACTIVITY' ? '활동' : '출석 체크'}</span>
               <span className={`badge badge-status ${missionStatusBadgeClass(missionDispatchStatus(mission))}`}>{missionDispatchStatus(mission)}</span>
             </div>
             <p className="mission-list-card-title">{mission.title}</p>

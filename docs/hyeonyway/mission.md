@@ -89,6 +89,17 @@
 
 검증: 백엔드 `MissionServiceTest`에 2개 케이스 추가(완료한 미션 제외, 반려된 미션은 재제출 가능하도록 유지) 후 `./gradlew test` 전체 통과. 프론트 `App.test.tsx`에 출석체크 완료 후 다음 미션으로 전환되는 회귀 테스트 1개 추가, 기존 3개 테스트는 완료 후 재조회 결과를 모킹하도록 갱신 후 `npm test`(41파일 256개), `npm run lint`, `npx tsc -b --noEmit` 모두 통과.
 
+## 활동 미션 촬영 화면 삭제 — 카메라 바로 진입 (#202)
+
+- Figma S-04-1은 미션 진입 시 바로 카메라로 들어가야 하는데, `ActivityMissionScreen`이 뷰파인더 목업 이미지 + "촬영하기" 셔터 버튼이 있는 중간 화면을 먼저 보여주고 학생이 그 버튼을 눌러야 `captureMissionPhoto`가 호출되던 문제를 고쳤다.
+- 처음에는 `ActivityMissionScreen`을 남겨두고 마운트 시 자동으로 캡처를 호출하는 방향으로 구현했으나, 이슈 작성자가 "CHECK 미션이 `CheckMissionScreen`으로 바로 들어가는 것처럼, ACTIVITY 미션도 화면 자체 없이 바로 캡처를 호출해야 한다"고 방향을 정정해 최종적으로는 그 방향으로 다시 구현했다.
+- `App.tsx`에 `captureActivityMission(mission)`을 추가해 `captureMissionPhoto`를 직접 호출한다. "현재 미션 수행" 클릭, 알림 딥링크, 사진 확인 화면의 "재촬영하기"가 모두 이 함수 하나를 공유한다. 성공하면 `ACTIVITY_CONFIRMATION`으로 전환하고, 실패/취소 시에는 화면 전환 없이 학생 홈에 남아 오류 문구만 보여준다(재촬영 실패 시에도 기존 사진 확인 화면에 그대로 머문다).
+- 더 이상 라우팅되지 않는 `ActivityMissionScreen` 컴포넌트, 전용 화면 값 `'ACTIVITY_MISSION'`(`features/app/appFlow.ts`의 `Screen` 유니언), 그 화면에서만 쓰이던 `assets/icons/viewfinder.svg`를 함께 제거했다(`.viewfinder-wrap` CSS 클래스 자체는 `ActivityConfirmation`의 사진 미리보기가 계속 쓰므로 유지).
+- 반려 재제출 안내 문구("반려 사유를 확인하고 다시 촬영해 주세요." / "사진이 흐릿합니다...")는 기존에 `ActivityMissionScreen`에만 있었는데, 그 화면 자체가 없어지면서 대체할 곳 없이 함께 제거됐다 — 토스트 등 새 알림 수단을 이 이슈 범위에서 새로 만들지는 않기로 했다(이슈 작성자 확인). `isResubmission` 플래그는 `App.tsx`에서 항상 `false`로만 채워지고 있어(`loadCurrentMission`) 실제로는 아직 트리거되지 않는 상태이기도 하다.
+- Figma MCP를 이번 세션에 연결할 수 없어 픽셀 단위 비교는 생략하고, 이슈에 적힌 요구사항 문구를 기준으로 판단했다.
+
+검증: `npm test`(42파일 279개 통과), `npm run lint`, `npm run build` 모두 통과.
+
 ## 학생 상세 미션 현황 및 Figma 레이아웃 (#180)
 
 - `TeacherStudents`의 학생 상세를 Figma T-04-1 구조(상단 뒤로가기, 학생 정보 카드, 위치 placeholder, 미션 현황 행)로 구성했다. 전화번호 API가 아직 없으므로 학생/학부모 `전화 걸기` 버튼은 비활성 UI만 제공하며 `tel:` 연결이나 번호 표시는 하지 않는다.
@@ -96,3 +107,30 @@
 - `MANUAL` 참가자는 `userId`가 없어 status-board와 연결할 수 없으므로 위치 미추적 안내만 보여 주고 미션 목록은 생략한다.
 
 검증: 프런트 `npm test`(41파일 259개), `npm run build` 통과.
+
+## 미션 종류 태그 색깔 미반영 수정 (#204)
+
+- `TeacherMissions.tsx`의 미션 리스트 카드가 `mission.type` 값과 무관하게 항상 `badge badge-type` 하나만 렌더링해, "활동"과 "출석 체크" 태그가 항상 같은 회색(`#eef1f7`/`#556`)으로 보이던 버그를 고쳤다.
+- `missionStatusBadgeClass`와 같은 패턴으로 `missionTypeBadgeClass(type)`를 추가해 `ACTIVITY` → `badge-type--activity`, `CHECK` → `badge-type--check` 클래스를 부여한다.
+- 이번 세션에는 Figma MCP 연결이 끊겨 있어 시안의 실제 색상 값을 조회하지 못했다. 대신 `index.css`에 이미 있는 두 가지 톤을 재사용했다: `badge-type--activity`는 `.upcoming-trip-badge`와 같은 계열의 앰버(연한 배경 `var(--color-accent-soft)` + 텍스트 `#a16207`), `badge-type--check`는 이 앱에 아직 없던 청색 계열(연한 배경 `rgb(59 130 246 / 12%)` + 텍스트 `#3b5bdb`)을 새로 추가했다. 둘 다 옆의 상태 배지(`badge-status-active`의 초록, `noti-badge`류의 빨강/주황)와 색이 겹치지 않도록 골랐다. 실제 Figma 값과 다를 수 있으므로 디자인 확인 시 재조정이 필요하다.
+
+검증: 프런트 `npx vitest run`(42파일 279개), `npm run lint`, `npm run build` 모두 통과.
+
+## 미션 시각 비교/표시가 오프셋 없는 서버 시각을 로컬로 잘못 해석하던 문제 수정 (#216)
+
+- Issue #191/PR #197이 "오프셋 없는 서버 ISO 시각은 UTC로 저장된 값으로 해석한다"는 계약(`shared/dateTime.ts`의 `parseServerDate`/`formatKoreanClock`)을 만들었지만, 학생 알림/교사 알림/위치 수신 시각에만 적용됐고 미션 쪽 두 파일은 여전히 `new Date(rawString)`을 직접 썼다. `Mission`/`MissionSubmission`의 `startAt`/`endAt`/`createdAt`이 모두 `LocalDateTime.now()`(오프셋 없음)라 위치/알림 시각과 동일한 패턴인데도 빠져 있었다.
+- `TeacherMissions.tsx`: `formatSubmittedAt`이 `new Date(submittedAt).getHours()/getMinutes()`로 실행 환경의 로컬 시간대를 그대로 읽어 UTC 원본 숫자를 표시하던 것을 `formatKoreanClock`으로 교체(항상 Asia/Seoul 기준). `missionDispatchStatus`(대기/진행중 판정)와 `formatCountdown`의 `remainingMs`(마감 카운트다운)는 `new Date(startAt/endAt)` 대신 `parseServerDate`로 절대 시점을 구해 비교하도록 고쳤다 — 두 함수 모두 "지금"은 여전히 `new Date()`/`Date.now()`를 그대로 쓴다(현재 시각 자체는 파싱 모호성이 없다).
+- `studentMissionSummary.ts`의 `isClosed` 판정(마감 시각과 비교해 미제출/진행 중을 가르는 로직)도 같은 이유로 `parseServerDate(board.mission.endAt)`로 교체.
+- 기존 `studentMissionSummary.test.ts`의 한 테스트가 `now` 인자를 오프셋 없이(`new Date('2026-08-26T10:00:00')`) 만들어 두고 있었다 — 수정 전에는 `endAt`도 같은 방식으로(로컬로) 파싱돼 우연히 상대적으로 일관됐지만, `endAt`을 절대 시점으로 고치면서 이 픽스처만 `now`에 `Z`를 명시하지 않으면 실행 환경 시간대에 따라 결과가 달라지는 상태였다 — `Z`를 붙여 명확한 절대 시점으로 교정했다.
+- 회귀 테스트는 `vi.setSystemTime`으로 "지금"을 고정하고, 이 개발 환경의 실제 시간대(Asia/Seoul)에서 수정 전 코드가 실제로 9시간 어긋난 결과를 내는 것을 먼저 확인(RED)한 뒤 고쳤다. vitest 4.1.11의 `useFakeTimers`는 `timezone` 옵션을 지원하지 않는다(타입에도 없고 런타임에서도 조용히 무시된다) — 실행 환경 자체의 시간대에 의존해서만 이 버그를 재현할 수 있었다는 뜻이며, `parseServerDate` 기반 수정 후에는 `Z` 접미사 덕에 실행 환경 시간대와 무관하게 항상 옳은 결과를 낸다.
+
+검증: 프런트 `npx vitest run`(42파일 286개 통과), `npm run lint`(0 errors — `export` 추가로 인한 `react-refresh/only-export-components` warning 3개는 기존에도 같은 패턴을 쓰는 다른 파일들처럼 파일 분리로 없앨 수 있으나 이번 수정 범위 밖으로 남겨둠), `npm run build` 모두 통과.
+
+## 출석 PIN 입력 박스 크기 붕괴 수정 (#218)
+
+- 모바일 뷰포트(375px)에서 `CheckMissionScreen`의 PIN 4칸이 60×70px 대신 6~8px로 극단적으로 작게 렌더링됐다. `InviteCodeScreen`(초대 코드 6칸)은 정상이라 `CheckMissionScreen`만의 문제로 좁혔다.
+- 원인: `CheckMissionScreen`의 `<form className="auth-form" style={{ justifyItems: 'center' }}>`가 버튼·문구를 가운데 정렬하려고 붙였는데, 이 때문에 자식 grid item `<Field>`가 기본 `stretch` 대신 `max-content`(자기 콘텐츠 크기)로 줄어든다. `.code-boxes-wrap { width: 100%; }` + `.code-box { flex: 1 1 0; max-width: Npx; }` 구조는 조상이 **정해진 너비**를 줄 때만 제대로 동작하는데, `.field`가 shrink-to-fit 되면서 `width: 100%`가 기준 삼을 너비 자체가 거의 0으로 순환 계산됐다(`flex-basis: 0`인 빈 박스는 조상의 shrink-to-fit 계산에 `max-width`가 아니라 자기 콘텐츠 크기로만 기여한다).
+- 브라우저에서 직접 계측: `.code-box` computed width가 6.7px(기대 60px). `.field { justify-self: stretch; }`를 임시로 걸어보니 즉시 60px로 복구되는 걸 확인한 뒤 그대로 `index.css`에 반영했다. `.code-box`를 다시 고정 `width`로 되돌리지 않은 이유는 `flex: 1 1 0 + max-width` 자체는 좁은 화면에서 안 넘치게 하려는 의도된 반응형 설계로 보여서, 그 설계는 유지하고 진짜 원인만 고쳤다.
+- `.field`는 폼 필드 전용 클래스라 `justify-self: stretch`가 항상 맞는 기본값이다 — `justifyItems:'center'`를 안 쓰는 다른 폼(로그인, 초대 코드 등)은 이미 기본값이 stretch라 이번 변경으로 영향받지 않는다.
+
+검증: `npm test`(42파일 281개 통과), `npm run lint`, `npm run build` 모두 통과. 로컬 백엔드+프론트로 학생 계정 로그인 → CHECK 미션 진입 → PIN 화면에서 박스 크기를 DevTools로 직접 측정해 확인(모바일 375px 뷰포트, 수정 전 6.7px → 수정 후 60px). jsdom은 실제 레이아웃 계산을 하지 않아 이 회귀를 잡는 자동 테스트는 추가하지 않았다 — 브라우저 실측으로 대체.

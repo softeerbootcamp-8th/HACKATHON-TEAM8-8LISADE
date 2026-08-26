@@ -1,3 +1,4 @@
+import { parseServerDate } from '../../shared/dateTime'
 import type { MissionStatusBoard } from '../../types/mission'
 
 export interface MissionCompletionSummary {
@@ -33,7 +34,7 @@ export function summarizeStudentMissionStatuses(
   return boards.map((board) => {
     const submission = board.submitted.find((student) => student.studentId === userId)
     const isMissing = board.notSubmitted.some((student) => student.studentId === userId)
-    const isClosed = Boolean(board.mission.completedAt) || (board.mission.endAt !== null && new Date(board.mission.endAt) <= now)
+    const isClosed = Boolean(board.mission.completedAt) || (board.mission.endAt !== null && parseServerDate(board.mission.endAt) <= now)
     const status: StudentMissionStatus = submission
       ? submission.late ? '지각' : '제출'
       : isMissing && isClosed ? '미제출' : '진행 중'

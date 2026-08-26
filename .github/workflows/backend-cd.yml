@@ -159,6 +159,9 @@ jobs:
 
       # FirebaseConfig는 자격증명이 없거나 잘못돼도 warn만 남기고 앱은 정상 기동한다 — 배포가
       # 초록불이어도 push가 조용히 안 나갈 수 있다는 뜻이라 별도로 확인한다 (#199).
+      # 콘솔 appender는 WARN 이상만 출력하므로(#144) `docker compose logs`(stdout)에는
+      # 성공 로그(INFO)가 찍히지 않는다. FILE appender가 쓰는 호스트 마운트 파일
+      # (~/app/logs/travel.log)을 직접 읽는다 (#213).
       - name: Verify Firebase Admin initialized
         uses: appleboy/ssh-action@v1.2.2
         with:
@@ -168,8 +171,9 @@ jobs:
           script: |
             set -euo pipefail
             cd ~/app
+            LOG_FILE=logs/travel.log
             for i in $(seq 1 15); do
-              LOGS=$(docker compose -f docker-compose.prod.yml logs backend 2>&1)
+              LOGS=$(cat "$LOG_FILE" 2>/dev/null || true)
               if echo "$LOGS" | grep -q "Firebase Admin initialized"; then
                 echo "Firebase Admin 초기화 확인됨."
                 exit 0

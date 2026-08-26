@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import TeacherMissions from './TeacherMissions'
+import TeacherMissions, { formatCountdown, formatSubmittedAt, missionDispatchStatus } from './TeacherMissions'
+import type { TeacherMission } from '../types/mission'
 
 type FetchResult = { success: boolean; data?: unknown; message?: string }
 type RouteResponse = { status?: number; body?: FetchResult }
@@ -51,6 +52,11 @@ describe('TeacherMissions', () => {
     expect(screen.getByText('2/5명 완료')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /15시 출발 버스 출석체크/ })).toBeInTheDocument()
     expect(screen.getByText('0/5명 완료')).toBeInTheDocument()
+
+    expect(screen.getByText('활동')).toHaveClass('badge-type--activity')
+    expect(screen.getByText('출석 체크')).toHaveClass('badge-type--check')
+    expect(screen.getByText('활동').className).not.toContain('badge-type--check')
+    expect(screen.getByText('출석 체크').className).not.toContain('badge-type--activity')
   })
 
   it('creates an activity mission and shows the end-time field only for activity missions', async () => {
@@ -221,5 +227,37 @@ describe('TeacherMissions', () => {
 
     expect(await screen.findByRole('heading', { name: '미션 리스트' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /15시 출발 버스 출석체크/ })).not.toBeInTheDocument()
+  })
+})
+
+const baseMission: TeacherMission = { id: 1, tripId: '1', title: '미션', description: '', type: 'ACTIVITY', startAt: null, endAt: null, pin: null, completedAt: null }
+
+describe('오프셋 없는 서버 시각 처리', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('formatSubmittedAt은 오프셋 없는 UTC 제출 시각을 한국 시간으로 표시한다', () => {
+    expect(formatSubmittedAt('2026-08-25T20:49:42.115219')).toBe('05:49')
+  })
+
+  it('formatSubmittedAt은 오프셋이 포함된 시각의 절대 시점을 보존한다', () => {
+    expect(formatSubmittedAt('2026-08-25T20:49:42+09:00')).toBe('20:49')
+  })
+
+  it('missionDispatchStatus는 기기 시간대와 무관하게 오프셋 없는 UTC 시작 시각을 올바르게 비교한다', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-26T01:00:00Z'))
+
+    const mission = { ...baseMission, startAt: '2026-08-26T02:00:00' }
+
+    expect(missionDispatchStatus(mission)).toBe('대기')
+  })
+
+  it('formatCountdown은 기기 시간대와 무관하게 오프셋 없는 UTC 마감 시각까지 남은 시간을 올바르게 계산한다', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-26T01:00:00Z'))
+
+    expect(formatCountdown('2026-08-26T02:30:00')).toBe('01:30')
   })
 })

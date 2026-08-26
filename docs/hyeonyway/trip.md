@@ -83,3 +83,12 @@
 - 활동/출석 fixture 모두에 `completedAt: null`을 추가해 실제 `teacherMissionApi` 변환 결과와 타입 계약을 일치시켰다. 프로덕션 타입 계약은 완화하지 않았다.
 
 검증: 프런트 `npm test`(41파일 273개), `npm run build` 통과.
+
+## 체험학습 상세 카드 텍스트 행간 조정 (#203)
+
+- `.trip-detail-card .label`/`.value`(날짜/장소/담당자/참여 학생 행)에 `line-height`가 전혀 없어 `장소`처럼 값이 길어 줄바꿈되면 브라우저 기본 행간으로 좁게 붙어 보였다. Figma MCP는 이번 세션에서 연결되지 않아 시안 수치를 직접 조회하지 못해, 코드베이스에 이미 있는 관례로 값을 정했다.
+- 두 규칙 모두 `line-height: 1.45`로 통일했다. `.noti-card-message`(13px/500/1.45), `.add-student-notice p:last-child`(12px/1.45), `.noti-toast-message`(13px/1.45) 등 카드형 보조/본문 텍스트에 이미 쓰이던 값과 맞춰 라벨·값이 한 행 안에서 같은 리듬을 갖게 했다.
+- `.trip-detail-card`는 READY/ACTIVE/FINISHED 모든 상세 화면이 공유하는 컴포넌트라 별도 상태 분기 없이 한 번의 CSS 수정으로 전 화면에 반영된다.
+- 실제 로그인 렌더링은 백엔드 계정 없이는 확인이 어려워, `frontend/src/index.css`를 그대로 불러와 실제 마크업 구조(`날짜`/`장소`/`담당자`/`참여 학생` 행, 긴 주소로 줄바꿈 유도)를 재현한 정적 HTML로 전/후를 비교해 레이아웃 깨짐이 없고 줄바꿈된 `장소` 값의 가독성이 개선됨을 스크린샷으로 확인했다.
+
+검증: `npx vitest run`(42 files, 279 passed), `npm run lint`, `npm run build` 통과.
