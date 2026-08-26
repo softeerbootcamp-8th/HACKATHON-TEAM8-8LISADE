@@ -4,6 +4,7 @@ export interface LocationOverrideState {
   enabled: boolean
   latitude: number | null
   longitude: number | null
+  defaultCenter: LocationPoint | null
 }
 
 export type LocationPoint = {

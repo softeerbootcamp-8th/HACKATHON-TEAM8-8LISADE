@@ -40,24 +40,30 @@ public class LocationController {
     }
 
     @GetMapping("/override")
-    public ApiResponse<LocationOverrideResponse> getOverride(HttpSession session) {
-        return ApiResponse.success(currentOverride(session));
+    public ApiResponse<LocationOverrideResponse> getOverride(Authentication authentication, HttpSession session) {
+        UserPrincipal user = (UserPrincipal) authentication.getPrincipal();
+        return ApiResponse.success(withDefaultCenter(currentOverride(session), user.userId()));
     }
 
     @PutMapping("/override")
-    public ApiResponse<LocationOverrideResponse> enableOverride(@Valid @RequestBody LocationOverrideRequest request,
+    public ApiResponse<LocationOverrideResponse> enableOverride(Authentication authentication,
+                                                               @Valid @RequestBody LocationOverrideRequest request,
                                                                HttpSession session) {
         // WebView와 Android 네이티브 요청이 같은 JSESSIONID를 쓰므로 세션에 둔 좌표 하나로 두 경로를 함께 제어한다.
         session.setAttribute(OVERRIDE_LATITUDE, request.latitude());
         session.setAttribute(OVERRIDE_LONGITUDE, request.longitude());
-        return ApiResponse.success(new LocationOverrideResponse(true, request.latitude(), request.longitude()));
+        UserPrincipal user = (UserPrincipal) authentication.getPrincipal();
+        LocationOverrideResponse override = new LocationOverrideResponse(true, request.latitude(), request.longitude(), null);
+        return ApiResponse.success(withDefaultCenter(override, user.userId()));
     }
 
     @DeleteMapping("/override")
-    public ApiResponse<LocationOverrideResponse> disableOverride(HttpSession session) {
+    public ApiResponse<LocationOverrideResponse> disableOverride(Authentication authentication, HttpSession session) {
         session.removeAttribute(OVERRIDE_LATITUDE);
         session.removeAttribute(OVERRIDE_LONGITUDE);
-        return ApiResponse.success(new LocationOverrideResponse(false, null, null));
+        UserPrincipal user = (UserPrincipal) authentication.getPrincipal();
+        LocationOverrideResponse override = new LocationOverrideResponse(false, null, null, null);
+        return ApiResponse.success(withDefaultCenter(override, user.userId()));
     }
 
     private LocationUpdateRequest applyOverride(HttpSession session, LocationUpdateRequest request) {
@@ -77,7 +83,14 @@ public class LocationController {
         BigDecimal latitude = (BigDecimal) session.getAttribute(OVERRIDE_LATITUDE);
         BigDecimal longitude = (BigDecimal) session.getAttribute(OVERRIDE_LONGITUDE);
         return latitude == null || longitude == null
-                ? new LocationOverrideResponse(false, null, null)
-                : new LocationOverrideResponse(true, latitude, longitude);
+                ? new LocationOverrideResponse(false, null, null, null)
+                : new LocationOverrideResponse(true, latitude, longitude, null);
+    }
+
+    private LocationOverrideResponse withDefaultCenter(LocationOverrideResponse override, Long userId) {
+        LocationOverrideResponse.DefaultCenter defaultCenter = locationService.findDefaultCenter(userId)
+                .map(location -> new LocationOverrideResponse.DefaultCenter(location.getLatitude(), location.getLongitude()))
+                .orElse(null);
+        return new LocationOverrideResponse(override.enabled(), override.latitude(), override.longitude(), defaultCenter);
     }
 }

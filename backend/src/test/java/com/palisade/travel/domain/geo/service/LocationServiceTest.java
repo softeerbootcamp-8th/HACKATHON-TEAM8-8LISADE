@@ -474,6 +474,56 @@ class LocationServiceTest {
                         .isEqualTo(LocationErrorCode.GEOFENCE_NOT_CONFIGURED));
     }
 
+    @Test
+    void 마지막으로_보고된_위치가_있으면_기본_중심좌표로_반환한다() {
+        // given
+        given(tripParticipantRepository.findFirstByUserIdOrderByCreatedAtDescIdDesc(USER_ID))
+                .willReturn(Optional.of(participant()));
+        CurrentLocation lastKnown = CurrentLocation.create(
+                USER_ID, TRIP_ID, new BigDecimal("37.5796000"), new BigDecimal("126.9770000"),
+                false, LocalDateTime.of(2026, 1, 1, 10, 0)
+        );
+        given(currentLocationRepository.findByUserIdAndTripId(USER_ID, TRIP_ID))
+                .willReturn(Optional.of(lastKnown));
+
+        // when
+        Optional<CurrentLocation> center = locationService.findDefaultCenter(USER_ID);
+
+        // then
+        assertThat(center).isPresent();
+        assertThat(center.get().getLatitude()).isEqualByComparingTo("37.5796000");
+        assertThat(center.get().getLongitude()).isEqualByComparingTo("126.9770000");
+    }
+
+    @Test
+    void 참여_중인_trip이_없으면_기본_중심좌표가_없다() {
+        // given
+        given(tripParticipantRepository.findFirstByUserIdOrderByCreatedAtDescIdDesc(USER_ID))
+                .willReturn(Optional.empty());
+
+        // when
+        Optional<CurrentLocation> center = locationService.findDefaultCenter(USER_ID);
+
+        // then
+        assertThat(center).isEmpty();
+        then(currentLocationRepository).should(never()).findByUserIdAndTripId(any(), any());
+    }
+
+    @Test
+    void 아직_보고된_위치가_없으면_기본_중심좌표가_없다() {
+        // given
+        given(tripParticipantRepository.findFirstByUserIdOrderByCreatedAtDescIdDesc(USER_ID))
+                .willReturn(Optional.of(participant()));
+        given(currentLocationRepository.findByUserIdAndTripId(USER_ID, TRIP_ID))
+                .willReturn(Optional.empty());
+
+        // when
+        Optional<CurrentLocation> center = locationService.findDefaultCenter(USER_ID);
+
+        // then
+        assertThat(center).isEmpty();
+    }
+
     private LocationUpdateRequest request() {
         return new LocationUpdateRequest(
                 new BigDecimal("37.0050000"),
