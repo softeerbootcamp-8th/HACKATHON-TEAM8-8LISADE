@@ -5,6 +5,7 @@ import TeacherMissions from '../../components/TeacherMissions'
 import TeacherStudents from '../../components/TeacherStudents'
 import { ScreenCard } from '../../shared/ui/ScreenCard'
 import { AppHeader } from '../../shared/ui/AppHeader'
+import { ListSkeleton } from '../../shared/ui/ListSkeleton'
 import { NotificationToast } from '../../shared/ui/NotificationToast'
 import { useForegroundNotifications } from '../../notifications/foregroundNotifications'
 import { TeacherNotifications } from './TeacherNotifications'
@@ -132,13 +133,13 @@ export function TeacherDashboard({ user, onLogout }: { user: CurrentUser; onLogo
         ? tripError
           ? <p className="management-state error" role="alert">{tripError}</p>
           : trips === null
-            ? <p className="management-state" role="status">체험학습 목록을 불러오는 중입니다.</p>
+            ? <ListSkeleton label="체험학습 목록을 불러오는 중입니다." />
             : <TeacherLocationMap trips={trips} />
       : <div className="teacher-body">
         {currentTrip && <div className="teacher-status-row"><h2>{currentTrip.title}</h2><span className={`status-pill ${currentTrip.status === 'ACTIVE' ? 'status-pill--success' : 'status-pill--neutral'}`}>{teacherTripStatusLabels[currentTrip.status]}</span></div>}
         {tab === 'HOME' && notice && <p className="notice" role="status">{notice}</p>}
         {tab === 'HOME' ? (
-          trips === null && !tripError ? <p className="hint" role="status">체험학습 목록을 불러오는 중입니다.</p>
+          trips === null && !tripError ? <ListSkeleton label="체험학습 목록을 불러오는 중입니다." />
           : trips !== null && trips.length === 0 ? <div className="home-empty">
             <img src={mascotLarge} alt="" className="start-mascot" />
             <p className="hint sub-copy" style={{ textAlign: 'center', margin: '16px 0 24px' }}>아직 예정된<br />현장체험학습이 없어요</p>
@@ -174,7 +175,7 @@ function ManagementTab({ user, trips, error, notice, onAdd, onSelect }: { user: 
       {error
         ? <p className="management-state error" role="alert">{error}</p>
         : trips === null
-          ? <p className="management-state" role="status">체험학습 목록을 불러오는 중입니다.</p>
+          ? <ListSkeleton label="체험학습 목록을 불러오는 중입니다." />
           : trips.length === 0
             ? <p className="management-state">아직 생성한 현장체험학습이 없습니다.</p>
             : trips.map((trip) => <button type="button" className="management-card" key={trip.id} onClick={() => onSelect(trip.id)}>

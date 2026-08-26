@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { teacherMissionApi } from '../api/missionApi'
 import { formatKoreanClock, parseServerDate } from '../shared/dateTime'
+import { ListSkeleton } from '../shared/ui/ListSkeleton'
 import type { MissionStatusBoard, MissionType, NotSubmittedStudent, TeacherMission } from '../types/mission'
 
 type View = { name: 'LIST' } | { name: 'REGISTER' } | { name: 'STATUS'; missionId: number }
@@ -82,7 +83,7 @@ export default function TeacherMissions({ tripId }: { tripId: string }) {
   if (view.name === 'STATUS') return <MissionStatusScreen missionId={view.missionId} onBack={() => setView({ name: 'LIST' })} onDeleted={async () => { await loadMissions(); setView({ name: 'LIST' }) }} />
 
   if (loadError) return <section aria-label="미션 관리"><h2>미션 리스트</h2><p className="error" role="alert">{loadError}</p></section>
-  if (missions === null) return <section aria-label="미션 관리"><h2>미션 리스트</h2><p className="hint" role="status">미션 목록을 불러오는 중입니다.</p></section>
+  if (missions === null) return <section aria-label="미션 관리"><h2>미션 리스트</h2><ListSkeleton label="미션 목록을 불러오는 중입니다." /></section>
 
   return <section aria-label="미션 관리">
     {notice && <p className="notice" role="status">{notice}</p>}
