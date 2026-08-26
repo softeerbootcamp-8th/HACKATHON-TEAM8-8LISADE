@@ -9,7 +9,6 @@ import { BackHeader } from '../../shared/ui/BackHeader'
 import { CodeBoxes } from '../../shared/ui/CodeBoxes'
 import mascotInvite from '../../assets/icons/mascot-invite.svg'
 import viewfinder from '../../assets/icons/viewfinder.svg'
-import previewPlaceholder from '../../assets/icons/preview-placeholder.svg'
 import mascotPin from '../../assets/icons/mascot-pin.svg'
 
 export type CurrentMission = StudentMission & { isResubmission: boolean }
@@ -87,8 +86,7 @@ export function ActivityConfirmation({ isResubmission, photoUri, onRetake, onSub
   }
   return <ScreenCard title="사진 확인">
     <BackHeader title={isResubmission ? '재촬영한 사진' : '촬영한 사진'} />
-    <div className="viewfinder-wrap"><img src={previewPlaceholder} alt="" aria-label="촬영한 사진 미리보기" /></div>
-    <p className="hint screen-pad" style={{ margin: '12px 0 24px' }}>{photoUri}</p>
+    <div className="viewfinder-wrap" style={{ paddingBottom: 24 }}><img src={photoUri} alt="촬영한 사진 미리보기" /></div>
     {error && <p className="error" role="alert">{error}</p>}
     <div className="confirm-actions"><button className="text-button" onClick={onRetake}>재촬영하기</button><button onClick={submit} disabled={submitting}>{submitting ? '제출 중...' : '제출하기'}</button></div>
   </ScreenCard>
