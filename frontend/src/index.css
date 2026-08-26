@@ -157,6 +157,8 @@ h2 { font-size: 17px; margin: 0; }
 .student-list-empty { color: var(--color-text-muted); font-size: 14px; padding: 8px 4px; }
 
 /* Student detail (T-04-1) */
+.student-detail-screen { min-height: 100%; }
+.student-detail-content { display: grid; gap: 20px; padding: 16px 16px 24px; }
 .detail-name-row { align-items: center; display: flex; gap: 8px; }
 .info-card { background: var(--color-surface); border-radius: 18px; box-shadow: var(--shadow-card); display: grid; gap: 10px; padding: 16px 18px; }
 .info-card-title { font-size: 15px; font-weight: 700; margin: 0; }
@@ -175,6 +177,12 @@ h2 { font-size: 17px; margin: 0; }
 .mini-map-caption { background: #fff; border-radius: 11px; box-shadow: var(--shadow-soft); font-size: 10px; color: var(--color-text-muted); font-weight: 500; left: 50%; padding: 3px 9px; position: absolute; top: 66%; transform: translateX(-50%); z-index: 1; }
 .mission-status-row { align-items: center; background: var(--color-surface); border-radius: 14px; display: flex; height: 50px; justify-content: space-between; padding: 0 14px 0 16px; }
 .mission-status-row p { font-size: 13px; font-weight: 500; margin: 0; }
+.mission-status-list { display: grid; gap: 10px; margin-top: 12px; }
+.mission-status-badge { border-radius: 8px; font-size: 11px; font-weight: 700; padding: 3px 8px; }
+.mission-status--submitted { background: var(--color-success-soft); color: var(--color-success); }
+.mission-status--late { background: var(--color-warning-soft); color: var(--color-warning); }
+.mission-status--missing { background: var(--color-danger-soft); color: var(--color-danger); }
+.mission-status--active { background: rgb(69 131 213 / 13%); color: #4583d5; }
 .end-trip-button { background: var(--color-danger-soft); box-shadow: none; color: var(--color-danger); margin-top: 8px; width: 100%; }
 .stat-grid { display: grid; gap: 10px; }
 .stat-card { background: var(--color-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-card); padding: 14px 16px; }
