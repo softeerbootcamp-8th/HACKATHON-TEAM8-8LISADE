@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from 'react'
-import { captureMissionPhoto } from '../../native/missionPhotoRecovery'
 import type { StudentMission } from '../../api/missionApi'
 import type { LocationTrackingState, StudentTrip } from '../../types/studentTrip'
 import { Field } from '../../shared/ui/Field'
@@ -8,7 +7,6 @@ import { AppHeader } from '../../shared/ui/AppHeader'
 import { BackHeader } from '../../shared/ui/BackHeader'
 import { CodeBoxes } from '../../shared/ui/CodeBoxes'
 import mascotInvite from '../../assets/icons/mascot-invite.svg'
-import viewfinder from '../../assets/icons/viewfinder.svg'
 import mascotPin from '../../assets/icons/mascot-pin.svg'
 import { LocationOverrideControl } from './LocationOverrideControl'
 
@@ -65,17 +63,6 @@ export function StudentHome({ trip, location, notice, currentMission, onCurrentM
       <dl className="trip-summary"><div><dt>미션 진행률</dt><dd>{trip.missionCompleted} / {trip.missionTotal}</dd></div></dl>
       {trip.hasSafetyWarning && <p className="error" role="alert">안전 구역 이탈이 감지되었습니다.</p>}
     </div>
-  </ScreenCard>
-}
-
-export function ActivityMissionScreen({ mission, onBack, onCaptured }: { mission: CurrentMission; onBack: () => void; onCaptured: (uri: string) => void }) {
-  const capture = async () => { const photo = await captureMissionPhoto(mission); onCaptured(photo.uri) }
-  return <ScreenCard title={mission.isResubmission ? '사진 미션 재제출' : '사진 미션'}>
-    <BackHeader title={mission.isResubmission ? '반려된 사진 미션' : mission.title} onBack={onBack} />
-    <p className="hint screen-pad" style={{ margin: '16px 0' }}>{mission.isResubmission ? '반려 사유를 확인하고 다시 촬영해 주세요.' : mission.description ?? '카메라로 촬영한 사진만 제출할 수 있습니다.'}</p>
-    {mission.isResubmission && <p className="error" role="alert">사진이 흐릿합니다. 대상이 잘 보이도록 다시 촬영해 주세요.</p>}
-    <div className="viewfinder-wrap"><img src={viewfinder} alt="" /></div>
-    <div className="shutter-row"><button type="button" className="shutter-button" aria-label="촬영하기" onClick={capture} /></div>
   </ScreenCard>
 }
 
