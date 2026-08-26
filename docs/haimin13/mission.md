@@ -30,3 +30,14 @@
 - tripId 배선: PR #52(#47)가 이미 만든 `teacherTripApi.getTrips()`로 로드한 실제 trip 목록 중 첫 번째를 미션 탭의 `tripId`로 사용하도록 `TeacherDashboard.tsx`를 수정했다. 홈 탭 상단의 "기준 Trip" 선택기와 통계 카드(참여 학생/정상 위치/미션 완료율 등)는 대응하는 실 API가 아직 없어서 기존 mock(`teacherTrips` 배열)을 그대로 뒀다 — 미션 탭의 `tripId`만 그 mock 선택과 독립적으로 실제 trip을 쓴다. 트립이 아직 없으면(신규 교사) "체험학습을 먼저 만들어 주세요." 안내만 보여준다.
 
 검증: `npm test`(vitest, 68개 전체 통과 — 교체된 `TeacherMissions.test.tsx` 5개, 신규 `teacherMissionApi.test.ts` 5개 포함), `npm run lint`, `npm run build` 모두 통과. 로컬 MySQL + 백엔드(local 프로필)를 직접 띄우고 curl로 교사 가입/로그인 → trip 생성 → 미션 생성(ACTIVITY/CHECK)/목록/PIN → 학생 가입/참여/PIN 제출 → 교사 현황판 조회/반려/대리완료/삭제까지 전 구간을 검증해 응답 모양이 프론트 가정과 정확히 일치함을 확인했다. 이어서 브라우저로 실제 로그인 후 미션 탭 → 현황판 → 반려 → 대리 완료까지 직접 클릭해 눈으로 확인했다.
+
+## 미션 제출 사진 조회용 presigned GET URL 발급 (#92)
+
+- `StoragePresigner`에 `presignGet(objectKey)`를 추가해 조회 경로를 업로드와 같은 경계에 뒀다. `S3StoragePresigner`는 `presignGetObject`로 서명하고, `local`/`test`의 `LocalStoragePresigner`는 업로드와 같은 `mock-storage` 주소를 돌려준다.
+- 서명 유효기간을 용도별로 분리했다 — 업로드 `UPLOAD_SIGNATURE_DURATION` 5분, 조회 `VIEW_SIGNATURE_DURATION` 30분. 교사가 현황판을 열어둔 채로 썸네일이 깨지는 걸 막기 위해서다. 업로드는 카메라 촬영 직후 바로 PUT 하는 흐름이라 창을 넓힐 이유가 없어 그대로 뒀다.
+- 새 엔드포인트는 만들지 않고 `GET /api/teacher/missions/{missionId}/status-board` 응답의 `submitted[]`에 `imageUrl`을 추가했다. 교사가 사진을 보는 화면이 현황판뿐이라, 개별 발급 엔드포인트를 두면 화면 진입마다 학생 수만큼 요청이 늘어난다. 대가로 URL 만료 시 현황판을 다시 조회해야 한다.
+- `imageKey`가 `null`인 경우뿐 아니라 **빈 문자열**일 때도 발급을 건너뛴다. `MissionSubmission.completedCheck()`/`completedByTeacher()`가 `imageKey`를 `""`로 저장하기 때문에(컬럼이 `nullable = false`) `null` 검사만 하면 빈 키로 무의미한 서명을 발급하게 된다. `isBlank()`로 걸러 `imageUrl`을 `null`로 내린다.
+- 프론트는 `TeacherMissions.tsx`의 회색 `photo-placeholder` div를 `imageUrl`이 있을 때 `<img>`로 분기하도록 바꿨다. `<img src>`로 표시만 하면 브라우저가 CORS를 요구하지 않으므로 버킷 CORS 설정 변경 없이 동작한다 — `fetch`로 blob을 받거나 canvas를 쓰는 구현으로 바뀌면 그때 버킷 CORS에 `GET`/`HEAD`를 추가해야 한다(현재 `PUT`만 등록되어 있음, `docs/hyeonyway/production-api-deployment.md`에 기록).
+- 운영 버킷은 비공개를 유지한다. public read로 여는 우회는 미성년자 얼굴·시각·장소가 결합된 사진이 인증 없이 영구 공개되고, `requireTeacher` 인가가 무의미해지며, 프론트 번들에 버킷명(AWS 계정 ID 포함)이 노출되어 채택하지 않았다.
+
+검증: `./gradlew build`(백엔드 전체 스위트 통과 — `MissionServiceTest`에 조회 URL 발급/사진 없는 제출은 `null`/담당 아닌 교사 거부 3개, `S3StoragePresignerTest`·`LocalStoragePresignerTest`에 GET 발급 각 1개 추가), `npm run lint`, `npm test`(27파일 156개 통과 — `TeacherMissions.test.tsx`에 사진 렌더링/placeholder 유지 2개 추가), `npm run build` 모두 통과.
