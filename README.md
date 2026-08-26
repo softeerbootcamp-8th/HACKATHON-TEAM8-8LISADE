@@ -16,22 +16,42 @@
 ## Tech Stack
 
 ### Frontend
-- React 19 + TypeScript, Vite
-- Capacitor (Android 앱 빌드, 카메라/푸시알림/위치 네이티브 연동)
-- Kakao Maps JS SDK (안전 구역 지도, 실시간 위치 지도)
-- Firebase (FCM 웹/앱 푸시 수신)
-- Vitest + Testing Library (테스트)
+
+![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
+![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white)
+![Capacitor](https://img.shields.io/badge/capacitor-119EFF.svg?style=for-the-badge&logo=capacitor&logoColor=white)
+![Kakao](https://img.shields.io/badge/kakao%20maps-ffcd00.svg?style=for-the-badge&logo=kakao&logoColor=000000)
+![Firebase](https://img.shields.io/badge/firebase-%23DD2C00.svg?style=for-the-badge&logo=firebase&logoColor=white)
+![Vitest](https://img.shields.io/badge/vitest-%23252529.svg?style=for-the-badge&logo=vitest&logoColor=FCC72B)
+![Testing Library](https://img.shields.io/badge/testinglibrary-%23E33332.svg?style=for-the-badge&logo=testing-library&logoColor=white)
+
+- Capacitor: Android 앱 빌드, 카메라/푸시알림/위치 네이티브 연동
+- Kakao Maps JS SDK: 안전 구역 지도, 실시간 위치 지도
+- Firebase: FCM 웹/앱 푸시 수신
 
 ### Backend
+
+![Spring Boot](https://img.shields.io/badge/spring%20boot-%236DB33F.svg?style=for-the-badge&logo=springboot&logoColor=white)
+![Spring Security](https://img.shields.io/badge/spring%20security-%236DB33F.svg?style=for-the-badge&logo=springsecurity&logoColor=white)
+![Java](https://img.shields.io/badge/java-%23ED8B00.svg?style=for-the-badge&logo=openjdk&logoColor=white)
+![MySQL](https://img.shields.io/badge/mysql-%234479A1.svg?style=for-the-badge&logo=mysql&logoColor=white)
+![Firebase](https://img.shields.io/badge/firebase-%23DD2C00.svg?style=for-the-badge&logo=firebase&logoColor=white)
+
 - Spring Boot 4 (Java 21)
-- Spring Security (세션 기반 인증)
+- Spring Security: 세션 기반 인증
 - Spring Data JPA + MySQL 8
-- AWS S3 (미션 제출 사진 저장)
-- Firebase Admin SDK (FCM 푸시 발송)
+- AWS S3: 미션 제출 사진 저장 (simple-icons에 AWS 로고가 없어 배지 생략)
+- Firebase Admin SDK: FCM 푸시 발송
 
 ### Infra / CI-CD
+
+![Vercel](https://img.shields.io/badge/vercel-%23000000.svg?style=for-the-badge&logo=vercel&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)
+![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
+
 - Frontend: Vercel (자동 배포, `/api/*` 요청은 Backend로 rewrite)
-- Backend: GitHub Actions → GHCR(Docker 이미지 push) → EC2 SSH 배포 (`docker compose`)
+- Backend: GitHub Actions → GHCR(Docker 이미지 push) → EC2 SSH 배포 (`docker compose`, Amazon EC2는 simple-icons에 로고가 없어 배지 생략)
 - GitHub Actions: Frontend CI / Backend CI / Android CI / iOS CI
 
 ## 서비스 아키텍처
