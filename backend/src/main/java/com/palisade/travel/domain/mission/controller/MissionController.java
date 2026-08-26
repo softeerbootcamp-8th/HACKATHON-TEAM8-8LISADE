@@ -29,7 +29,7 @@ public class MissionController {
     @GetMapping("/teacher/missions/{missionId}/pin")
     public ApiResponse<String> pin(@PathVariable Long missionId, @AuthenticationPrincipal UserPrincipal user) { return ApiResponse.success(missionService.getPin(missionId,user.userId())); }
     @PostMapping("/missions/{missionId}/photo-upload")
-    public ApiResponse<PresignedUploadResponse> preparePhoto(@PathVariable Long missionId, @AuthenticationPrincipal UserPrincipal user) { return ApiResponse.success(PresignedUploadResponse.from(missionService.preparePhotoUpload(missionId,user.userId()))); }
+    public ApiResponse<PresignedUploadResponse> preparePhoto(@PathVariable Long missionId, @AuthenticationPrincipal UserPrincipal user, @Valid @RequestBody PhotoUploadPrepareRequest request) { return ApiResponse.success(PresignedUploadResponse.from(missionService.preparePhotoUpload(missionId,user.userId(),request.contentType()))); }
     @PostMapping("/missions/{missionId}/submissions/photo")
     public ApiResponse<SubmissionResponse> submitPhoto(@PathVariable Long missionId, @AuthenticationPrincipal UserPrincipal user, @Valid @RequestBody PhotoSubmitRequest request) { return ApiResponse.success(SubmissionResponse.from(missionService.submitPhoto(missionId,user.userId(),request.objectKey()))); }
     @PostMapping("/missions/{missionId}/submissions/pin")
