@@ -47,6 +47,7 @@ public class FirebaseConfig {
                     .setHttpTransport(new NetHttpTransport())
                     .build();
             FirebaseApp.initializeApp(options);
+            log.info("Firebase Admin initialized from credentials-path={}", credentialsPath);
         } catch (IOException e) {
             log.warn("Failed to initialize Firebase from credentials-path={}; FCM push sending is disabled.",
                     credentialsPath, e);
