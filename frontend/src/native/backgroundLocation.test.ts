@@ -23,9 +23,10 @@ function createPlugin() {
 describe('백그라운드 위치 브리지', () => {
   afterEach(() => vi.useRealTimers())
 
-  it('Given 웹 위치 권한이 허용된 환경 When 위치 추적을 시작하면 Then 최신 GPS를 즉시 보내지 않고 10초마다 전송한다', async () => {
+  it('Given 웹 위치 권한이 허용된 환경 When 위치 추적을 시작하면 Then 같은 좌표도 새로운 보고 시각으로 10초마다 전송한다', async () => {
     // given
     vi.useFakeTimers()
+    vi.setSystemTime('2026-08-26T06:00:00.000Z')
     const plugin = createPlugin()
     const request = vi.fn().mockResolvedValue(new Response(null, { status: 200 }))
     const geolocation = browserGeolocation({
@@ -58,11 +59,16 @@ describe('백그라운드 위치 브리지', () => {
         latitude: 37.501,
         longitude: 127.001,
         accuracy: 8.2,
-        recordedAt: '2026-08-26T06:00:00.000Z',
+        recordedAt: '2026-08-26T06:00:10.000Z',
       }),
     })
     await vi.advanceTimersByTimeAsync(10_000)
     expect(request).toHaveBeenCalledTimes(2)
+    expect(JSON.parse(String(request.mock.calls[1][1]?.body))).toMatchObject({
+      latitude: 37.501,
+      longitude: 127.001,
+      recordedAt: '2026-08-26T06:00:20.000Z',
+    })
     expect(await bridge.getStatus()).toMatchObject({ lastSentAt: '방금 전' })
     expect(plugin.startTracking).not.toHaveBeenCalled()
   })

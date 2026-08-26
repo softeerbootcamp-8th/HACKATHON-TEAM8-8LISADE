@@ -104,7 +104,7 @@ function createBrowserBackgroundLocation(
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
           accuracy: position.coords.accuracy,
-          recordedAt: new Date(position.timestamp).toISOString(),
+          recordedAt: new Date().toISOString(),
         }),
       })
       if (activeGeneration !== generation) return status
