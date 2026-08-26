@@ -7,4 +7,4 @@
 - 내부 API 요청은 공통 `apiFetch`를 사용한다. 로그인 자격 증명 실패를 제외한 401 응답은 세션 만료 이벤트로 전달하고, `App`이 인증 상태와 네이티브 위치 추적 세션을 비운 뒤 로그인 화면으로 이동한다.
 - 외부 presigned 업로드와 로컬 사진 URI 요청은 서버 세션과 무관하므로 공통 401 처리에서 제외했다.
 
-검증: `frontend npm test` (32개 파일, 187개 테스트), `npm run lint`, `npm run build`, `backend ./gradlew test build`, `git diff --check`
+검증: `frontend npm test` (34개 파일, 202개 테스트), `npm run lint`, `npm run build`, `backend ./gradlew test build`, `git diff --check`
