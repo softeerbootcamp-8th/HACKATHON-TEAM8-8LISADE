@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { authApi } from './api/authApi'
 import { SESSION_EXPIRED_EVENT } from './api/httpClient'
 import { locationTrackingAdapter } from './api/locationTrackingApi'
-import { missionApi } from './api/missionApi'
+import { missionApi, type StudentMissionOverview } from './api/missionApi'
 import { studentTripApi } from './api/studentTripApi'
 import { resolvePostLoginScreen, type Screen } from './features/app/appFlow'
 import { LoginScreen, SignUpScreen, StartScreen } from './features/auth/AuthScreens'
@@ -13,6 +13,7 @@ import { PhotoSourceDialog } from './features/student/PhotoSourceDialog'
 import { TeacherDashboard } from './features/teacher/TeacherDashboard'
 import { pushNotifications } from './notifications/pushNotifications'
 import { captureMissionPhoto, clearPendingMissionPhoto, listenForRestoredMissionPhoto, type PhotoSource } from './native/missionPhotoRecovery'
+import { pollEverySecond } from './shared/pollEverySecond'
 import type { CurrentUser, SignUpInput } from './types/auth'
 import type { StudentNotification } from './types/notification'
 import type { LocationTrackingState, StudentTrip } from './types/studentTrip'
@@ -38,6 +39,7 @@ export default function App() {
   const [missionNotice, setMissionNotice] = useState('')
   const [currentMission, setCurrentMission] = useState<CurrentMission | null>(null)
   const [photoSourceMission, setPhotoSourceMission] = useState<CurrentMission | null>(null)
+  const studentTripId = studentTrip?.id
 
   useEffect(() => {
     let disposed = false
@@ -56,8 +58,7 @@ export default function App() {
   const showLogin = () => { setError(''); setScreen('LOGIN') }
   const showSignUp = () => { setError(''); setNotice(''); setScreen('SIGN_UP') }
 
-  const loadCurrentMission = useCallback(async (tripId: number) => {
-    const overview = await missionApi.getStudentMissionOverview(tripId)
+  const applyMissionOverview = useCallback((overview: StudentMissionOverview) => {
     const current = overview.currentMissions.map((mission) => ({ ...mission, isResubmission: false }))
     const next = current[0] ?? null
     setCurrentMission(next)
@@ -67,6 +68,10 @@ export default function App() {
     })
     return next
   }, [])
+
+  const loadCurrentMission = useCallback(async (tripId: number) => {
+    return applyMissionOverview(await missionApi.getStudentMissionOverview(tripId))
+  }, [applyMissionOverview])
 
   const enterAuthenticatedUser = useCallback(async (user: CurrentUser) => {
     setCurrentUser(user)
@@ -112,7 +117,7 @@ export default function App() {
   }, [enterAuthenticatedUser])
 
   useEffect(() => {
-    if (currentUser?.role !== 'STUDENT' || !studentTrip) return
+    if (currentUser?.role !== 'STUDENT' || studentTripId === undefined) return
 
     const refreshTrackingState = async () => {
       try {
@@ -139,15 +144,31 @@ export default function App() {
 
     const interval = window.setInterval(() => { void refreshTrackingState() }, 2_000)
     return () => window.clearInterval(interval)
-  }, [currentUser?.role, screen, showLoginForExpiredSession, studentTrip])
+  }, [currentUser?.role, screen, showLoginForExpiredSession, studentTripId])
 
   useEffect(() => {
-    if (currentUser?.role !== 'STUDENT' || !studentTrip) return
+    if (currentUser?.role !== 'STUDENT' || studentTripId === undefined) return
 
-    const tripId = studentTrip.id
-    const interval = window.setInterval(() => { void loadCurrentMission(tripId).catch(() => undefined) }, 1_000)
-    return () => window.clearInterval(interval)
-  }, [currentUser?.role, loadCurrentMission, studentTrip])
+    return pollEverySecond(
+      async () => {
+        const trip = await studentTripApi.getActiveTrip()
+        return trip ? missionApi.getStudentMissionOverview(trip.id) : null
+      },
+      (overview) => {
+        if (overview) {
+          applyMissionOverview(overview)
+          return
+        }
+        void locationTrackingAdapter.stopTracking().catch(() => undefined)
+        setStudentTrip(null)
+        setLocationState(null)
+        setCurrentMission(null)
+        setScreen('STUDENT_INVITE')
+      },
+      () => undefined,
+      false,
+    )
+  }, [applyMissionOverview, currentUser?.role, studentTripId])
 
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); setError('')

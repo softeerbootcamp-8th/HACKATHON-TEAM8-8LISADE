@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { teacherNotificationApi } from '../../api/teacherNotificationApi'
 import type { TeacherNotification } from '../../types/notification'
 import { formatKoreanNotificationTime } from '../../shared/dateTime'
+import { pollEverySecond } from '../../shared/pollEverySecond'
 import chevronLeft from '../../assets/icons/chevron-left.svg'
 
 /** 유형별 배지 라벨/스타일 (Figma T-07). 서버가 새 유형을 보내면 fallback으로 안전 처리. */
@@ -20,19 +21,17 @@ export function TeacherNotifications({ onBack, onSelect }: {
   const [notifications, setNotifications] = useState<TeacherNotification[] | null>(null)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    let active = true
-    teacherNotificationApi.list()
-      .then((list) => { if (active) setNotifications(list) })
-      .catch((caught) => { if (active) setError(caught instanceof Error ? caught.message : '알림을 불러오지 못했습니다.') })
-    return () => { active = false }
-  }, [])
+  useEffect(() => pollEverySecond(
+    () => teacherNotificationApi.list(),
+    (list) => { setNotifications(list); setError('') },
+    (caught) => setError(caught instanceof Error ? caught.message : '알림을 불러오지 못했습니다.'),
+  ), [])
 
   return <section aria-label="알림">
     <button type="button" className="noti-back" onClick={onBack}><img src={chevronLeft} alt="" />알림</button>
     {error && <p className="error" role="alert">{error}</p>}
     {!error && notifications === null && <p className="hint">알림을 불러오는 중…</p>}
-    {!error && notifications !== null && notifications.length === 0 && <p className="hint">새로운 알림이 없어요.</p>}
+    {notifications !== null && notifications.length === 0 && <p className="hint">새로운 알림이 없어요.</p>}
     {notifications !== null && notifications.length > 0 && <ul className="noti-list">
       {notifications.map((notification) => {
         const badge = badgeByType[notification.type] ?? fallbackBadge

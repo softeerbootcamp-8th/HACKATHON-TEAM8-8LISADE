@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const activeStudentTrip = {
   id: 1,
@@ -79,6 +79,7 @@ describe('App', () => {
     studentTripApiMock.getActiveTrip.mockReset().mockResolvedValue(null)
     studentTripApiMock.joinWithInviteCode.mockReset().mockImplementation(async (code: string) => {
       if (code.toUpperCase() !== 'AB1234') throw new Error('초대 코드를 확인해 주세요.')
+      studentTripApiMock.getActiveTrip.mockResolvedValue(activeStudentTrip)
       return activeStudentTrip
     })
     const tracking = { permission: 'GRANTED', locationEnabled: true, sendStatus: 'NORMAL', lastSentAt: '방금 전' }
@@ -109,6 +110,8 @@ describe('App', () => {
     missionPhotoRecoveryMock.listenForRestoredMissionPhoto.mockResolvedValue({ remove: vi.fn() })
     studentNotificationApiMock.list.mockReset().mockResolvedValue([])
   })
+
+  afterEach(() => vi.useRealTimers())
 
   it('shows the start screen before a session is established', () => {
     render(<App />)
@@ -573,6 +576,34 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: '위치 권한 필요' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '위치 권한 다시 확인' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '학생 홈' })).not.toBeInTheDocument()
+  })
+
+  it('Given_위치_권한이_차단된_학생_When_교사가_Trip을_종료하고_일초가_지나면_Then_참여_화면으로_이동한다', async () => {
+    // given
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    locationTrackingMock.startTracking.mockResolvedValue({
+      permission: 'DENIED',
+      locationEnabled: true,
+      sendStatus: 'NO_PERMISSION',
+      lastSentAt: null,
+      reason: 'PERMISSION_DENIED',
+    })
+    renderApp()
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'student01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+    await screen.findByRole('heading', { name: 'Trip 참여' })
+    fireEvent.change(screen.getByLabelText('초대 코드'), { target: { value: 'AB1234' } })
+    fireEvent.click(screen.getByRole('button', { name: '참여하기' }))
+    await screen.findByRole('heading', { name: '위치 권한 필요' })
+    studentTripApiMock.getActiveTrip.mockResolvedValue(null)
+
+    // when
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000) })
+
+    // then
+    expect(await screen.findByRole('heading', { name: 'Trip 참여' })).toBeInTheDocument()
+    expect(locationTrackingMock.stopTracking).toHaveBeenCalled()
   })
 
   it('Given 위치 권한이 차단된 학생 When 권한을 다시 허용하면 Then 학생 홈으로 이동한다', async () => {

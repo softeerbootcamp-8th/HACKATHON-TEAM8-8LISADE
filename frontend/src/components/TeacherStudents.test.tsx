@@ -1,5 +1,7 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { teacherMissionApi } from '../api/missionApi'
+import { teacherStudentApi } from '../api/teacherStudentApi'
 import TeacherStudents from './TeacherStudents'
 
 function jsonResponse(data: unknown, ok = true) {
@@ -39,7 +41,68 @@ function stubRoster(missionsResponse: unknown = [], statusBoards: Record<number,
 }
 
 describe('TeacherStudents', () => {
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); vi.useRealTimers() })
+
+  it('Given_정상인_학생_When_일초_뒤_이탈하면_Then_학생_목록의_상태를_반영한다', async () => {
+    // given
+    vi.useFakeTimers()
+    const normalStudent = { participantId: 3, userId: 22, name: '이서연', type: 'APP' as const, outside: false, lastSentAt: new Date().toISOString(), joinedAt: new Date().toISOString() }
+    vi.spyOn(teacherStudentApi, 'listStudents').mockResolvedValueOnce([normalStudent]).mockResolvedValue([{ ...normalStudent, outside: true }])
+    vi.spyOn(teacherMissionApi, 'listMissions').mockResolvedValue([])
+    render(<TeacherStudents tripId="5" />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(within(screen.getByRole('button', { name: /이서연/ })).queryByText('이탈')).not.toBeInTheDocument()
+
+    // when
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000) })
+
+    // then
+    expect(within(screen.getByRole('button', { name: /이서연/ })).getByText('이탈')).toBeInTheDocument()
+  })
+
+  it('Given_학생_상세의_정상_위치_When_일초_뒤_이탈하면_Then_현재_위치_상태를_반영한다', async () => {
+    // given
+    vi.useFakeTimers()
+    const normalStudent = { participantId: 3, userId: 22, name: '이서연', type: 'APP' as const, outside: false, lastSentAt: new Date().toISOString(), joinedAt: new Date().toISOString() }
+    vi.spyOn(teacherStudentApi, 'listStudents').mockResolvedValue([normalStudent])
+    vi.spyOn(teacherStudentApi, 'getStudentDetail').mockResolvedValueOnce(normalStudent).mockResolvedValue({ ...normalStudent, outside: true })
+    vi.spyOn(teacherMissionApi, 'listMissions').mockResolvedValue([])
+    render(<TeacherStudents tripId="5" />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    fireEvent.click(screen.getByRole('button', { name: /이서연/ }))
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(screen.getByLabelText('정상')).toBeInTheDocument()
+
+    // when
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000) })
+
+    // then
+    expect(screen.getByLabelText('이탈')).toBeInTheDocument()
+  })
+
+  it('Given_학생_상세의_진행중_미션_When_일초_뒤_제출하면_Then_미션_상태를_반영한다', async () => {
+    // given
+    vi.useFakeTimers()
+    const student = { participantId: 3, userId: 22, name: '이서연', type: 'APP' as const, outside: false, lastSentAt: new Date().toISOString(), joinedAt: new Date().toISOString() }
+    const mission = { id: 101, tripId: '5', title: '사진 미션', description: '', type: 'ACTIVITY' as const, startAt: null, endAt: null, pin: null, completedAt: null }
+    const missingBoard = { mission, totalStudentCount: 1, submitted: [], notSubmitted: [{ studentId: 22, studentName: '이서연', rejectionReason: null }] }
+    const submittedBoard = { mission, totalStudentCount: 1, submitted: [{ studentId: 22, studentName: '이서연', imageKey: 'photo.jpg', imageUrl: null, submittedAt: new Date().toISOString(), late: false }], notSubmitted: [] }
+    vi.spyOn(teacherStudentApi, 'listStudents').mockResolvedValue([student])
+    vi.spyOn(teacherStudentApi, 'getStudentDetail').mockResolvedValue(student)
+    vi.spyOn(teacherMissionApi, 'listMissions').mockResolvedValueOnce([]).mockResolvedValue([mission])
+    vi.spyOn(teacherMissionApi, 'getStatusBoard').mockResolvedValueOnce(missingBoard).mockResolvedValue(submittedBoard)
+    render(<TeacherStudents tripId="5" />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    fireEvent.click(screen.getByRole('button', { name: /이서연/ }))
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(screen.getByText('진행 중')).toBeInTheDocument()
+
+    // when
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000) })
+
+    // then
+    expect(screen.getByText('제출')).toBeInTheDocument()
+  })
 
   it('Given 학생 목록 응답이 대기 중일 때 When 학생 탭을 열면 Then 목록 스켈레톤을 보여준다', () => {
     // given

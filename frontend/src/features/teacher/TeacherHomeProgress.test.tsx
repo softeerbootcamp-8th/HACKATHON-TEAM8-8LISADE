@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TeacherHomeProgress } from './TeacherHomeProgress'
 import { teacherStudentApi } from '../../api/teacherStudentApi'
 import { teacherMissionApi } from '../../api/missionApi'
@@ -31,6 +31,8 @@ describe('TeacherHomeProgress', () => {
     })
   })
 
+  afterEach(() => vi.useRealTimers())
+
   it('Given 학생 목록 응답이 대기 중일 때 When 홈 현황을 열면 Then 목록 스켈레톤을 보여준다', () => {
     // given
     vi.mocked(teacherStudentApi.listStudents).mockReturnValue(new Promise(() => {}))
@@ -40,6 +42,24 @@ describe('TeacherHomeProgress', () => {
 
     // then
     expect(screen.getByRole('status', { name: '확인이 필요한 학생 목록을 불러오는 중입니다.' })).toHaveClass('list-skeleton')
+  })
+
+  it('Given_정상이던_학생_When_일초_뒤_이탈하면_Then_확인_필요_목록에_반영한다', async () => {
+    // given
+    vi.useFakeTimers()
+    vi.mocked(teacherStudentApi.listStudents)
+      .mockResolvedValueOnce(roster.map((student) => ({ ...student, outside: false })))
+      .mockResolvedValue(roster)
+    vi.mocked(teacherMissionApi.getStatusBoard).mockResolvedValue({ mission, totalStudentCount: 3, submitted: [], notSubmitted: [] })
+    render(<TeacherHomeProgress tripId="7" onViewStudents={vi.fn()} />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(screen.queryByRole('button', { name: /김하늘.*이탈/ })).not.toBeInTheDocument()
+
+    // when
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000) })
+
+    // then
+    expect(screen.getByRole('button', { name: /김하늘.*이탈/ })).toBeInTheDocument()
   })
 
   it('이탈·미완료 학생을 확인이 필요한 학생 목록으로 보여준다', async () => {

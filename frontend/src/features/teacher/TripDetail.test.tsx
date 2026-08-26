@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { TeacherMission } from '../../types/mission'
 import type { TeacherTrip } from '../../types/teacherTrip'
 
@@ -40,6 +40,25 @@ describe('TripDetail', () => {
     vi.mocked(teacherTripApi.start).mockReset()
     vi.mocked(teacherTripApi.delete).mockReset()
     vi.mocked(teacherMissionApi.listMissions).mockReset().mockResolvedValue([])
+  })
+
+  afterEach(() => vi.useRealTimers())
+
+  it('Given_참여_학생이_없는_Trip_When_일초_뒤_학생이_참여하면_Then_인원수를_반영한다', async () => {
+    // given
+    vi.useFakeTimers()
+    vi.mocked(teacherTripApi.getParticipants)
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([{ id: 1, userId: 20, name: '김학생', type: 'APP', createdAt: '2026-08-25T09:00:00' }])
+    render(<TripDetail trip={activeTrip} teacherName="고심" onBack={vi.fn()} onAddStudent={vi.fn()} onStarted={vi.fn()} onDeleted={vi.fn()} onFinished={vi.fn()} />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(screen.getByText('0명')).toBeInTheDocument()
+
+    // when
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000) })
+
+    // then
+    expect(screen.getByText('1명')).toBeInTheDocument()
   })
 
   it('예정 상태 체험학습은 초대 코드 대신 시작하기·삭제하기 버튼을 보여준다', async () => {
