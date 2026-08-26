@@ -121,3 +121,30 @@
 - `SM_S911N` 실측: ACTIVE Trip 재로그인 후 `12:15:05`부터 `12:15:55`까지
   약 10초 간격으로 6회 전송되었고 모두 HTTP 200 응답 확인
 - `git diff --check`: 통과
+
+## Issue #130: 웹 GPS 전송과 공통 수동 위치 모드
+
+- 브라우저는 `navigator.geolocation.watchPosition`으로 받은 좌표·정확도·측정
+  시각을 기존 `POST /api/student/locations`로 전송한다. 권한 거부, 15초 위치
+  획득 제한, 전송 실패, 401 세션 만료, 410 Trip 종료를 기존 위치 상태 모델에
+  반영하며 중지·로그아웃 뒤 늦게 끝난 요청이 추적 상태를 되살리지 않게 한다.
+- `GET/PUT/DELETE /api/student/locations/override`는 수동 위치 상태를 조회·활성화·
+  해제한다. 선택 좌표는 로그인 세션에 저장하므로 같은 `JSESSIONID`를 쓰는 웹과
+  Android 요청에 공통 적용되고 로그아웃 시 함께 제거된다.
+- 수동 위치를 켜면 정확도 0의 좌표를 즉시 저장하고, 이후 실제 GPS 요청도 같은
+  좌표로 치환한 뒤 기존 `LocationService`의 저장·지오펜스 판정·SSE 흐름을
+  그대로 사용한다. 해제 뒤에는 다음 GPS 좌표부터 자동 위치로 복귀한다.
+- 학생 홈의 `위치 조작 설정`은 네이티브 `<dialog>`와 기존 Kakao Maps 로더를
+  사용한다. 지도 클릭 후보를 마커·좌표로 확인해 저장하며, 활성 상태에서는 같은
+  다이얼로그에서 자동 위치로 복귀할 수 있다.
+- Android 네이티브 위치 서비스와 DB schema는 변경하지 않았다.
+
+### 검증
+
+- `./gradlew test`: 백엔드 154개 테스트 통과
+- `npm test`: 프론트 39개 파일, 233개 테스트 통과
+- `npm run lint`, `npm run build`, `npm run mobile:android`: 통과
+- `./gradlew testDebugUnitTest assembleDebug`: Android 14개 테스트와 디버그 APK 조립 통과
+- Browser 합성 좌표 QA: 390×844 모바일·기본 데스크톱에서 다이얼로그 열기,
+  지도 선택, 저장, 수동 상태 표시, 자동 위치 복귀와 콘솔 오류 없음 확인
+- `git diff --check`: 통과
