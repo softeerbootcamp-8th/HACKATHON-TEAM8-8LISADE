@@ -76,3 +76,10 @@
 - 프론트 `TripDetail.tsx`에서 "코드 재발급" 버튼과 `teacherTripApi.reissueInviteCode`를 제거했다. `InviteCodeResponse`/`InviteCode` 타입에서 `expiresAt` 필드도 뺐다.
 
 검증: `cd backend && ./gradlew test` 전체 통과, `cd frontend && npm run lint && npx vitest run && npm run build` 통과(38 files, 235 passed).
+
+## TripDetail 미션 fixture 타입 불일치 수정 (#185)
+
+- `TeacherMission.completedAt`이 필수 필드로 추가된 뒤 `TripDetail.test.tsx`의 종료된 체험학습 미션 fixture 두 개가 이전 구조를 유지해 TypeScript 빌드를 막고 있었다.
+- 활동/출석 fixture 모두에 `completedAt: null`을 추가해 실제 `teacherMissionApi` 변환 결과와 타입 계약을 일치시켰다. 프로덕션 타입 계약은 완화하지 않았다.
+
+검증: 프런트 `npm test`(41파일 273개), `npm run build` 통과.

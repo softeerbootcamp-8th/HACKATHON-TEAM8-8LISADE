@@ -45,21 +45,26 @@ public class Mission {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
     public static Mission create(Long tripId, String title, String description, MissionType type,
                                  LocalDateTime startAt, LocalDateTime endAt) {
-        return new Mission(null, tripId, title, description, type, null, startAt, endAt, LocalDateTime.now());
+        return new Mission(null, tripId, title, description, type, null, startAt, endAt, LocalDateTime.now(), null);
     }
 
     public static Mission createCheck(Long tripId, String title, String description,
                                       LocalDateTime startAt, LocalDateTime endAt, String pin) {
-        return new Mission(null, tripId, title, description, MissionType.CHECK, pin, startAt, endAt, LocalDateTime.now());
+        return new Mission(null, tripId, title, description, MissionType.CHECK, pin, startAt, endAt, LocalDateTime.now(), null);
     }
 
     public boolean isAccessibleAt(LocalDateTime now) { return startAt == null || !startAt.isAfter(now); }
     public boolean isExpiredAt(LocalDateTime now) { return endAt != null && now.isAfter(endAt); }
     public boolean matchesPin(String pin) { return attendancePin != null && attendancePin.equals(pin); }
+    public boolean isCompleted() { return completedAt != null; }
     public void change(String title, String description, LocalDateTime startAt, LocalDateTime endAt) {
         this.title = title; this.description = description; this.startAt = startAt; this.endAt = endAt;
     }
+    public void complete(LocalDateTime now) { this.completedAt = now; }
 
 }

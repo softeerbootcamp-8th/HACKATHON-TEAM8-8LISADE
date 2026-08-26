@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { ReactElement } from 'react'
 import { teacherTripApi } from '../../api/teacherTripApi'
 import TeacherMissions from '../../components/TeacherMissions'
 import TeacherStudents from '../../components/TeacherStudents'
@@ -10,11 +11,7 @@ import { TeacherNotifications } from './TeacherNotifications'
 import type { TeacherNotification } from '../../types/notification'
 import type { CurrentUser } from '../../types/auth'
 import type { TeacherTrip, TeacherTripStatus } from '../../types/teacherTrip'
-import icHome from '../../assets/icons/ic-home.svg'
-import icStudents from '../../assets/icons/ic-students.svg'
-import icMission from '../../assets/icons/ic-mission.svg'
-import icPin from '../../assets/icons/ic-pin.svg'
-import icSliders from '../../assets/icons/ic-sliders.svg'
+import { HomeIcon, MissionIcon, PinIcon, SlidersIcon, StudentsIcon } from './TeacherTabIcons'
 import mascotLarge from '../../assets/icons/mascot-large.svg'
 import { TripCreationFlow } from './TripCreationFlow'
 import { AddStudentForm, TripDetail } from './TripDetail'
@@ -24,12 +21,12 @@ import { TeacherHomeProgress } from './TeacherHomeProgress'
 type TeacherTab = 'HOME' | 'STUDENTS' | 'MISSIONS' | 'LOCATION' | 'MANAGE'
 type ManageView = { name: 'LIST' } | { name: 'CREATE' } | { name: 'DETAIL'; tripId: number } | { name: 'ADD_STUDENT'; tripId: number }
 
-const tabs: Array<{ id: TeacherTab; label: string; icon: string }> = [
-  { id: 'HOME', label: '홈', icon: icHome },
-  { id: 'STUDENTS', label: '학생', icon: icStudents },
-  { id: 'MISSIONS', label: '미션', icon: icMission },
-  { id: 'LOCATION', label: '위치', icon: icPin },
-  { id: 'MANAGE', label: '관리', icon: icSliders },
+const tabs: Array<{ id: TeacherTab; label: string; Icon: () => ReactElement }> = [
+  { id: 'HOME', label: '홈', Icon: HomeIcon },
+  { id: 'STUDENTS', label: '학생', Icon: StudentsIcon },
+  { id: 'MISSIONS', label: '미션', Icon: MissionIcon },
+  { id: 'LOCATION', label: '위치', Icon: PinIcon },
+  { id: 'MANAGE', label: '관리', Icon: SlidersIcon },
 ]
 const teacherTripStatusLabels: Record<TeacherTripStatus, string> = {
   READY: '대기',
@@ -52,6 +49,8 @@ export function TeacherDashboard({ user, onLogout }: { user: CurrentUser; onLogo
   const { toast, hasUnread, dismissToast, markRead } = useForegroundNotifications()
   const activeTripId = trips && trips.length > 0 ? String(trips[0].id) : null
   const currentTrip = trips?.find((candidate) => candidate.status === 'ACTIVE') ?? null
+  // 진행 중인 체험학습이 있으면 홈은 진행 현황을 보여주므로(Figma T-02 진행중) 다가오는 카드는 계산하지 않는다.
+  const upcomingTrips = currentTrip ? [] : (trips ?? []).filter((candidate) => candidate.status === 'READY').sort(byStartAtAscending)
 
   const refreshTrips = () => teacherTripApi.getTrips()
     .then((loadedTrips) => { setTrips(loadedTrips); setTripError(''); return loadedTrips })
@@ -151,6 +150,12 @@ export function TeacherDashboard({ user, onLogout }: { user: CurrentUser; onLogo
             onViewStudents={() => setTab('STUDENTS')}
             onFinished={async () => { await refreshTrips(); setNotice('현장체험학습을 종료했습니다.') }}
           />
+          : upcomingTrips.length > 0 ? <UpcomingTrips
+            trips={upcomingTrips}
+            teacherName={user.name}
+            onStarted={async () => { await refreshTrips(); setNotice('현장체험학습을 시작했습니다.') }}
+            onSelect={(selectedTripId) => { setTab('MANAGE'); setManageView({ name: 'DETAIL', tripId: selectedTripId }) }}
+          />
           : <p className="hint">진행 중인 현장체험학습이 없습니다. 예정된 체험학습의 시작을 기다리는 중이에요.</p>
         ) : tab === 'STUDENTS'
           ? (activeTripId ? <TeacherStudents key={activeTripId} tripId={activeTripId} /> : <section className="stat-card"><p className="hint">체험학습을 먼저 만들어 주세요.</p></section>)
@@ -158,7 +163,7 @@ export function TeacherDashboard({ user, onLogout }: { user: CurrentUser; onLogo
           ? (activeTripId ? <TeacherMissions key={activeTripId} tripId={activeTripId} /> : <section className="stat-card"><p className="hint">체험학습을 먼저 만들어 주세요.</p></section>)
           : <section className="stat-card"><p className="hint">{tabs.find((item) => item.id === tab)?.label}</p><p>{currentTrip?.title ?? ''} 기준 화면입니다.</p></section>}
       </div>}
-    <nav aria-label="교사 하단 탭" className="teacher-tabs">{tabs.map((item) => <button key={item.id} onClick={() => setTab(item.id)} aria-pressed={tab === item.id}><img src={item.icon} alt="" />{item.label}</button>)}</nav>
+    <nav aria-label="교사 하단 탭" className="teacher-tabs">{tabs.map((item) => <button key={item.id} onClick={() => setTab(item.id)} aria-pressed={tab === item.id}><item.Icon />{item.label}</button>)}</nav>
   </ScreenCard>
 }
 
@@ -181,6 +186,77 @@ function ManagementTab({ user, trips, error, notice, onAdd, onSelect }: { user: 
     {notice && <p className="add-notice" role="status">{notice}</p>}
     <button type="button" className="add-trip-button" aria-label="현장체험학습 추가하기" onClick={onAdd}>+ 현장체험학습 추가하기</button>
   </section>
+}
+
+/** 다가오는 현장체험학습 카드 목록 (Figma T-02 홈 — 예정). 진행 중인 체험학습이 없을 때만 노출된다. */
+function UpcomingTrips({ trips, teacherName, onStarted, onSelect }: {
+  trips: TeacherTrip[]
+  teacherName: string
+  onStarted: () => Promise<void>
+  onSelect: (tripId: number) => void
+}) {
+  const [startingTripId, setStartingTripId] = useState<number | null>(null)
+  const [error, setError] = useState('')
+
+  // 시작은 단방향 전이(§10.2)이고 TripDetail의 시작 버튼과 같은 API를 쓴다.
+  const start = async (tripId: number) => {
+    setError('')
+    setStartingTripId(tripId)
+    try {
+      await teacherTripApi.start(tripId)
+      await onStarted()
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : '현장체험학습 시작에 실패했습니다.')
+      setStartingTripId(null)
+    }
+  }
+
+  return <section className="upcoming-trips" aria-label="다가오는 현장체험학습">
+    <h2>다가오는 현장체험학습</h2>
+    {error && <p className="error" role="alert">{error}</p>}
+    {trips.map((trip) => <article className="upcoming-trip-card" key={trip.id}>
+      <button type="button" className="upcoming-trip-summary" aria-label={`${trip.title} 상세 보기`} onClick={() => onSelect(trip.id)}>
+        <span className="upcoming-trip-chips">
+          <span className="upcoming-trip-badge">예정</span>
+          <span className="upcoming-trip-dday">{formatDday(trip.startAt)}</span>
+        </span>
+        <h3>{trip.title}</h3>
+        <span className="upcoming-trip-meta"><span className="label">날짜</span><span className="value">{formatTripSchedule(trip.startAt)}</span></span>
+        <span className="upcoming-trip-meta"><span className="label">장소</span><span className="value">{trip.place}</span></span>
+        <span className="upcoming-trip-meta"><span className="label">담당자</span><span className="value">{teacherName} 선생님</span></span>
+      </button>
+      <button type="button" className="upcoming-trip-start" onClick={() => { void start(trip.id) }} disabled={startingTripId === trip.id}>
+        {startingTripId === trip.id ? '시작하는 중...' : '시작하기'}
+      </button>
+    </article>)}
+  </section>
+}
+
+function byStartAtAscending(left: TeacherTrip, right: TeacherTrip) {
+  if (!left.startAt) return 1
+  if (!right.startAt) return -1
+  return left.startAt.localeCompare(right.startAt)
+}
+
+/** 오늘 자정 기준 남은 일수. 시각이 아니라 날짜 차이로 세야 "오늘 09:00 시작"이 D-DAY가 된다. */
+function formatDday(startAt: string | null) {
+  if (!startAt) return '일정 미정'
+  const startDate = new Date(startAt)
+  if (Number.isNaN(startDate.getTime())) return '일정 미정'
+  const today = new Date()
+  const daysLeft = Math.round((new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()).getTime()
+    - new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()) / 86_400_000)
+  if (daysLeft === 0) return 'D-DAY'
+  return daysLeft > 0 ? `D-${daysLeft}` : `D+${-daysLeft}`
+}
+
+/** 체험학습은 일자 단위로만 만들어지므로(생성 화면이 일자만 받는다) 날짜와 요일까지만 보여준다. */
+function formatTripSchedule(startAt: string | null) {
+  if (!startAt) return '일정 미정'
+  const date = new Date(startAt)
+  if (Number.isNaN(date.getTime())) return '일정 미정'
+  const weekday = new Intl.DateTimeFormat('ko-KR', { weekday: 'short' }).format(date)
+  return `${formatTripDate(startAt)} (${weekday})`
 }
 
 function formatPhoneNumber(phoneNumber: string | null) {

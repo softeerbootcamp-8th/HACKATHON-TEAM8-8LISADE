@@ -58,3 +58,41 @@
 - 네이티브 Android/iOS 빌드는 이미 실제 네이티브 카메라 API를 쓰므로 이 변경과 무관하다.
 
 검증: `npm test`(37파일 225개 통과), `npm run lint`, `npm run build` 모두 통과. 로컬 백엔드+프론트를 직접 띄우고 학생 계정으로 로그인해 실제 미션 촬영 화면에서 셔터를 눌러 pwa-camera-modal이 뜨는 것과 "No camera found" 처리, 취소 후 정상 복귀를 브라우저로 직접 확인했다.
+
+## 미션 수동 완료 처리 (#168)
+
+- 마감(`endAt`)이 지나도 미션이 "진행중"으로 계속 표시되고, 교사가 직접 종료할 방법이 없던 문제를 해결했다. `Mission`에 `completedAt`(nullable) 필드와 `complete()`/`isCompleted()`를 추가했다 — 별도 status enum 대신 시각 필드로 완료 여부를 표현한다.
+- `POST /api/teacher/missions/{missionId}/complete`(`MissionService.complete`)를 추가했다. 담당 교사만 호출 가능하고, 이미 완료된 미션을 다시 완료 처리하면 `MISSION_ALREADY_COMPLETED`로 거부한다.
+- 완료된 미션은 학생이 더 이상 접근할 수 없다 — 기존 `requireAccessible()`(제출/PIN 검증/사진 presign이 모두 거치는 단일 지점)에 `mission.isCompleted()` 체크를 추가해 한 곳 수정으로 전부 막았다. `getCurrentStudentMissions`도 완료된 미션을 목록에서 제외한다.
+- `MissionResponse`에 `completedAt`을 실어 프론트에 노출한다.
+- 프론트: `missionDispatchStatus`가 `완료` 상태를 추가로 반환하고(대기/진행중/완료 3종), 리스트·현황판 뱃지에 반영된다. `MissionStatusScreen`에 "완료 처리하기" 버튼 + 확인 모달(기존 삭제하기 확인 패턴과 동일한 2단계 확인 UX)을 추가했다. 완료된 미션에서는 "완료 처리하기", "대리 완료", "반려" 버튼이 모두 사라진다(읽기 전용 현황판).
+- 자료 내보내기, 마감 시각 기준 자동 완료 전환은 이번 범위에서 다루지 않는다.
+
+검증: 백엔드 `MissionServiceTest`에 4개 케이스 추가(수동 완료, 중복 완료 거부, 완료된 미션 학생 접근 차단, 완료된 미션이 학생 현재 미션 목록에서 제외) 후 `./gradlew test` 전체 통과. 프론트 `TeacherMissions.test.tsx`에 완료 처리 플로우 테스트 추가 후 `npm test`(41파일 256개), `npm run lint` 모두 통과.
+
+## 반려된 미션 제출 이미지 S3 삭제 (#172)
+
+- 교사가 사진 제출을 반려해도 `MissionService.reject()`는 상태만 `REJECTED`로 바꾸고 S3 object는 그대로 방치됐다. 재제출(`resubmit`) 시에도 DB의 `imageKey`만 새 값으로 덮어써서, 반려된 이전 이미지는 버킷에 영구히 고아로 남아 있었다.
+- `StoragePresigner`에 `deleteObject(String objectKey)`를 추가했다. `S3StoragePresigner`는 새로 주입받은 `S3Client`(presigner와 별개, 실제 delete 호출용)로 `DeleteObjectRequest`를 실행한다. `S3Exception`은 잡아서 로그만 남기고 삼킨다 — 반려는 DB 상태 변경이 핵심이고 S3 정리는 부가 작업이므로, 삭제 실패가 반려 트랜잭션 자체를 막으면 안 된다. `LocalStoragePresigner`는 no-op.
+- `S3PresignerConfig`에 `S3Client` 빈을 추가했다(`DefaultCredentialsProvider` 재사용, 기존 `S3Presigner`와 동일한 자격 증명 체인).
+- `MissionService.reject()`에서 `submission.reject(reason)` 직후 `imageKey`가 비어있지 않을 때만(`CHECK` 미션은 imageKey가 빈 문자열) `deleteObject`를 호출한다.
+
+검증: `./gradlew test`(`S3StoragePresignerTest`에 delete 성공/예외 삼킴 케이스 추가, `MissionServiceTest`에 반려 시 삭제 호출/미호출 케이스 추가), `./gradlew build` 모두 통과.
+
+## 완료한 미션이 현재 미션 목록에 계속 남던 버그 수정 (#176)
+
+- 원인은 두 가지였다.
+  1. `MissionService.getCurrentStudentMissions()`가 `Mission.isAccessibleAt(now)`만 필터링하고, 해당 학생이 이미 제출했는지(`MissionSubmission.status == COMPLETED`)는 전혀 확인하지 않았다. 사진 제출·PIN 인증 모두 성공 시 즉시 `COMPLETED`로 저장되는데, `/api/trips/{tripId}/missions/current`가 이를 무시하고 트립의 접근 가능한 미션을 그대로 반환해서, 새로고침·재로그인·20초 폴링마다 이미 완료한 미션이 다시 나타났다.
+  2. 프론트 `App.tsx`에서 출석체크(`CHECK_MISSION`) 완료 콜백이 `setCurrentMission(null)`로 무조건 초기화했다. 사진 미션 제출 콜백은 로컬에 캐시해 둔 `availableMissions` 배열에서 다음 미션을 찾아 넘어갔는데(그마저도 3개 이상 미션이 연쇄될 때는 stale 배열 때문에 이미 끝낸 미션으로 되돌아갈 수 있는 잠재 결함이 있었다), 출석체크는 이 로직조차 없었다.
+- 백엔드: `MissionSubmissionRepository`에 `findByMissionIdInAndUserId(missionIds, userId)`를 추가하고, `getCurrentStudentMissions`가 접근 가능한 미션 중 이 학생이 `COMPLETED`로 제출한 것만 제외하도록 했다. `REJECTED`는 그대로 남겨 재제출이 가능하다.
+- 프론트: 사진 제출·PIN 인증 콜백 둘 다 로컬 배열을 뒤지는 대신 기존에 있던 `loadCurrentMission(tripId)`(알림 딥링크 처리에서 이미 쓰던 함수)를 다시 호출해 서버에서 최신 목록을 받아오도록 통일했다. 이제 백엔드가 완료된 미션을 걸러주므로, 프론트는 단순히 다시 물어보기만 하면 되고 "다음 미션이 뭔지" 스스로 추론할 필요가 없다 — 위 잠재 결함도 이 통일로 함께 없어졌다. 더 이상 아무도 읽지 않는 `availableMissions` state는 제거했다.
+
+검증: 백엔드 `MissionServiceTest`에 2개 케이스 추가(완료한 미션 제외, 반려된 미션은 재제출 가능하도록 유지) 후 `./gradlew test` 전체 통과. 프론트 `App.test.tsx`에 출석체크 완료 후 다음 미션으로 전환되는 회귀 테스트 1개 추가, 기존 3개 테스트는 완료 후 재조회 결과를 모킹하도록 갱신 후 `npm test`(41파일 256개), `npm run lint`, `npx tsc -b --noEmit` 모두 통과.
+
+## 학생 상세 미션 현황 및 Figma 레이아웃 (#180)
+
+- `TeacherStudents`의 학생 상세를 Figma T-04-1 구조(상단 뒤로가기, 학생 정보 카드, 위치 placeholder, 미션 현황 행)로 구성했다. 전화번호 API가 아직 없으므로 학생/학부모 `전화 걸기` 버튼은 비활성 UI만 제공하며 `tel:` 연결이나 번호 표시는 하지 않는다.
+- 기존 교사 미션 목록과 미션별 status-board 응답을 재사용해, 대상 학생이 제출자이면 `제출` 또는 `지각`, 미제출이면 미션 마감/완료 여부에 따라 `미제출` 또는 `진행 중` 배지를 표시한다. 새 API는 추가하지 않았다.
+- `MANUAL` 참가자는 `userId`가 없어 status-board와 연결할 수 없으므로 위치 미추적 안내만 보여 주고 미션 목록은 생략한다.
+
+검증: 프런트 `npm test`(41파일 259개), `npm run build` 통과.

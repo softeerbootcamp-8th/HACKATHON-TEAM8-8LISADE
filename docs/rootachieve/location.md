@@ -148,3 +148,19 @@
 - Browser 합성 좌표 QA: 390×844 모바일·기본 데스크톱에서 다이얼로그 열기,
   지도 선택, 저장, 수동 상태 표시, 자동 위치 복귀와 콘솔 오류 없음 확인
 - `git diff --check`: 통과
+
+## Issue #178: GPS 위치 실시간 갱신 복구
+
+- 웹 위치 브리지가 `watchPosition`의 한 좌표를 반복 전송할 때도 매 10초 보고의
+  `recordedAt`을 새로 생성한다. 백엔드의 오래된 요청 방지는 유지하면서 자동
+  위치와 세션 수동 override가 중복 시각으로 무시되지 않게 했다.
+- 교사 SSE 연결 응답에 `X-Accel-Buffering: no`를 추가해 운영 Nginx가
+  `LOCATION_UPDATED` 이벤트를 모아두지 않고 즉시 전달한다. 기존 10초 전송과
+  교사 화면의 15초 확인 불가 기준은 변경하지 않았다.
+
+### 검증
+
+- `npm test -- --run`: 프론트 41개 파일, 257개 테스트 통과
+- `npm run lint`, `npm run build`: 통과
+- `./gradlew test`: 백엔드 전체 테스트 통과
+- `git diff --check`: 통과

@@ -11,8 +11,15 @@ const emptyFormInput: MissionFormInput = { title: '', type: 'ACTIVITY', startAt:
 
 type MissionProgress = { completed: number; total: number }
 
-function missionDispatchStatus(mission: TeacherMission): '대기' | '진행중' {
+function missionDispatchStatus(mission: TeacherMission): '대기' | '진행중' | '완료' {
+  if (mission.completedAt) return '완료'
   return mission.startAt && new Date(mission.startAt) > new Date() ? '대기' : '진행중'
+}
+
+function missionStatusBadgeClass(status: '대기' | '진행중' | '완료'): string {
+  if (status === '진행중') return 'badge-status-active'
+  if (status === '완료') return 'badge-status-done'
+  return ''
 }
 
 function formatCountdown(endAt: string | null): string {
@@ -84,7 +91,7 @@ export default function TeacherMissions({ tripId }: { tripId: string }) {
           <button className="mission-list-card" onClick={() => setView({ name: 'STATUS', missionId: mission.id })}>
             <div className="mission-list-card-badges">
               <span className="badge badge-type">{mission.type === 'ACTIVITY' ? '활동' : '출석 체크'}</span>
-              <span className={`badge badge-status ${missionDispatchStatus(mission) === '진행중' ? 'badge-status-active' : ''}`}>{missionDispatchStatus(mission)}</span>
+              <span className={`badge badge-status ${missionStatusBadgeClass(missionDispatchStatus(mission))}`}>{missionDispatchStatus(mission)}</span>
             </div>
             <p className="mission-list-card-title">{mission.title}</p>
             <div className="progress-bar" aria-hidden="true"><div className="progress-bar-fill" style={{ width: `${percent}%` }} /></div>
@@ -143,6 +150,8 @@ function MissionStatusScreen({ missionId, onBack, onDeleted }: { missionId: numb
   const [rejectingStudentId, setRejectingStudentId] = useState<number | null>(null)
   const [reason, setReason] = useState('')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [confirmingComplete, setConfirmingComplete] = useState(false)
+  const [completing, setCompleting] = useState(false)
   const [error, setError] = useState('')
 
   const fetchBoard = useCallback(() => teacherMissionApi.getStatusBoard(missionId), [missionId])
@@ -181,6 +190,20 @@ function MissionStatusScreen({ missionId, onBack, onDeleted }: { missionId: numb
     await onDeleted()
   }
 
+  const confirmComplete = async () => {
+    setError('')
+    setCompleting(true)
+    try {
+      await teacherMissionApi.completeMission(missionId)
+      await reload()
+      setConfirmingComplete(false)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : '미션 완료 처리에 실패했습니다.')
+    } finally {
+      setCompleting(false)
+    }
+  }
+
   if (loadError) return <section aria-label="미션 현황판"><button className="text-button back-button" onClick={onBack}>‹ 목록으로</button><p className="error" role="alert">{loadError}</p></section>
   if (board === null) return <section aria-label="미션 현황판"><p className="hint" role="status">현황판을 불러오는 중입니다.</p></section>
 
@@ -190,7 +213,7 @@ function MissionStatusScreen({ missionId, onBack, onDeleted }: { missionId: numb
 
   return <section aria-label="미션 현황판">
     <button className="text-button back-button" onClick={onBack}>‹ {mission.title}</button>
-    <span className={`badge badge-status ${missionDispatchStatus(mission) === '진행중' ? 'badge-status-active' : ''}`}>{missionDispatchStatus(mission)}</span>
+    <span className={`badge badge-status ${missionStatusBadgeClass(missionDispatchStatus(mission))}`}>{missionDispatchStatus(mission)}</span>
     {error && <p className="error" role="alert">{error}</p>}
 
     {mission.type === 'ACTIVITY' ? <div className="status-stat-row">
@@ -208,7 +231,7 @@ function MissionStatusScreen({ missionId, onBack, onDeleted }: { missionId: numb
       {board.notSubmitted.map((student, index) => <li key={student.studentId}>
         <span className="roster-index">{String(index + 1).padStart(2, '0')}</span>
         <span>{student.studentName}</span>
-        <button className="text-button" onClick={() => completeOnBehalf(student)}>대리 완료</button>
+        {!mission.completedAt && <button className="text-button" onClick={() => completeOnBehalf(student)}>대리 완료</button>}
       </li>)}
     </ul>}
 
@@ -219,11 +242,11 @@ function MissionStatusScreen({ missionId, onBack, onDeleted }: { missionId: numb
         {submission.imageUrl
           ? <img className="photo-thumbnail" src={submission.imageUrl} alt={`${submission.studentName} 제출 사진`} />
           : <div className="photo-placeholder" aria-hidden="true" />}
-        <p>{submission.studentName} <span className="hint">{formatSubmittedAt(submission.submittedAt)}</span></p>
-        {rejectingStudentId === submission.studentId ? <form className="auth-form" onSubmit={submitRejection}>
+        <p>{submission.studentName} <span className="hint">{formatSubmittedAt(submission.submittedAt)}</span>{submission.late && <span className="badge badge-late">지각</span>}</p>
+        {!mission.completedAt && (rejectingStudentId === submission.studentId ? <form className="auth-form" onSubmit={submitRejection}>
           <label className="field" htmlFor={`reject-reason-${submission.studentId}`}>반려 사유<input id={`reject-reason-${submission.studentId}`} value={reason} onChange={(event) => setReason(event.target.value)} required /></label>
           <button type="submit">반려 확정</button>
-        </form> : <button className="text-button" onClick={() => setRejectingStudentId(submission.studentId)}>반려</button>}
+        </form> : <button className="text-button" onClick={() => setRejectingStudentId(submission.studentId)}>반려</button>)}
       </li>)}
     </ul>}
     {board.submitted.length > 0 && mission.type === 'CHECK' && <ul className="roster-list">
@@ -233,6 +256,12 @@ function MissionStatusScreen({ missionId, onBack, onDeleted }: { missionId: numb
         <span className="hint">{formatSubmittedAt(submission.submittedAt)}</span>
       </li>)}
     </ul>}
+
+    {!mission.completedAt && (confirmingComplete ? <div className="auth-form">
+      <p>미션을 완료 처리할까요? 완료 후에는 학생이 더 이상 제출·응답할 수 없고, 되돌릴 수 없어요.</p>
+      <button onClick={confirmComplete} disabled={completing}>{completing ? '완료 처리하는 중...' : '완료 처리 확정'}</button>
+      <button className="text-button" onClick={() => setConfirmingComplete(false)}>취소</button>
+    </div> : <button onClick={() => setConfirmingComplete(true)}>완료 처리하기</button>)}
 
     {confirmingDelete ? <div className="auth-form">
       <p>미션을 삭제할까요? 삭제하면 되돌릴 수 없습니다.</p>

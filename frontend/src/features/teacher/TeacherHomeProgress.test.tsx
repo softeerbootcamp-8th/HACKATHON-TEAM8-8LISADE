@@ -21,7 +21,7 @@ const roster = [
   { participantId: 3, userId: 13, name: '이도윤', type: 'APP' as const, outside: false, lastSentAt: new Date().toISOString(), joinedAt: new Date().toISOString() },
 ]
 
-const mission = { id: 1, tripId: '7', title: '사진 미션', description: '', type: 'ACTIVITY' as const, startAt: null, endAt: null, pin: null }
+const mission = { id: 1, tripId: '7', title: '사진 미션', description: '', type: 'ACTIVITY' as const, startAt: null, endAt: null, pin: null, completedAt: null }
 
 describe('TeacherHomeProgress', () => {
   beforeEach(() => {
@@ -43,6 +43,19 @@ describe('TeacherHomeProgress', () => {
     expect(screen.getByRole('button', { name: /김하늘.*이탈/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /박서준.*미완료/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /이도윤.*미완료/ })).toBeInTheDocument()
+  })
+
+  it('위치·미션 사유를 동시에 가진 학생은 태그 두 개를 함께 보여준다', async () => {
+    vi.mocked(teacherMissionApi.getStatusBoard).mockResolvedValue({
+      mission,
+      totalStudentCount: 3,
+      submitted: [],
+      notSubmitted: [{ studentId: 11, studentName: '김하늘', rejectionReason: null }],
+    })
+
+    render(<TeacherHomeProgress tripId="7" onViewStudents={vi.fn()} onFinished={vi.fn()} />)
+
+    expect(await screen.findByRole('button', { name: /김하늘.*이탈.*미완료/ })).toBeInTheDocument()
   })
 
   it('확인이 필요한 학생이 없으면 안내 문구를 보여준다', async () => {

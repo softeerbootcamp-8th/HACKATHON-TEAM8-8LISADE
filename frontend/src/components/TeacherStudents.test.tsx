@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import TeacherStudents from './TeacherStudents'
 
@@ -6,7 +6,7 @@ function jsonResponse(data: unknown, ok = true) {
   return { ok, json: async () => ({ success: ok, data, message: ok ? undefined : '요청에 실패했습니다.' }) } as Response
 }
 
-function stubRoster(missionsResponse: unknown = []) {
+function stubRoster(missionsResponse: unknown = [], statusBoards: Record<number, unknown> = {}) {
   const fetchMock = vi.fn((path: string) => {
     if (path.endsWith('/participants')) {
       return Promise.resolve(jsonResponse([
@@ -21,6 +21,7 @@ function stubRoster(missionsResponse: unknown = []) {
     }
     if (path.includes('/status-board')) {
       const missionId = Number(path.match(/\/missions\/(\d+)\//)?.[1])
+      if (statusBoards[missionId]) return Promise.resolve(jsonResponse(statusBoards[missionId]))
       const notSubmittedByMission: Record<number, number[]> = { 101: [21] }
       return Promise.resolve(jsonResponse({
         mission: { id: missionId, tripId: 5, title: '미션', description: '', type: 'ACTIVITY', startAt: null, endAt: null },
@@ -52,6 +53,34 @@ describe('TeacherStudents', () => {
     expect(screen.getByRole('button', { name: /김직접/ })).toBeInTheDocument()
   })
 
+  it('shows both a location tag and a mission tag for a student with both reasons', async () => {
+    stubRoster([{ id: 101, tripId: 5, title: '사진 미션', description: '', type: 'ACTIVITY', startAt: null, endAt: null }])
+    render(<TeacherStudents tripId="5" />)
+
+    const row = await screen.findByRole('button', { name: /박서준/ })
+    expect(within(row).getByText('위치 확인 필요')).toBeInTheDocument()
+    expect(within(row).getByText('미완료')).toBeInTheDocument()
+  })
+
+  it('adds a student with a normal location but an incomplete mission to the attention list', async () => {
+    stubRoster(
+      [{ id: 101, tripId: 5, title: '사진 미션', description: '', type: 'ACTIVITY', startAt: null, endAt: null }],
+      {
+        101: {
+          mission: { id: 101, tripId: 5, title: '사진 미션', description: '', type: 'ACTIVITY', startAt: null, endAt: null },
+          totalStudentCount: 3,
+          submitted: [],
+          notSubmitted: [{ studentId: 22, studentName: '이서연', rejectionReason: null }],
+        },
+      },
+    )
+    render(<TeacherStudents tripId="5" />)
+
+    expect(await screen.findByText('확인이 필요한 학생 3')).toBeInTheDocument()
+    const row = await screen.findByRole('button', { name: /이서연/ })
+    expect(within(row).getByText('미완료')).toBeInTheDocument()
+  })
+
   it('shows an empty trip with no students', async () => {
     const fetchMock = vi.fn(() => Promise.resolve(jsonResponse([])))
     vi.stubGlobal('fetch', fetchMock)
@@ -67,7 +96,7 @@ describe('TeacherStudents', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: /이서연/ }))
 
-    expect(await screen.findByRole('button', { name: /‹ 이서연/ })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '이서연' })).toBeInTheDocument()
     expect(screen.getByText('현재 위치')).toBeInTheDocument()
   })
 
@@ -77,7 +106,7 @@ describe('TeacherStudents', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: /박서준/ }))
 
-    expect(await screen.findAllByText('위치 확인 필요')).not.toHaveLength(0)
+    expect(await screen.findByLabelText('위치 확인 필요')).toBeInTheDocument()
   })
 
   it('labels a manually-added student without tracking their location', async () => {
@@ -86,26 +115,45 @@ describe('TeacherStudents', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: /김직접/ }))
 
-    expect(await screen.findAllByText('직접 확인')).not.toHaveLength(0)
-    expect(screen.getByText('앱을 사용하지 않는 학생으로, 위치가 추적되지 않습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('앱을 사용하지 않는 학생으로, 위치가 추적되지 않습니다.')).toBeInTheDocument()
   })
 
-  it('shows the trip join time for any student in the detail screen', async () => {
+  it('shows non-functional call buttons in the detail screen', async () => {
     stubRoster()
     render(<TeacherStudents tripId="5" />)
 
     fireEvent.click(await screen.findByRole('button', { name: /이서연/ }))
 
-    expect(await screen.findByText('2026. 08. 25 09:04 참여')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '학생 전화 걸기, 준비 중' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '학부모 전화 걸기, 준비 중' })).toBeDisabled()
   })
 
-  it('shows mission completion count for an APP student', async () => {
-    stubRoster([{ id: 101, tripId: 5, title: '사진 미션', description: '', type: 'ACTIVITY', startAt: null, endAt: null }])
+  it('shows each mission title with the matching status badge for an APP student', async () => {
+    stubRoster([
+      { id: 101, tripId: 5, title: '사진 미션', description: '', type: 'ACTIVITY', startAt: null, endAt: null },
+      { id: 102, tripId: 5, title: '출석 미션', description: '', type: 'CHECK', startAt: null, endAt: null },
+    ], {
+      101: {
+        mission: { id: 101, tripId: 5, title: '사진 미션', description: '', type: 'ACTIVITY', startAt: null, endAt: '2026-08-25T08:00:00', completedAt: null },
+        totalStudentCount: 3,
+        submitted: [{ studentId: 22, studentName: '이서연', imageKey: 'photo.jpg', imageUrl: null, submittedAt: '2026-08-25T07:00:00', late: false }],
+        notSubmitted: [],
+      },
+      102: {
+        mission: { id: 102, tripId: 5, title: '출석 미션', description: '', type: 'CHECK', startAt: null, endAt: null, completedAt: '2026-08-25T08:00:00' },
+        totalStudentCount: 3,
+        submitted: [],
+        notSubmitted: [{ studentId: 22, studentName: '이서연', rejectionReason: null }],
+      },
+    })
     render(<TeacherStudents tripId="5" />)
 
     fireEvent.click(await screen.findByRole('button', { name: /이서연/ }))
 
-    expect(await screen.findByText('미션 1 / 1 완료')).toBeInTheDocument()
+    expect(await screen.findByText('미션 1 · 사진 미션')).toBeInTheDocument()
+    expect(screen.getByText('제출')).toBeInTheDocument()
+    expect(screen.getByText('미션 2 · 출석 미션')).toBeInTheDocument()
+    expect(screen.getByText('미제출')).toBeInTheDocument()
   })
 
   it('does not show a mission completion count for a manually-added student', async () => {
@@ -114,8 +162,8 @@ describe('TeacherStudents', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: /김직접/ }))
 
-    await screen.findByText('2026. 08. 25 09:08 참여')
-    expect(screen.queryByText(/완료$/)).not.toBeInTheDocument()
+    await screen.findByText('앱을 사용하지 않는 학생으로, 위치가 추적되지 않습니다.')
+    expect(screen.queryByLabelText('미션 현황')).not.toBeInTheDocument()
   })
 
   it('returns to the list from the detail screen', async () => {
@@ -123,7 +171,7 @@ describe('TeacherStudents', () => {
     render(<TeacherStudents tripId="5" />)
 
     fireEvent.click(await screen.findByRole('button', { name: /이서연/ }))
-    fireEvent.click(await screen.findByRole('button', { name: /‹ 이서연/ }))
+    fireEvent.click(await screen.findByRole('button', { name: '뒤로 가기' }))
 
     expect(await screen.findByText('전체 학생 4')).toBeInTheDocument()
   })

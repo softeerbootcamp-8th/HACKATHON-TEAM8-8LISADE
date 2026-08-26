@@ -8,7 +8,7 @@ export interface AttentionStudent {
   participantId: number
   userId: number | null
   name: string
-  reason: AttentionReason
+  reasons: AttentionReason[]
 }
 
 export function collectIncompleteStudentIds(boards: MissionStatusBoard[]): Set<number> {
@@ -27,16 +27,13 @@ export function buildAttentionList(
   const attention: AttentionStudent[] = []
   for (const student of students) {
     const { participantId, userId, name } = student
+    const reasons: AttentionReason[] = []
     if (student.type !== 'MANUAL') {
       const locationStatus = computeStudentStatus(student.outside, student.lastSentAt, now)
-      if (locationStatus !== 'NORMAL') {
-        attention.push({ participantId, userId, name, reason: locationStatus })
-        continue
-      }
+      if (locationStatus !== 'NORMAL') reasons.push(locationStatus)
     }
-    if (userId !== null && incompleteUserIds.has(userId)) {
-      attention.push({ participantId, userId, name, reason: 'MISSION_INCOMPLETE' })
-    }
+    if (userId !== null && incompleteUserIds.has(userId)) reasons.push('MISSION_INCOMPLETE')
+    if (reasons.length > 0) attention.push({ participantId, userId, name, reasons })
   }
   return attention
 }

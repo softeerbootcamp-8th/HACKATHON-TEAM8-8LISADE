@@ -185,9 +185,12 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('비밀번호 확인'), { target: { value: 'password1234' } })
     fireEvent.change(screen.getByLabelText('학생 전화번호'), { target: { value: '01012345678' } })
     fireEvent.change(screen.getByLabelText('학부모 전화번호'), { target: { value: '01087654321' } })
-    fireEvent.click(screen.getByRole('button', { name: '가입하기' }))
 
-    expect(screen.getByText('보호자 동의가 필요합니다.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '가입하기' })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('checkbox'))
+
+    expect(screen.getByRole('button', { name: '가입하기' })).toBeEnabled()
   })
 
   it('blocks sign-up when password confirmation does not match', () => {
@@ -200,6 +203,7 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('비밀번호 확인'), { target: { value: 'password4321' } })
     fireEvent.change(screen.getByLabelText('학생 전화번호'), { target: { value: '01012345678' } })
     fireEvent.change(screen.getByLabelText('학부모 전화번호'), { target: { value: '01087654321' } })
+    fireEvent.click(screen.getByRole('checkbox'))
     fireEvent.click(screen.getByRole('button', { name: '가입하기' }))
 
     expect(screen.getByRole('alert')).toHaveTextContent('비밀번호가 일치하지 않습니다.')
@@ -591,8 +595,32 @@ describe('App', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('PIN 번호를 확인해 주세요.')
   })
 
+  it('advances to the next mission after completing an attendance check, instead of showing nothing', async () => {
+    await openStudentHome()
+    await completePhotoMission()
+
+    // 출석 체크 완료 후에도 남은 미션이 있으면 이어서 바로 뜨는 것을, 백엔드 재조회 결과로 재현한다.
+    missionApiMock.getCurrentMissions.mockResolvedValueOnce([
+      { id: 13, tripId: 1, title: '불국사 앞에서 사진 찍기', description: '', type: 'ACTIVITY', startAt: null, endAt: null },
+    ])
+
+    fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
+    fireEvent.click(screen.getByRole('button', { name: '출석 체크' }))
+    fireEvent.change(screen.getByLabelText('출석 PIN'), { target: { value: '1234' } })
+    fireEvent.click(screen.getByRole('button', { name: '확인' }))
+
+    expect(await screen.findByText('출석 체크를 완료했습니다.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '불국사 앞에서 사진 찍기' })).toBeInTheDocument()
+  })
+
   it('lets a student confirm a captured photo before submitting it', async () => {
     await openStudentHome()
+
+    // 백엔드는 완료된 제출을 /current 응답에서 제외한다 — 제출 직후 재조회 시 사진 미션(11)이
+    // 빠지고 출석 체크(12)만 남는 것을 모킹으로 재현한다.
+    missionApiMock.getCurrentMissions.mockResolvedValueOnce([
+      { id: 12, tripId: 1, title: '경복궁 출석 체크', description: '교사가 공유한 4자리 PIN을 입력해 주세요.', type: 'CHECK', startAt: null, endAt: null },
+    ])
 
     fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
     fireEvent.click(await screen.findByRole('button', { name: '촬영하기' }))
@@ -742,6 +770,11 @@ async function openStudentHome() {
 }
 
 async function completePhotoMission() {
+  // 백엔드는 완료(COMPLETED) 상태인 제출을 /current 응답에서 제외한다 — 제출 직후 재조회 시
+  // 사진 미션(11)이 빠지고 출석 체크(12)만 남는 것을 모킹으로 재현한다.
+  missionApiMock.getCurrentMissions.mockResolvedValueOnce([
+    { id: 12, tripId: 1, title: '경복궁 출석 체크', description: '교사가 공유한 4자리 PIN을 입력해 주세요.', type: 'CHECK', startAt: null, endAt: null },
+  ])
   fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
   fireEvent.click(await screen.findByRole('button', { name: '촬영하기' }))
   fireEvent.click(await screen.findByRole('button', { name: '제출하기' }))

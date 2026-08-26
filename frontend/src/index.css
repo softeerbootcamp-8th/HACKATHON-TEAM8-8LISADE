@@ -41,8 +41,8 @@ input { border: 1.5px solid var(--color-border); border-radius: var(--radius-inp
 input::placeholder { color: var(--color-text-muted); }
 input:focus { border-color: var(--color-accent); outline: 3px solid var(--color-accent-soft); }
 
-.app-shell { display: flex; justify-content: center; min-height: 100vh; background: var(--color-bg); }
-.screen { width: 100%; max-width: 440px; min-height: 100vh; background: var(--color-bg); display: flex; flex-direction: column; padding-bottom: 32px; position: relative; }
+.app-shell { display: flex; justify-content: center; min-height: 100vh; min-height: 100dvh; background: var(--color-bg); }
+.screen { width: 100%; max-width: 440px; min-height: 100vh; min-height: 100dvh; background: var(--color-bg); display: flex; flex-direction: column; padding-bottom: 32px; position: relative; }
 .screen-pad { padding: 0 24px; }
 
 .page-title { font-size: 22px; font-weight: 700; margin: 28px 0 24px; padding: 0 24px; }
@@ -136,10 +136,10 @@ h2 { font-size: 17px; margin: 0; }
 
 /* Bottom nav (teacher) */
 .screen:has(.teacher-tabs) { padding-bottom: 0; }
-.teacher-tabs { align-items: center; background: var(--color-surface); border-top: 1px solid var(--color-border); bottom: 0; display: flex; gap: 4px; height: 74px; left: 0; padding: 8px 10px 0; position: sticky; right: 0; width: 100%; }
-.teacher-tabs button { align-items: center; background: transparent; border-radius: 14px; box-shadow: none; color: var(--color-text-muted); display: flex; flex: 1 0 0; flex-direction: column; font-size: 10px; gap: 2px; min-height: auto; padding: 5px; }
-.teacher-tabs button[aria-pressed="true"] { background: var(--color-accent-soft); color: var(--color-text); }
-.teacher-tabs button img { height: 24px; width: 24px; }
+.teacher-tabs { align-items: center; background: var(--color-surface); border-top: 1px solid var(--color-border); bottom: 0; display: flex; flex: 0 0 auto; gap: 4px; left: 0; margin-top: auto; min-height: 74px; padding: 8px 10px env(safe-area-inset-bottom); position: sticky; right: 0; width: 100%; }
+.teacher-tabs button { --tab-icon-hole: var(--color-surface); align-items: center; background: transparent; border-radius: 14px; box-shadow: none; color: var(--color-text-muted); display: flex; flex: 1 0 0; flex-direction: column; font-size: 10px; gap: 2px; min-height: auto; padding: 5px; }
+.teacher-tabs button[aria-pressed="true"] { --tab-icon-hole: var(--color-accent-soft); background: var(--color-accent-soft); color: var(--color-text); }
+.teacher-tabs button svg { display: block; height: 24px; width: 24px; }
 
 .teacher-body { display: grid; gap: 12px; padding: 16px 16px 24px; }
 .teacher-trip-select { -webkit-appearance: none; appearance: none; background: var(--color-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2327303a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center; border: 0; border-radius: 20px; box-shadow: var(--shadow-card); font-size: 14px; font-weight: 700; min-height: 40px; padding: 8px 40px 8px 14px; width: fit-content; }
@@ -157,6 +157,8 @@ h2 { font-size: 17px; margin: 0; }
 .student-list-empty { color: var(--color-text-muted); font-size: 14px; padding: 8px 4px; }
 
 /* Student detail (T-04-1) */
+.student-detail-screen { min-height: 100%; }
+.student-detail-content { display: grid; gap: 20px; padding: 16px 16px 24px; }
 .detail-name-row { align-items: center; display: flex; gap: 8px; }
 .info-card { background: var(--color-surface); border-radius: 18px; box-shadow: var(--shadow-card); display: grid; gap: 10px; padding: 16px 18px; }
 .info-card-title { font-size: 15px; font-weight: 700; margin: 0; }
@@ -175,7 +177,13 @@ h2 { font-size: 17px; margin: 0; }
 .mini-map-caption { background: #fff; border-radius: 11px; box-shadow: var(--shadow-soft); font-size: 10px; color: var(--color-text-muted); font-weight: 500; left: 50%; padding: 3px 9px; position: absolute; top: 66%; transform: translateX(-50%); z-index: 1; }
 .mission-status-row { align-items: center; background: var(--color-surface); border-radius: 14px; display: flex; height: 50px; justify-content: space-between; padding: 0 14px 0 16px; }
 .mission-status-row p { font-size: 13px; font-weight: 500; margin: 0; }
-.end-trip-button { background: var(--color-danger-soft); box-shadow: none; color: var(--color-danger); margin-top: 8px; }
+.mission-status-list { display: grid; gap: 10px; margin-top: 12px; }
+.mission-status-badge { border-radius: 8px; font-size: 11px; font-weight: 700; padding: 3px 8px; }
+.mission-status--submitted { background: var(--color-success-soft); color: var(--color-success); }
+.mission-status--late { background: var(--color-warning-soft); color: var(--color-warning); }
+.mission-status--missing { background: var(--color-danger-soft); color: var(--color-danger); }
+.mission-status--active { background: rgb(69 131 213 / 13%); color: #4583d5; }
+.end-trip-button { background: var(--color-danger-soft); box-shadow: none; color: var(--color-danger); margin-top: 8px; width: 100%; }
 .stat-grid { display: grid; gap: 10px; }
 .stat-card { background: var(--color-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-card); padding: 14px 16px; }
 .stat-card p:first-child { font-size: 15px; font-weight: 700; margin: 0; }
@@ -250,6 +258,8 @@ h2 { font-size: 17px; margin: 0; }
 .badge-type { background: #eef1f7; color: #556; }
 .badge-status { background: #f4f7fb; color: #6b778c; }
 .badge-status-active { background: #eef7f0; color: #1b6d34; }
+.badge-status-done { background: #eceef1; color: #4b5563; }
+.badge-late { background: var(--color-warning-soft); color: var(--color-warning); margin-left: 6px; }
 .progress-bar { background: #eef1f7; border-radius: 999px; height: 8px; overflow: hidden; }
 .progress-bar-fill { background: #276ef1; height: 100%; }
 .segmented-control { background: #f4f7fb; border-radius: 10px; display: flex; gap: 4px; padding: 4px; }
@@ -328,6 +338,21 @@ h2 { font-size: 17px; margin: 0; }
 .add-notice + .add-trip-button { margin-top: 0; }
 
 .home-empty { display: flex; flex-direction: column; align-items: center; padding: 96px 24px 0; text-align: center; }
+/* 다가오는 현장체험학습 카드 (Figma T-02 홈 — 예정) */
+.upcoming-trips { display: grid; gap: 12px; }
+.upcoming-trips h2 { font-size: 16px; margin: 4px 0 0; }
+.upcoming-trip-card { background: var(--color-surface); border-radius: 18px; box-shadow: var(--shadow-card); display: grid; gap: 12px; padding: 16px 18px; }
+.upcoming-trip-summary { background: transparent; box-shadow: none; display: grid; gap: 12px; justify-items: start; min-height: auto; padding: 0; text-align: left; width: 100%; }
+.upcoming-trip-summary:hover { background: transparent; filter: none; }
+.upcoming-trip-summary h3 { font-size: 16px; font-weight: 700; margin: 0; }
+.upcoming-trip-chips { align-items: center; display: flex; justify-content: space-between; width: 100%; }
+.upcoming-trip-badge { background: rgb(255 201 61 / 18%); border-radius: 8px; color: #a16207; font-size: 11px; font-weight: 700; padding: 3px 8px; }
+.upcoming-trip-dday { color: #a16207; font-size: 13px; font-weight: 700; }
+.upcoming-trip-meta { display: flex; gap: 10px; }
+.upcoming-trip-meta .label { color: var(--color-text-muted); font-size: 13px; font-weight: 500; }
+.upcoming-trip-meta .value { font-size: 14px; font-weight: 700; }
+.upcoming-trip-start { align-items: center; background: var(--color-accent); border-radius: 16px; box-shadow: none; display: flex; font-size: 15px; justify-content: center; min-height: 48px; width: 100%; }
+
 .home-empty .add-trip-button { flex: 0 0 auto; margin-top: 0; width: 294px; }
 
 /* 알림 목록 화면 (T-07) */
@@ -352,6 +377,7 @@ h2 { font-size: 17px; margin: 0; }
 /* Trip detail (T-03-1 / T-03-2) */
 .trip-create-header h1 { flex: 1; }
 .trip-detail-content { align-content: start; display: grid; gap: 16px; }
+.trip-detail-finished { gap: 32px; padding: 16px; }
 .trip-detail-card { background: #fff; border-radius: 18px; box-shadow: var(--shadow-card); display: grid; gap: 12px; padding: 16px 18px; }
 .trip-detail-card > div { align-items: baseline; display: flex; gap: 10px; }
 .trip-detail-card .label { color: var(--color-text-muted); flex: 0 0 auto; font-size: 13px; font-weight: 500; }
@@ -360,6 +386,11 @@ h2 { font-size: 17px; margin: 0; }
 .trip-invite-card .invite-title { font-size: 15px; font-weight: 700; margin: 0; }
 .invite-code-box { background: var(--color-accent-soft); border-radius: 12px; font-size: 26px; font-weight: 700; letter-spacing: 5px; padding: 12px; width: 100%; }
 .invite-actions { align-items: center; display: flex; gap: 16px; justify-content: center; }
+.finished-missions { display: grid; gap: 10px; }
+.finished-missions h2 { font-size: 15px; margin: 0; }
+.finished-mission-list { display: grid; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.finished-mission-list li { align-items: center; background: #fff; border-radius: 14px; display: flex; font-size: 13px; font-weight: 500; justify-content: space-between; min-height: 46px; padding: 12px 14px 12px 16px; }
+.finished-mission-list li span:last-child { color: var(--color-text-muted); font-size: 16px; }
 .end-trip-confirm { display: grid; gap: 12px; text-align: center; }
 .end-trip-confirm p { color: var(--color-text-muted); font-size: 13px; margin: 0; }
 .end-trip-confirm-actions { display: flex; gap: 12px; }

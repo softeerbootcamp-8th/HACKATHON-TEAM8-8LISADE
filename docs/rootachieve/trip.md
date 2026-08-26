@@ -26,3 +26,16 @@
 - `cd frontend && npm run lint`: 통과
 - `cd frontend && npm run build`: 통과
 - 인앱 브라우저 402 × 874 비교: 공통 상단바·하단 탭과 관리 본문 좌표 일치, `design-qa.md` 최종 결과 `passed`
+
+## 종료된 체험학습 상세의 미션 목록 (#159)
+
+- `TripDetail`이 `FINISHED` 상태에서만 기존 `teacherMissionApi.listMissions`를 호출해 수행한 미션 수와 제목 목록을 표시한다.
+- 종료 화면은 Figma T-03-2의 간격, 카드와 상태 배지를 따르며 미션 항목은 요구사항대로 읽기 전용 목록으로 제공한다.
+- READY 상태에서 쓰던 삭제 확인과 API 호출 흐름을 FINISHED 상태에서도 그대로 재사용한다.
+- 자료 내보내기 UI/API와 미션 항목 탭 동작은 Issue 범위에 따라 추가하지 않았다.
+
+### 검증
+
+- `cd frontend && npm test`: 41개 파일, 260개 테스트 통과
+- `cd frontend && npm run lint`: 통과
+- `cd frontend && npm run build`: 통과

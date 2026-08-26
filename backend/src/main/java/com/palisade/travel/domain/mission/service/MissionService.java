@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
@@ -70,7 +71,17 @@ public class MissionService {
         mission.change(title, description, startAt, endAt); return mission;
     }
     public Mission getStudentMission(Long missionId, Long studentId) { Mission mission = findMission(missionId); requireParticipant(mission, studentId); requireAccessible(mission); return mission; }
-    public List<Mission> getCurrentStudentMissions(Long tripId, Long studentId) { if (!participantRepository.existsByTripIdAndUserId(tripId, studentId)) throw new MissionException(MissionErrorCode.NOT_A_TRIP_PARTICIPANT); LocalDateTime now=LocalDateTime.now(); return missionRepository.findByTripIdOrderByStartAtAsc(tripId).stream().filter(m -> m.isAccessibleAt(now)).toList(); }
+    public List<Mission> getCurrentStudentMissions(Long tripId, Long studentId) {
+        if (!participantRepository.existsByTripIdAndUserId(tripId, studentId)) throw new MissionException(MissionErrorCode.NOT_A_TRIP_PARTICIPANT);
+        LocalDateTime now = LocalDateTime.now();
+        List<Mission> accessible = missionRepository.findByTripIdOrderByStartAtAsc(tripId).stream().filter(m -> m.isAccessibleAt(now) && !m.isCompleted()).toList();
+        List<Long> missionIds = accessible.stream().map(Mission::getId).toList();
+        Set<Long> completedMissionIds = submissionRepository.findByMissionIdInAndUserId(missionIds, studentId).stream()
+                .filter(submission -> submission.getStatus() == SubmissionStatus.COMPLETED)
+                .map(MissionSubmission::getMissionId)
+                .collect(Collectors.toSet());
+        return accessible.stream().filter(m -> !completedMissionIds.contains(m.getId())).toList();
+    }
     @Transactional
     public SubmissionResult verifyPin(Long missionId, Long studentId, String pin) {
         Mission mission = getStudentMission(missionId, studentId);
@@ -78,21 +89,25 @@ public class MissionService {
         MissionSubmission submission = submissionRepository.findByMissionIdAndUserId(missionId, studentId).orElseGet(() -> submissionRepository.save(MissionSubmission.completedCheck(missionId, studentId)));
         return SubmissionResult.from(submission, mission);
     }
+    /** 사진 제출(ACTIVITY)은 마감(endAt) 이후에도 차단하지 않고 받되, LATE로 저장한다 — 지각 판정(§163). */
     @Transactional
     public SubmissionResult submitPhoto(Long missionId, Long studentId, String imageKey) {
         Mission mission=getStudentMission(missionId, studentId);
         String requiredPrefix = "upload/missions/" + missionId + "/students/" + studentId + "/";
-        if (mission.getType()!=MissionType.ACTIVITY || mission.isExpiredAt(LocalDateTime.now()) || imageKey==null || !imageKey.startsWith(requiredPrefix)) throw new MissionException(MissionErrorCode.INVALID_PHOTO_SUBMISSION);
-        MissionSubmission submission=submissionRepository.findByMissionIdAndUserId(missionId, studentId).map(s -> { if (s.getStatus()!=SubmissionStatus.REJECTED) throw new MissionException(MissionErrorCode.RESUBMISSION_NOT_ALLOWED); s.resubmit(imageKey); return s; }).orElseGet(() -> submissionRepository.save(MissionSubmission.photo(missionId,studentId,imageKey)));
+        if (mission.getType()!=MissionType.ACTIVITY || imageKey==null || !imageKey.startsWith(requiredPrefix)) throw new MissionException(MissionErrorCode.INVALID_PHOTO_SUBMISSION);
+        boolean late = mission.isExpiredAt(LocalDateTime.now());
+        MissionSubmission submission=submissionRepository.findByMissionIdAndUserId(missionId, studentId).map(s -> { if (s.getStatus()!=SubmissionStatus.REJECTED) throw new MissionException(MissionErrorCode.RESUBMISSION_NOT_ALLOWED); s.resubmit(imageKey, late); return s; }).orElseGet(() -> submissionRepository.save(MissionSubmission.photo(missionId,studentId,imageKey,late)));
         return SubmissionResult.from(submission, mission);
     }
-    public StoragePresigner.PresignedUpload preparePhotoUpload(Long missionId, Long studentId, String contentType) { Mission mission=getStudentMission(missionId,studentId); if (mission.getType()!=MissionType.ACTIVITY || mission.isExpiredAt(LocalDateTime.now())) throw new MissionException(MissionErrorCode.INVALID_PHOTO_SUBMISSION); String extension = "image/png".equals(contentType) ? "png" : "jpg"; return storagePresigner.presignPut("upload/missions/"+missionId+"/students/"+studentId+"/"+java.util.UUID.randomUUID()+"."+extension, contentType); }
+    public StoragePresigner.PresignedUpload preparePhotoUpload(Long missionId, Long studentId, String contentType) { Mission mission=getStudentMission(missionId,studentId); if (mission.getType()!=MissionType.ACTIVITY) throw new MissionException(MissionErrorCode.INVALID_PHOTO_SUBMISSION); String extension = "image/png".equals(contentType) ? "png" : "jpg"; return storagePresigner.presignPut("upload/missions/"+missionId+"/students/"+studentId+"/"+java.util.UUID.randomUUID()+"."+extension, contentType); }
     @Transactional
     public void reject(Long missionId, Long studentId, Long teacherId, String reason) {
         Mission mission = findMission(missionId);
         requireTeacher(mission.getTripId(), teacherId);
         MissionSubmission submission = submissionRepository.findByMissionIdAndUserId(missionId, studentId).orElseThrow(() -> new MissionException(MissionErrorCode.SUBMISSION_NOT_FOUND));
         submission.reject(reason);
+        String imageKey = submission.getImageKey();
+        if (imageKey != null && !imageKey.isBlank()) storagePresigner.deleteObject(imageKey);
         notifyRejected(mission, studentId, reason);
     }
 
@@ -126,16 +141,24 @@ public class MissionService {
             Long studentId = participant.getUserId();
             String studentName = namesByStudent.getOrDefault(studentId, participant.getParticipantName());
             MissionSubmission submission = submissionsByStudent.get(studentId);
-            if (submission != null && submission.getStatus() == SubmissionStatus.COMPLETED) {
+            if (submission != null && (submission.getStatus() == SubmissionStatus.COMPLETED || submission.getStatus() == SubmissionStatus.LATE)) {
                 String imageKey = submission.getImageKey();
                 String imageUrl = imageKey == null || imageKey.isBlank() ? null : storagePresigner.presignGet(imageKey);
-                submitted.add(new SubmittedEntry(studentId, studentName, imageKey, imageUrl, submission.getCreatedAt()));
+                submitted.add(new SubmittedEntry(studentId, studentName, imageKey, imageUrl, submission.getCreatedAt(), submission.getStatus() == SubmissionStatus.LATE));
             } else {
                 String rejectionReason = submission != null && submission.getStatus() == SubmissionStatus.REJECTED ? submission.getRejectionReason() : null;
                 notSubmitted.add(new NotSubmittedEntry(studentId, studentName, rejectionReason));
             }
         }
         return new StatusBoard(mission, roster.size(), submitted, notSubmitted);
+    }
+
+    @Transactional
+    public void complete(Long missionId, Long teacherId) {
+        Mission mission = findMission(missionId);
+        requireTeacher(mission.getTripId(), teacherId);
+        if (mission.isCompleted()) throw new MissionException(MissionErrorCode.MISSION_ALREADY_COMPLETED);
+        mission.complete(LocalDateTime.now());
     }
 
     @Transactional
@@ -150,10 +173,10 @@ public class MissionService {
 
     private Mission findMission(Long id) { return missionRepository.findById(id).orElseThrow(() -> new MissionException(MissionErrorCode.MISSION_NOT_FOUND)); }
     private void requireParticipant(Mission mission, Long userId) { if (!participantRepository.existsByTripIdAndUserId(mission.getTripId(),userId)) throw new MissionException(MissionErrorCode.NOT_A_TRIP_PARTICIPANT); }
-    private void requireAccessible(Mission mission) { if (!mission.isAccessibleAt(LocalDateTime.now())) throw new MissionException(MissionErrorCode.MISSION_NOT_ACCESSIBLE); }
+    private void requireAccessible(Mission mission) { if (!mission.isAccessibleAt(LocalDateTime.now()) || mission.isCompleted()) throw new MissionException(MissionErrorCode.MISSION_NOT_ACCESSIBLE); }
     private void requireTeacher(Long tripId, Long teacherId) { Trip trip=tripRepository.findById(tripId).orElseThrow(() -> new MissionException(MissionErrorCode.TRIP_NOT_FOUND)); if (!trip.getTeacherId().equals(teacherId)) throw new MissionException(MissionErrorCode.TRIP_ACCESS_FORBIDDEN); }
     public record SubmissionResult(Long submissionId, SubmissionStatus status, String imageKey) { static SubmissionResult from(MissionSubmission submission, Mission mission) { return new SubmissionResult(submission.getId(), submission.currentStatus(LocalDateTime.now(),mission), submission.getImageKey()); } }
     public record StatusBoard(Mission mission, int totalStudentCount, List<SubmittedEntry> submitted, List<NotSubmittedEntry> notSubmitted) {}
-    public record SubmittedEntry(Long studentId, String studentName, String imageKey, String imageUrl, LocalDateTime submittedAt) {}
+    public record SubmittedEntry(Long studentId, String studentName, String imageKey, String imageUrl, LocalDateTime submittedAt, boolean late) {}
     public record NotSubmittedEntry(Long studentId, String studentName, String rejectionReason) {}
 }

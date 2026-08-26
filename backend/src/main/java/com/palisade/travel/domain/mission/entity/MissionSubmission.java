@@ -43,10 +43,14 @@ public class MissionSubmission {
         this.missionId = missionId; this.userId = userId; this.imageKey = imageKey; this.status = status;
         this.createdAt = LocalDateTime.now();
     }
-    public static MissionSubmission photo(Long missionId, Long userId, String imageKey) { return new MissionSubmission(missionId, userId, imageKey, SubmissionStatus.COMPLETED); }
+    public static MissionSubmission photo(Long missionId, Long userId, String imageKey) { return photo(missionId, userId, imageKey, false); }
+    /** late=true면 마감(endAt) 이후 제출로 판정되어 COMPLETED 대신 LATE로 저장된다. */
+    public static MissionSubmission photo(Long missionId, Long userId, String imageKey, boolean late) { return new MissionSubmission(missionId, userId, imageKey, late ? SubmissionStatus.LATE : SubmissionStatus.COMPLETED); }
     public static MissionSubmission completedCheck(Long missionId, Long userId) { return new MissionSubmission(missionId, userId, "", SubmissionStatus.COMPLETED); }
     public static MissionSubmission completedByTeacher(Long missionId, Long userId) { return new MissionSubmission(missionId, userId, "", SubmissionStatus.COMPLETED); }
-    public void resubmit(String imageKey) { this.imageKey = imageKey; this.status = SubmissionStatus.COMPLETED; this.rejectionReason = null; }
+    public void resubmit(String imageKey) { resubmit(imageKey, false); }
+    /** late=true면 마감(endAt) 이후 재제출로 판정되어 COMPLETED 대신 LATE로 저장된다. */
+    public void resubmit(String imageKey, boolean late) { this.imageKey = imageKey; this.status = late ? SubmissionStatus.LATE : SubmissionStatus.COMPLETED; this.rejectionReason = null; }
     public void reject(String reason) { this.status = SubmissionStatus.REJECTED; this.rejectionReason = reason; }
     public void completeByTeacher() { this.status = SubmissionStatus.COMPLETED; this.rejectionReason = null; }
     public SubmissionStatus currentStatus(LocalDateTime now, Mission mission) { return status == SubmissionStatus.WAITING && mission.isExpiredAt(now) ? SubmissionStatus.EXPIRED : status; }

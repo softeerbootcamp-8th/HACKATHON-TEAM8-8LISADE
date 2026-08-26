@@ -70,7 +70,11 @@ public class MissionIncompleteAlertService {
         pushNotificationService.sendToUser(trip.getTeacherId(), title, body);
     }
 
-    /** 미완료 = (앱 참가 학생 수) − (COMPLETED 제출 학생 수). */
+    /**
+     * 미완료 = (앱 참가 학생 수) − (COMPLETED 제출 학생 수). 이 알림은 "마감까지 제출했는지"를
+     * 교사에게 알려주는 것이 목적이라, 정의상 마감을 넘겨 낸 LATE 제출은 완료로 치지 않고
+     * 그대로 미완료(마감 미준수)로 집계한다(§163).
+     */
     private long countIncomplete(Mission mission) {
         Set<Long> rosterUserIds = participantRepository.findAllByTripIdOrderByCreatedAtAsc(mission.getTripId()).stream()
                 .map(TripParticipant::getUserId)

@@ -17,6 +17,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -67,6 +68,17 @@ class SseControllerTest {
                 .andExpect(request().asyncStarted())
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_EVENT_STREAM));
+    }
+
+    @Test
+    void 교사가_SSE를_연결하면_Nginx_버퍼링을_비활성화한다() throws Exception {
+        // given
+        MockHttpSession session = (MockHttpSession) loginAs("teacher1").andReturn().getRequest().getSession(false);
+
+        // when & then
+        mockMvc.perform(get("/api/teacher/sse/connect").session(session))
+                .andExpect(request().asyncStarted())
+                .andExpect(header().string("X-Accel-Buffering", "no"));
     }
 
     private ResultActions loginAs(String loginId) throws Exception {
