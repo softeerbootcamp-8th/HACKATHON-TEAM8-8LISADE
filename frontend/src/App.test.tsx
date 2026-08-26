@@ -344,6 +344,14 @@ describe('App', () => {
     expect(screen.queryByRole('heading', { name: '학생 홈' })).not.toBeInTheDocument()
   })
 
+  it('reports the real (non-native) tracking state instead of a hardcoded granted mock', async () => {
+    await openStudentHome()
+
+    expect(screen.getByText('위치 권한이 없어요')).toBeInTheDocument()
+    expect(screen.queryByText('위치가 선생님께 보내지고 있어요')).not.toBeInTheDocument()
+    expect(screen.queryByText('방금 전')).not.toBeInTheDocument()
+  })
+
   it('shows only the current mission and does not expose future missions', async () => {
     await openStudentHome()
 

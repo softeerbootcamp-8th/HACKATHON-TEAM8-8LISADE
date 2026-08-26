@@ -1,6 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { authApi } from './api/authApi'
-import { mockLocationTrackingAdapter } from './api/locationTrackingApi'
 import { missionApi } from './api/missionApi'
 import { studentTripApi } from './api/studentTripApi'
 import { resolvePostLoginScreen, type Screen } from './features/app/appFlow'
@@ -9,6 +8,7 @@ import { ActivityConfirmation, ActivityMissionScreen, CheckMissionScreen, Invite
 import { TeacherDashboard } from './features/teacher/TeacherDashboard'
 import { pushNotifications } from './notifications/pushNotifications'
 import { clearPendingMissionPhoto, listenForRestoredMissionPhoto } from './native/missionPhotoRecovery'
+import { backgroundLocation, toLocationTrackingState } from './native/backgroundLocation'
 import type { CurrentUser, SignUpInput } from './types/auth'
 import type { LocationTrackingState, StudentTrip } from './types/studentTrip'
 
@@ -58,7 +58,8 @@ export default function App() {
       setCurrentUser(user)
       registerPushNotifications()
       if (user.role === 'TEACHER') { setScreen(resolvePostLoginScreen({ role: user.role })); return }
-      const [trip, tracking] = await Promise.all([studentTripApi.getActiveTrip(), mockLocationTrackingAdapter.getState()])
+      const [trip, status] = await Promise.all([studentTripApi.getActiveTrip(), backgroundLocation.getStatus()])
+      const tracking = toLocationTrackingState(status)
       setStudentTrip(trip); setLocationState(tracking)
       setScreen(resolvePostLoginScreen({ role: user.role, hasActiveTrip: Boolean(trip), hasLocationPermission: tracking.permission === 'GRANTED' }))
     } catch (caughtError) { setError(caughtError instanceof Error ? caughtError.message : '로그인에 실패했습니다.') }
@@ -85,7 +86,9 @@ export default function App() {
     setCurrentMission(current[0] ?? null)
   }
   const allowLocation = async () => {
-    const tracking = await mockLocationTrackingAdapter.requestPermission()
+    await backgroundLocation.syncSession({ apiBaseUrl: import.meta.env.VITE_API_BASE_URL ?? '' })
+    const status = await backgroundLocation.startTracking()
+    const tracking = toLocationTrackingState(status)
     setLocationState(tracking)
     if (studentTrip) {
       try { await loadCurrentMission(studentTrip.id) } catch (caughtError) { setMissionNotice(caughtError instanceof Error ? caughtError.message : '미션을 불러오지 못했습니다.') }
@@ -95,7 +98,8 @@ export default function App() {
 
   if (screen === 'STUDENT_INVITE') return <InviteCodeScreen onSubmit={joinTrip} />
   if (screen === 'STUDENT_PERMISSION') return <LocationPermissionScreen onAllow={allowLocation} onDeny={() => setScreen('STUDENT_PERMISSION_BLOCKED')} />
-  if (screen === 'STUDENT_PERMISSION_BLOCKED') return <LocationBlockedScreen onOpenSettings={() => mockLocationTrackingAdapter.openSettings()} />
+  // 네이티브 플러그인에 OS 설정 화면을 여는 메서드가 없어 권한 재요청(allowLocation)으로 대체한다.
+  if (screen === 'STUDENT_PERMISSION_BLOCKED') return <LocationBlockedScreen onOpenSettings={allowLocation} />
   if (screen === 'STUDENT_HOME' && studentTrip && locationState) return <StudentHome trip={studentTrip} location={locationState} notice={missionNotice} currentMission={currentMission} onCurrentMission={() => setScreen(currentMission?.type === 'CHECK' ? 'CHECK_MISSION' : 'ACTIVITY_MISSION')} />
   if (screen === 'ACTIVITY_MISSION' && currentMission) return <ActivityMissionScreen mission={currentMission} onCaptured={(uri) => { setCapturedPhotoUri(uri); setScreen('ACTIVITY_CONFIRMATION') }} />
   if (screen === 'ACTIVITY_CONFIRMATION') return <ActivityConfirmation isResubmission={currentMission?.isResubmission ?? false} photoUri={capturedPhotoUri} onRetake={() => setScreen('ACTIVITY_MISSION')} onSubmit={async () => {
