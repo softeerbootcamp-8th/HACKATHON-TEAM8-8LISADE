@@ -1,7 +1,9 @@
 package com.palisade.travel.global.error;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
+@RequiredArgsConstructor
 public enum CommonErrorCode implements ErrorCode {
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "Invalid request."),
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Validation failed."),
@@ -12,12 +14,6 @@ public enum CommonErrorCode implements ErrorCode {
     private final HttpStatus status;
     private final String code;
     private final String message;
-
-    CommonErrorCode(HttpStatus status, String code, String message) {
-        this.status = status;
-        this.code = code;
-        this.message = message;
-    }
 
     @Override
     public HttpStatus status() {

@@ -6,13 +6,18 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @Table(name = "invite_code")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class InviteCode {
 
     @Id
@@ -30,17 +35,6 @@ public class InviteCode {
 
     @Column(name = "revoked_at")
     private LocalDateTime revokedAt;
-
-    protected InviteCode() {
-    }
-
-    public InviteCode(Long id, Long tripId, String code, LocalDateTime expiresAt, LocalDateTime revokedAt) {
-        this.id = id;
-        this.tripId = tripId;
-        this.code = code;
-        this.expiresAt = expiresAt;
-        this.revokedAt = revokedAt;
-    }
 
     public static InviteCode create(Long tripId, String code, LocalDateTime expiresAt) {
         return new InviteCode(null, tripId, code, expiresAt, null);

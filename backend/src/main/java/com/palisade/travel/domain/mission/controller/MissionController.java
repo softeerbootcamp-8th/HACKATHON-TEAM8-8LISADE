@@ -8,13 +8,14 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import lombok.RequiredArgsConstructor;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class MissionController {
     private final MissionService missionService;
-    public MissionController(MissionService missionService) { this.missionService=missionService; }
     @PostMapping("/teacher/trips/{tripId}/missions") @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<MissionResponse> create(@PathVariable Long tripId, @AuthenticationPrincipal UserPrincipal user, @Valid @RequestBody MissionCreateRequest request) { return ApiResponse.success(MissionResponse.from(missionService.create(tripId,user.userId(),request.title(),request.description(),request.type(),request.startAt(),request.endAt()))); }
     @GetMapping("/teacher/trips/{tripId}/missions")

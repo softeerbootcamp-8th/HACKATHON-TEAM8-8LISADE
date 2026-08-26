@@ -6,7 +6,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -14,6 +16,7 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @Table(name = "current_location")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CurrentLocation {
 
     @Id
@@ -41,9 +44,6 @@ public class CurrentLocation {
 
     @Column(name = "outside_since")
     private LocalDateTime outsideSince;
-
-    protected CurrentLocation() {
-    }
 
     public CurrentLocation(Long id, Long userId, Long tripId, BigDecimal latitude, BigDecimal longitude,
                            boolean isOutside, LocalDateTime updatedAt) {

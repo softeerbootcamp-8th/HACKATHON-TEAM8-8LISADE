@@ -1,8 +1,10 @@
 package com.palisade.travel.domain.trip.exception;
 
 import com.palisade.travel.global.error.ErrorCode;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
+@RequiredArgsConstructor
 public enum TripErrorCode implements ErrorCode {
     TRIP_NOT_FOUND(HttpStatus.NOT_FOUND, "TRIP_NOT_FOUND", "Trip not found."),
     TRIP_ACCESS_DENIED(HttpStatus.FORBIDDEN, "TRIP_ACCESS_DENIED", "Trip access denied."),
@@ -13,12 +15,6 @@ public enum TripErrorCode implements ErrorCode {
     private final HttpStatus status;
     private final String code;
     private final String message;
-
-    TripErrorCode(HttpStatus status, String code, String message) {
-        this.status = status;
-        this.code = code;
-        this.message = message;
-    }
 
     @Override public HttpStatus status() { return status; }
     @Override public String code() { return code; }

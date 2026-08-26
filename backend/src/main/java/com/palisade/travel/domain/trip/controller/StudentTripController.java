@@ -6,6 +6,7 @@ import com.palisade.travel.domain.trip.service.TripService;
 import com.palisade.travel.global.api.ApiResponse;
 import com.palisade.travel.global.security.UserPrincipal;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,12 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/student/trips")
+@RequiredArgsConstructor
 public class StudentTripController {
     private final TripService tripService;
-
-    public StudentTripController(TripService tripService) {
-        this.tripService = tripService;
-    }
 
     @PostMapping("/join")
     public ApiResponse<JoinTripResponse> join(@AuthenticationPrincipal UserPrincipal student,

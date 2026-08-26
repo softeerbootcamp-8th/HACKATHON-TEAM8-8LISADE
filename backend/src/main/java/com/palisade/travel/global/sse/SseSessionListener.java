@@ -3,18 +3,16 @@ package com.palisade.travel.global.sse;
 import com.palisade.travel.global.security.UserPrincipal;
 import jakarta.servlet.http.HttpSessionEvent;
 import jakarta.servlet.http.HttpSessionListener;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class SseSessionListener implements HttpSessionListener {
 
     private final SseConnectionService sseConnectionService;
-
-    public SseSessionListener(SseConnectionService sseConnectionService) {
-        this.sseConnectionService = sseConnectionService;
-    }
 
     @Override
     public void sessionDestroyed(HttpSessionEvent event) {

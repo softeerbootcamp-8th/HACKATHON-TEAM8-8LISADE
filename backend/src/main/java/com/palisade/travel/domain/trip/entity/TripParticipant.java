@@ -8,13 +8,18 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @Table(name = "trip_participant")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class TripParticipant {
 
     @Id
@@ -37,19 +42,6 @@ public class TripParticipant {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
-    protected TripParticipant() {
-    }
-
-    public TripParticipant(Long id, Long tripId, Long userId, String participantName,
-                           TripParticipantType participantType, LocalDateTime createdAt) {
-        this.id = id;
-        this.tripId = tripId;
-        this.userId = userId;
-        this.participantName = participantName;
-        this.participantType = participantType;
-        this.createdAt = createdAt;
-    }
 
     public static TripParticipant create(Long tripId, Long userId) {
         return new TripParticipant(null, tripId, userId, null, TripParticipantType.APP, LocalDateTime.now());

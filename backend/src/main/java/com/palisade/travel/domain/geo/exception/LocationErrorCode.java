@@ -1,8 +1,10 @@
 package com.palisade.travel.domain.geo.exception;
 
 import com.palisade.travel.global.error.ErrorCode;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
+@RequiredArgsConstructor
 public enum LocationErrorCode implements ErrorCode {
     PARTICIPATING_TRIP_NOT_FOUND(
             HttpStatus.NOT_FOUND,
@@ -25,12 +27,6 @@ public enum LocationErrorCode implements ErrorCode {
     private final HttpStatus status;
     private final String code;
     private final String message;
-
-    LocationErrorCode(HttpStatus status, String code, String message) {
-        this.status = status;
-        this.code = code;
-        this.message = message;
-    }
 
     @Override
     public HttpStatus status() {

@@ -12,6 +12,7 @@ import com.palisade.travel.domain.user.entity.User;
 import com.palisade.travel.domain.user.repository.UserRepository;
 import com.palisade.travel.global.error.ApiException;
 import com.palisade.travel.global.error.CommonErrorCode;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class MissionService {
     private final MissionRepository missionRepository;
     private final MissionSubmissionRepository submissionRepository;
@@ -31,7 +33,6 @@ public class MissionService {
     private final TripParticipantRepository participantRepository;
     private final UserRepository userRepository;
     private final StoragePresigner storagePresigner;
-    public MissionService(MissionRepository missionRepository, MissionSubmissionRepository submissionRepository, TripRepository tripRepository, TripParticipantRepository participantRepository, UserRepository userRepository, StoragePresigner storagePresigner) { this.missionRepository=missionRepository; this.submissionRepository=submissionRepository; this.tripRepository=tripRepository; this.participantRepository=participantRepository; this.userRepository=userRepository; this.storagePresigner=storagePresigner; }
 
     @Transactional
     public Mission create(Long tripId, Long teacherId, String title, String description, MissionType type, LocalDateTime startAt, LocalDateTime endAt) {
