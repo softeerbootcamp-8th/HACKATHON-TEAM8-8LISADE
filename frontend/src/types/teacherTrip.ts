@@ -24,3 +24,13 @@ export interface TeacherTrip {
   startAt: string | null
   status: TeacherTripStatus
 }
+
+export type TripParticipantType = 'APP' | 'MANUAL'
+
+export interface TripParticipant {
+  id: number
+  userId: number | null
+  name: string
+  type: TripParticipantType
+  createdAt: string
+}

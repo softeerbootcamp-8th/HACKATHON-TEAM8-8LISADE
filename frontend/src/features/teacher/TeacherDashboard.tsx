@@ -15,8 +15,10 @@ import icMission from '../../assets/icons/ic-mission.svg'
 import icPin from '../../assets/icons/ic-pin.svg'
 import icSliders from '../../assets/icons/ic-sliders.svg'
 import { TripCreationFlow } from './TripCreationFlow'
+import { AddStudentForm, TripDetail } from './TripDetail'
 
 type TeacherTab = 'HOME' | 'STUDENTS' | 'MISSIONS' | 'LOCATION' | 'MANAGE'
+type ManageView = { name: 'LIST' } | { name: 'CREATE' } | { name: 'DETAIL'; tripId: number } | { name: 'ADD_STUDENT'; tripId: number }
 
 const teacherTrips = [
   { id: 'trip-1', title: '경복궁 현장체험학습', status: '진행 중', students: 24, normal: 20, outside: 1, missing: 3, missionRate: 68, pendingSubmissions: 2, updatedAt: '방금 전' },
@@ -43,13 +45,17 @@ function notificationTargetTab(type: TeacherNotification['type']): TeacherTab {
 export function TeacherDashboard({ user }: { user: CurrentUser }) {
   const [tripId, setTripId] = useState(teacherTrips[0].id)
   const [tab, setTab] = useState<TeacherTab>('HOME')
-  const [creating, setCreating] = useState(false)
-  const [createdNotice, setCreatedNotice] = useState('')
+  const [manageView, setManageView] = useState<ManageView>({ name: 'LIST' })
+  const [notice, setNotice] = useState('')
   const [trips, setTrips] = useState<TeacherTrip[] | null>(null)
   const [tripError, setTripError] = useState('')
   const [showNotifications, setShowNotifications] = useState(false)
   const trip = teacherTrips.find((candidate) => candidate.id === tripId) ?? teacherTrips[0]
   const activeTripId = trips && trips.length > 0 ? String(trips[0].id) : null
+
+  const refreshTrips = () => teacherTripApi.getTrips()
+    .then((loadedTrips) => { setTrips(loadedTrips); return loadedTrips })
+    .catch((caught) => { setTripError(caught instanceof Error ? caught.message : '체험학습 목록을 불러오지 못했습니다.'); return null })
 
   useEffect(() => {
     let active = true
@@ -64,13 +70,36 @@ export function TeacherDashboard({ user }: { user: CurrentUser }) {
     setShowNotifications(false)
   }
 
-  if (creating) return <TripCreationFlow
-    onCancel={() => setCreating(false)}
-    onCreated={(code) => {
-      setCreatedNotice(`현장체험학습을 생성했습니다. 초대 코드: ${code}`)
-      setCreating(false)
+  if (manageView.name === 'CREATE') return <TripCreationFlow
+    onCancel={() => setManageView({ name: 'LIST' })}
+    onCreated={async (code) => {
+      await refreshTrips()
+      setNotice(`현장체험학습을 생성했습니다. 초대 코드: ${code}`)
+      setManageView({ name: 'LIST' })
     }}
   />
+  if (manageView.name === 'DETAIL' || manageView.name === 'ADD_STUDENT') {
+    const detailTrip = trips?.find((candidate) => candidate.id === manageView.tripId)
+    if (!detailTrip) return null
+    if (manageView.name === 'ADD_STUDENT') return <AddStudentForm
+      onCancel={() => setManageView({ name: 'DETAIL', tripId: detailTrip.id })}
+      onAdd={async (name) => {
+        await teacherTripApi.addManualParticipant(detailTrip.id, name)
+        setManageView({ name: 'DETAIL', tripId: detailTrip.id })
+      }}
+    />
+    return <TripDetail
+      trip={detailTrip}
+      teacherName={user.name}
+      onBack={() => setManageView({ name: 'LIST' })}
+      onAddStudent={() => setManageView({ name: 'ADD_STUDENT', tripId: detailTrip.id })}
+      onFinished={async () => {
+        await refreshTrips()
+        setNotice('현장체험학습을 종료했습니다.')
+        setManageView({ name: 'LIST' })
+      }}
+    />
+  }
 
   if (showNotifications) return <ScreenCard title="알림">
     <AppHeader />
@@ -82,7 +111,14 @@ export function TeacherDashboard({ user }: { user: CurrentUser }) {
   return <ScreenCard title="교사 홈">
     <AppHeader onBellClick={() => setShowNotifications(true)} />
     {tab === 'MANAGE'
-      ? <ManagementTab user={user} trips={trips} error={tripError} notice={createdNotice} onAdd={() => setCreating(true)} />
+      ? <ManagementTab
+        user={user}
+        trips={trips}
+        error={tripError}
+        notice={notice}
+        onAdd={() => setManageView({ name: 'CREATE' })}
+        onSelect={(selectedTripId) => setManageView({ name: 'DETAIL', tripId: selectedTripId })}
+      />
       : <div className="teacher-body">
         <Field label="기준 Trip" id="teacher-trip"><select id="teacher-trip" className="teacher-trip-select" value={tripId} onChange={(event) => setTripId(event.target.value)}>{teacherTrips.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.title} · {candidate.status}</option>)}</select></Field>
         <div className="teacher-status-row"><h2>{trip.title}</h2><span className={`status-pill ${trip.status === '진행 중' ? 'status-pill--success' : 'status-pill--neutral'}`}>{trip.status}</span></div>
@@ -103,7 +139,7 @@ export function TeacherDashboard({ user }: { user: CurrentUser }) {
   </ScreenCard>
 }
 
-function ManagementTab({ user, trips, error, notice, onAdd }: { user: CurrentUser; trips: TeacherTrip[] | null; error: string; notice: string; onAdd: () => void }) {
+function ManagementTab({ user, trips, error, notice, onAdd, onSelect }: { user: CurrentUser; trips: TeacherTrip[] | null; error: string; notice: string; onAdd: () => void; onSelect: (tripId: number) => void }) {
   return <section className="management-tab">
     <section className="teacher-profile" aria-label="교사 정보"><strong>{user.name} 선생님</strong><span>{formatPhoneNumber(user.phoneNumber)}</span></section>
     <h1>현장체험학습 관리</h1>
@@ -114,10 +150,10 @@ function ManagementTab({ user, trips, error, notice, onAdd }: { user: CurrentUse
           ? <p className="management-state" role="status">체험학습 목록을 불러오는 중입니다.</p>
           : trips.length === 0
             ? <p className="management-state">아직 생성한 현장체험학습이 없습니다.</p>
-            : trips.map((trip) => <article className="management-card" key={trip.id}>
+            : trips.map((trip) => <button type="button" className="management-card" key={trip.id} onClick={() => onSelect(trip.id)}>
               <div><h2>{trip.title}</h2><p>{formatTripDate(trip.startAt)} · {trip.place}</p></div>
               <span className={`trip-status trip-status-${trip.status.toLowerCase()}`}>{teacherTripStatusLabels[trip.status]}</span>
-            </article>)}
+            </button>)}
     </div>
     {notice && <p className="add-notice" role="status">{notice}</p>}
     <button type="button" className="add-trip-button" aria-label="현장체험학습 추가하기" onClick={onAdd}>+ 현장체험학습 추가하기</button>

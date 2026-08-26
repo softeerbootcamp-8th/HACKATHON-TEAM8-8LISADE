@@ -133,6 +133,26 @@ public class TripService {
         return TripParticipantResponse.from(participantRepository.save(TripParticipant.manual(tripId, name)));
     }
 
+    public InviteCodeResponse getCurrentInviteCode(Long teacherId, Long tripId) {
+        findOwnedTrip(teacherId, tripId);
+        return inviteCodeRepository.findByTripIdAndRevokedAtIsNull(tripId)
+                .filter(code -> code.isUsableAt(now()))
+                .map(InviteCodeResponse::from)
+                .orElse(null);
+    }
+
+    @Transactional
+    public void finish(Long teacherId, Long tripId) {
+        Trip trip = findOwnedTrip(teacherId, tripId);
+        if (trip.getStatus() != TripStatus.ACTIVE) {
+            throw new ApiException(TripErrorCode.TRIP_NOT_ACTIVE);
+        }
+        trip.finish();
+        tripRepository.save(trip);
+        inviteCodeRepository.findByTripIdAndRevokedAtIsNull(tripId)
+                .ifPresent(code -> code.revoke(now()));
+    }
+
     private InviteCode issueCode(Long tripId) {
         String code = nextUnusedCode();
         InviteCode inviteCode = InviteCode.create(tripId, code, now().plusMinutes(INVITE_CODE_EXPIRES_MINUTES));
