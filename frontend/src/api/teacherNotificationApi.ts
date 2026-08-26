@@ -1,4 +1,5 @@
 import type { TeacherNotification } from '../types/notification'
+import { apiUrl } from './apiUrl'
 
 type ApiResponse<T> = { success: boolean; data: T; message?: string }
 
@@ -19,7 +20,7 @@ export interface TeacherNotificationApi {
 
 export const teacherNotificationApi: TeacherNotificationApi = {
   async list() {
-    const response = await fetch('/api/teacher/notifications', { credentials: 'include' })
+    const response = await fetch(apiUrl('/api/teacher/notifications'), { credentials: 'include' })
     const body = await response.json().catch(() => null) as ApiResponse<NotificationResponse[]> | null
     if (!response.ok || !body?.success) {
       throw new Error(body?.message ?? '알림을 불러오지 못했습니다.')

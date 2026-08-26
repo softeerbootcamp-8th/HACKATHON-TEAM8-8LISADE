@@ -8,6 +8,22 @@ spring:
       ddl-auto: update
     open-in-view: false
 
+server:
+  servlet:
+    session:
+      cookie:
+        secure: true
+        same-site: None
+
+app:
+  security:
+    cors:
+      allowed-origins:
+        - ${CORS_ALLOWED_ORIGIN:https://8lisade.site}
+    csrf-cookie:
+      secure: true
+      same-site: None
+
 firebase:
   credentials-path: ${FIREBASE_CREDENTIALS_PATH:}
 

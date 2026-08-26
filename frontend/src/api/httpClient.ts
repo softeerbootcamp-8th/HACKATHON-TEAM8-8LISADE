@@ -12,7 +12,7 @@ type ApiResponse<T> = {
 const FAILURE_MESSAGE = '요청 처리에 실패했습니다.'
 
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, { credentials: 'include', ...init })
+  const response = await fetch(apiUrl(path), { credentials: 'include', ...init })
   const body = await response.json().catch(() => null) as ApiResponse<T> | null
 
   if (!response.ok || !body?.success) {
@@ -33,7 +33,7 @@ export async function csrfJsonHeaders(): Promise<Record<string, string>> {
 
 /** 204 No Content로 응답하는 엔드포인트용 — 성공 본문을 파싱하지 않는다. */
 export async function sendJson(path: string, method: string, payload: unknown): Promise<void> {
-  const response = await fetch(path, {
+  const response = await fetch(apiUrl(path), {
     method,
     credentials: 'include',
     headers: await csrfJsonHeaders(),
@@ -45,3 +45,4 @@ export async function sendJson(path: string, method: string, payload: unknown): 
     throw new Error(body?.message ?? FAILURE_MESSAGE)
   }
 }
+import { apiUrl } from './apiUrl'

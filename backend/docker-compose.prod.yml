@@ -4,7 +4,7 @@ services:
     container_name: travel-backend
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: prod
       DB_HOST: ${DB_HOST}
@@ -12,3 +12,6 @@ services:
       DB_NAME: ${DB_NAME}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
+      # EC2 instance profile supplies AWS credentials; the bucket name is deployment configuration.
+      S3_BUCKET: ${S3_BUCKET:-8lisade-mission-image-upload-762794225137-ap-northeast-2-an}
+      AWS_REGION: ${AWS_REGION:-ap-northeast-2}

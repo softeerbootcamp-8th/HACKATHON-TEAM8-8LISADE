@@ -37,7 +37,7 @@ type StudentLocationResponse = {
 }
 
 async function request<T>(path: string, fallbackMessage: string): Promise<T> {
-  const response = await fetch(path, { credentials: 'include' })
+  const response = await fetch(apiUrl(path), { credentials: 'include' })
   const body = await response.json().catch(() => null) as ApiResponse<T> | null
 
   if (!response.ok || !body?.success) {
@@ -76,3 +76,4 @@ export const teacherStudentApi: TeacherStudentApi = {
     return student
   },
 }
+import { apiUrl } from './apiUrl'
