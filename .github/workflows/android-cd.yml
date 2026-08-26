@@ -2,6 +2,10 @@ name: Release Android APK
 
 on:
   push:
+    # main push = develop -> main 릴리즈 머지. 백엔드 배포와 같은 이벤트라
+    # APK와 서버가 항상 같은 코드에서 나간다.
+    branches: [main]
+    # 핫픽스나 수동 재배포용. main push와 간섭하지 않는다.
     tags:
       - 'v*'
   workflow_dispatch:
@@ -32,16 +36,25 @@ jobs:
         id: version
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION="${{ inputs.version }}"
-            PRERELEASE="${{ inputs.prerelease }}"
-          else
-            VERSION="${GITHUB_REF_NAME#v}"
-            case "$VERSION" in
-              *-*) PRERELEASE=true ;;
-              *)   PRERELEASE=false ;;
-            esac
-          fi
+          case "${{ github.event_name }}" in
+            workflow_dispatch)
+              VERSION="${{ inputs.version }}"
+              PRERELEASE="${{ inputs.prerelease }}"
+              ;;
+            *)
+              if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+                VERSION="${GITHUB_REF_NAME#v}"
+                case "$VERSION" in
+                  *-*) PRERELEASE=true ;;
+                  *)   PRERELEASE=false ;;
+                esac
+              else
+                # main push — run_number로 단조 증가시킨다. 태그 충돌이 구조적으로 없다.
+                VERSION="1.0.${{ github.run_number }}"
+                PRERELEASE=false
+              fi
+              ;;
+          esac
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
           echo "버전 $VERSION (versionCode=${{ github.run_number }}, prerelease=$PRERELEASE)"
@@ -137,13 +150,15 @@ jobs:
           APK: ${{ steps.apk.outputs.path }}
         run: |
           set -euo pipefail
-          TAG="${GITHUB_REF_NAME}"
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            TAG="$GITHUB_REF_NAME"
+          else
+            # 태그가 없는 경로(main push / workflow_dispatch)는
+            # gh release create가 이 커밋에 태그를 만들어 준다.
             TAG="v$VERSION"
-            git tag "$TAG" && git push origin "$TAG"
           fi
 
-          FLAGS=(--generate-notes --title "v$VERSION")
+          FLAGS=(--generate-notes --title "v$VERSION" --target "$GITHUB_SHA")
           if [ "$PRERELEASE" = "true" ]; then
             FLAGS+=(--prerelease)
           fi
