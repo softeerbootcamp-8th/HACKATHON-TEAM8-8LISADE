@@ -76,7 +76,7 @@ public class DeadlineImminentAlertService {
         }
     }
 
-    /** 미완료 = (앱 참가 학생 수) − (COMPLETED 제출 학생 수). */
+    /** 미완료 = (앱 참가 학생 수) − (COMPLETED 또는 LATE 제출 학생 수). 지각 제출도 제출은 한 것이므로 완료로 취급한다. */
     private List<Long> incompleteStudentIds(Mission mission) {
         Set<Long> rosterUserIds = participantRepository.findAllByTripIdOrderByCreatedAtAsc(mission.getTripId()).stream()
                 .map(TripParticipant::getUserId)
@@ -86,7 +86,7 @@ public class DeadlineImminentAlertService {
             return List.of();
         }
         Set<Long> completedUserIds = submissionRepository.findByMissionId(mission.getId()).stream()
-                .filter(submission -> submission.getStatus() == SubmissionStatus.COMPLETED)
+                .filter(submission -> submission.getStatus() == SubmissionStatus.COMPLETED || submission.getStatus() == SubmissionStatus.LATE)
                 .map(MissionSubmission::getUserId)
                 .collect(Collectors.toSet());
         return rosterUserIds.stream().filter(userId -> !completedUserIds.contains(userId)).toList();

@@ -120,6 +120,26 @@ class MissionIncompleteAlertServiceTest {
         then(pushNotificationService).should(never()).sendToUser(any(), any(), any());
     }
 
+    @Test
+    void 지각_제출도_완료로_취급해_미완료_알림에서_제외한다() {
+        // given
+        given(missionRepository.findByTypeAndEndAtIsNotNullAndEndAtBefore(MissionType.ACTIVITY, NOW))
+                .willReturn(List.of(mission("어디서 사진 찍기")));
+        given(notificationRepository.existsByMissionIdAndType(MISSION_ID, NotificationType.MISSION_INCOMPLETED))
+                .willReturn(false);
+        given(participantRepository.findAllByTripIdOrderByCreatedAtAsc(TRIP_ID))
+                .willReturn(List.of(participant(1L), participant(2L)));
+        given(submissionRepository.findByMissionId(MISSION_ID))
+                .willReturn(List.of(MissionSubmission.photo(MISSION_ID, 1L, "k", false), MissionSubmission.photo(MISSION_ID, 2L, "k", true)));
+
+        // when
+        service.notifyOverdueMissions(NOW);
+
+        // then
+        then(notificationRepository).should(never()).save(any());
+        then(pushNotificationService).should(never()).sendToUser(any(), any(), any());
+    }
+
     private Mission mission(String title) {
         Mission mission = Mission.create(TRIP_ID, title, "", MissionType.ACTIVITY, NOW.minusHours(1), NOW.minusMinutes(1));
         ReflectionTestUtils.setField(mission, "id", MISSION_ID);

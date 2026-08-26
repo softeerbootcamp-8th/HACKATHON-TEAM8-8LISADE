@@ -123,6 +123,26 @@ class DeadlineImminentAlertServiceTest {
         then(pushNotificationService).should(never()).sendToUser(any(), any(), any());
     }
 
+    @Test
+    void 지각_제출도_완료로_취급해_마감_임박_알림에서_제외한다() {
+        // given
+        given(missionRepository.findByTypeAndEndAtIsNotNullAndEndAtBetween(MissionType.ACTIVITY, NOW, NOW.plusMinutes(5)))
+                .willReturn(List.of(mission("어디서 사진 찍기")));
+        given(notificationRepository.existsByMissionIdAndType(MISSION_ID, NotificationType.DEADLINE_IMMINENT))
+                .willReturn(false);
+        given(participantRepository.findAllByTripIdOrderByCreatedAtAsc(TRIP_ID))
+                .willReturn(List.of(participant(1L), participant(2L)));
+        given(submissionRepository.findByMissionId(MISSION_ID))
+                .willReturn(List.of(MissionSubmission.photo(MISSION_ID, 1L, "k", false), MissionSubmission.photo(MISSION_ID, 2L, "k", true)));
+
+        // when
+        service.notifyUpcomingDeadlines(NOW);
+
+        // then
+        then(notificationRepository).should(never()).save(any());
+        then(pushNotificationService).should(never()).sendToUser(any(), any(), any());
+    }
+
     private Mission mission(String title) {
         Mission mission = Mission.create(TRIP_ID, title, "", MissionType.ACTIVITY, NOW.minusHours(1), NOW.plusMinutes(3));
         ReflectionTestUtils.setField(mission, "id", MISSION_ID);
