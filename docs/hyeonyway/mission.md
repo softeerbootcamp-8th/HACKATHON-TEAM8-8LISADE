@@ -31,3 +31,11 @@
 - 같이 정리: `missionApi.ts`의 미사용 `MissionApi` interface(#27 설계 문서가 언급한 이름이지만 실제 구현체는 다른 이름으로 나가서 orphan됨) 제거.
 
 검증: `npm test`(신규 `StudentScreens.test.tsx` 포함 34파일 199개 통과), `npm run lint`, `npm run build` 모두 통과.
+
+## 사진 업로드 Content-Type 서명 불일치 수정 (#132)
+
+- 운영 배포 후 실제 카메라로 촬영한 PNG 사진을 제출하니 S3 PUT이 403 `SignatureDoesNotMatch`로 실패했다. `S3StoragePresigner.presignPut`이 presigned URL을 항상 `Content-Type: image/jpeg`로 서명하는데, `uploadToStorage`는 `photo.type || 'image/jpeg'`로 실제 Blob의 MIME 타입을 그대로 헤더에 보내고 있었다 — 캡처 결과가 `image/jpeg`가 아니면(웹 파일 선택 등에서 흔함) SigV4 서명 검증이 어긋난다.
+- 403 응답의 `CanonicalRequest`에 `content-type:image/png`가 실제로 찍혀 있어 원인을 바로 특정했다.
+- `uploadToStorage`가 Blob의 실제 타입과 무관하게 항상 `image/jpeg`로 고정해서 보내도록 수정했다(백엔드가 항상 그 값으로 서명하므로).
+
+검증: `npm test`(신규 케이스 포함 37파일 222개 통과), `npm run lint`, `npm run build` 모두 통과.
