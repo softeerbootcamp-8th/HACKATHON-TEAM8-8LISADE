@@ -64,5 +64,6 @@
 - `POST /api/teacher/trips/{tripId}/start`, `DELETE /api/teacher/trips/{tripId}` 컨트롤러 엔드포인트 추가. `InviteCodeRepository.deleteAllByTripId`, `GeofencePointRepository.deleteAllByGeofenceId` 파생 쿼리 추가.
 - 프론트 `TripDetail.tsx`: READY 상태에 "현장체험학습 시작"(`trip-primary-button` 재사용)과 "삭제하기"(`danger-button` 재사용, 종료와 동일한 2단계 확인) 버튼 추가. `TeacherDashboard.tsx`의 `onStarted`는 같은 상세 화면에 머물러 새로고침된 ACTIVE 상태를 보여주고, `onDeleted`는 목록으로 돌아간다.
 - `TripCreationFlow.tsx`/`TeacherDashboard.tsx`: 생성 완료 알림에서 초대 코드 노출을 뺐다 — 그 코드는 `start()` 시점에 폐기되고 새 코드로 교체되므로 미리 보여주면 혼란만 준다.
+- **PR 리뷰 반영**: 처음엔 "`create()`가 코드를 발급하되 화면엔 숨긴다"로 구현했는데, 리뷰에서 "애초에 발급을 안 하는 게 맞다"는 피드백을 받아 `create()`가 초대 코드를 아예 발급하지 않도록 바꿨다. 반환 타입도 `InviteCodeResponse` → 신규 `TripCreatedResponse(tripId)`로 교체(컨트롤러도 동일). 프론트 `teacherTripApi.create()` 반환 타입도 `{ tripId: number }`로 정정 — 원래 프론트가 그 값을 안 썼어서 동작 변화는 없다.
 
-검증: 백엔드 `./gradlew test` 전체 통과(신규 5케이스: READY 생성, 시작 성공/이미 시작됨, 삭제 성공/진행중 삭제 시도), 프론트 `npx vitest run`(37 files, 231 passed), `npm run lint`, `npm run build` 통과.
+검증: 백엔드 `./gradlew test` 전체 통과(READY 생성 + 코드 미발급, 시작 성공/이미 시작됨, 삭제 성공/진행중 삭제 시도), 프론트 `npx vitest run`(38 files, 236 passed), `npm run lint`, `npm run build` 통과.
