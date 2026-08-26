@@ -1,6 +1,8 @@
 package com.palisade.travel.domain.mission.service;
 
 import com.palisade.travel.domain.mission.entity.*;
+import com.palisade.travel.domain.mission.exception.MissionErrorCode;
+import com.palisade.travel.domain.mission.exception.MissionException;
 import com.palisade.travel.domain.mission.repository.MissionRepository;
 import com.palisade.travel.domain.mission.repository.MissionSubmissionRepository;
 import com.palisade.travel.domain.mission.storage.StoragePresigner;
@@ -14,8 +16,6 @@ import com.palisade.travel.domain.trip.repository.TripParticipantRepository;
 import com.palisade.travel.domain.trip.repository.TripRepository;
 import com.palisade.travel.domain.user.entity.User;
 import com.palisade.travel.domain.user.repository.UserRepository;
-import com.palisade.travel.global.error.ApiException;
-import com.palisade.travel.global.error.CommonErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,7 +43,7 @@ public class MissionService {
     @Transactional
     public Mission create(Long tripId, Long teacherId, String title, String description, MissionType type, LocalDateTime startAt, LocalDateTime endAt) {
         requireTeacher(tripId, teacherId);
-        if (endAt != null && startAt != null && endAt.isBefore(startAt)) throw new ApiException(CommonErrorCode.INVALID_REQUEST);
+        if (endAt != null && startAt != null && endAt.isBefore(startAt)) throw new MissionException(MissionErrorCode.INVALID_MISSION_PERIOD);
         Mission mission = type == MissionType.CHECK ? Mission.createCheck(tripId, title, description, startAt, endAt, String.format("%04d", ThreadLocalRandom.current().nextInt(10_000))) : Mission.create(tripId, title, description, type, startAt, endAt);
         mission = missionRepository.save(mission);
         notifyNewMission(mission);
@@ -66,15 +66,15 @@ public class MissionService {
     @Transactional
     public Mission update(Long missionId, Long teacherId, String title, String description, LocalDateTime startAt, LocalDateTime endAt) {
         Mission mission = findMission(missionId); requireTeacher(mission.getTripId(), teacherId);
-        if (endAt != null && startAt != null && endAt.isBefore(startAt)) throw new ApiException(CommonErrorCode.INVALID_REQUEST);
+        if (endAt != null && startAt != null && endAt.isBefore(startAt)) throw new MissionException(MissionErrorCode.INVALID_MISSION_PERIOD);
         mission.change(title, description, startAt, endAt); return mission;
     }
     public Mission getStudentMission(Long missionId, Long studentId) { Mission mission = findMission(missionId); requireParticipant(mission, studentId); requireAccessible(mission); return mission; }
-    public List<Mission> getCurrentStudentMissions(Long tripId, Long studentId) { if (!participantRepository.existsByTripIdAndUserId(tripId, studentId)) throw new ApiException(CommonErrorCode.FORBIDDEN); LocalDateTime now=LocalDateTime.now(); return missionRepository.findByTripIdOrderByStartAtAsc(tripId).stream().filter(m -> m.isAccessibleAt(now)).toList(); }
+    public List<Mission> getCurrentStudentMissions(Long tripId, Long studentId) { if (!participantRepository.existsByTripIdAndUserId(tripId, studentId)) throw new MissionException(MissionErrorCode.NOT_A_TRIP_PARTICIPANT); LocalDateTime now=LocalDateTime.now(); return missionRepository.findByTripIdOrderByStartAtAsc(tripId).stream().filter(m -> m.isAccessibleAt(now)).toList(); }
     @Transactional
     public SubmissionResult verifyPin(Long missionId, Long studentId, String pin) {
         Mission mission = getStudentMission(missionId, studentId);
-        if (mission.getType() != MissionType.CHECK || !mission.matchesPin(pin) || mission.isExpiredAt(LocalDateTime.now())) throw new ApiException(CommonErrorCode.INVALID_REQUEST);
+        if (mission.getType() != MissionType.CHECK || !mission.matchesPin(pin) || mission.isExpiredAt(LocalDateTime.now())) throw new MissionException(MissionErrorCode.INVALID_CHECK_IN);
         MissionSubmission submission = submissionRepository.findByMissionIdAndUserId(missionId, studentId).orElseGet(() -> submissionRepository.save(MissionSubmission.completedCheck(missionId, studentId)));
         return SubmissionResult.from(submission, mission);
     }
@@ -82,16 +82,16 @@ public class MissionService {
     public SubmissionResult submitPhoto(Long missionId, Long studentId, String imageKey) {
         Mission mission=getStudentMission(missionId, studentId);
         String requiredPrefix = "upload/missions/" + missionId + "/students/" + studentId + "/";
-        if (mission.getType()!=MissionType.ACTIVITY || mission.isExpiredAt(LocalDateTime.now()) || imageKey==null || !imageKey.startsWith(requiredPrefix)) throw new ApiException(CommonErrorCode.INVALID_REQUEST);
-        MissionSubmission submission=submissionRepository.findByMissionIdAndUserId(missionId, studentId).map(s -> { if (s.getStatus()!=SubmissionStatus.REJECTED) throw new ApiException(CommonErrorCode.INVALID_REQUEST); s.resubmit(imageKey); return s; }).orElseGet(() -> submissionRepository.save(MissionSubmission.photo(missionId,studentId,imageKey)));
+        if (mission.getType()!=MissionType.ACTIVITY || mission.isExpiredAt(LocalDateTime.now()) || imageKey==null || !imageKey.startsWith(requiredPrefix)) throw new MissionException(MissionErrorCode.INVALID_PHOTO_SUBMISSION);
+        MissionSubmission submission=submissionRepository.findByMissionIdAndUserId(missionId, studentId).map(s -> { if (s.getStatus()!=SubmissionStatus.REJECTED) throw new MissionException(MissionErrorCode.RESUBMISSION_NOT_ALLOWED); s.resubmit(imageKey); return s; }).orElseGet(() -> submissionRepository.save(MissionSubmission.photo(missionId,studentId,imageKey)));
         return SubmissionResult.from(submission, mission);
     }
-    public StoragePresigner.PresignedUpload preparePhotoUpload(Long missionId, Long studentId, String contentType) { Mission mission=getStudentMission(missionId,studentId); if (mission.getType()!=MissionType.ACTIVITY || mission.isExpiredAt(LocalDateTime.now())) throw new ApiException(CommonErrorCode.INVALID_REQUEST); String extension = "image/png".equals(contentType) ? "png" : "jpg"; return storagePresigner.presignPut("upload/missions/"+missionId+"/students/"+studentId+"/"+java.util.UUID.randomUUID()+"."+extension, contentType); }
+    public StoragePresigner.PresignedUpload preparePhotoUpload(Long missionId, Long studentId, String contentType) { Mission mission=getStudentMission(missionId,studentId); if (mission.getType()!=MissionType.ACTIVITY || mission.isExpiredAt(LocalDateTime.now())) throw new MissionException(MissionErrorCode.INVALID_PHOTO_SUBMISSION); String extension = "image/png".equals(contentType) ? "png" : "jpg"; return storagePresigner.presignPut("upload/missions/"+missionId+"/students/"+studentId+"/"+java.util.UUID.randomUUID()+"."+extension, contentType); }
     @Transactional
     public void reject(Long missionId, Long studentId, Long teacherId, String reason) {
         Mission mission = findMission(missionId);
         requireTeacher(mission.getTripId(), teacherId);
-        MissionSubmission submission = submissionRepository.findByMissionIdAndUserId(missionId, studentId).orElseThrow(() -> new ApiException(CommonErrorCode.INVALID_REQUEST));
+        MissionSubmission submission = submissionRepository.findByMissionIdAndUserId(missionId, studentId).orElseThrow(() -> new MissionException(MissionErrorCode.SUBMISSION_NOT_FOUND));
         submission.reject(reason);
         notifyRejected(mission, studentId, reason);
     }
@@ -107,7 +107,7 @@ public class MissionService {
     }
     @Transactional
     public void delete(Long missionId, Long teacherId) { Mission mission=findMission(missionId); requireTeacher(mission.getTripId(), teacherId); missionRepository.delete(mission); }
-    public String getPin(Long missionId, Long teacherId) { Mission mission=findMission(missionId); requireTeacher(mission.getTripId(), teacherId); if (mission.getType()!=MissionType.CHECK) throw new ApiException(CommonErrorCode.INVALID_REQUEST); return mission.getAttendancePin(); }
+    public String getPin(Long missionId, Long teacherId) { Mission mission=findMission(missionId); requireTeacher(mission.getTripId(), teacherId); if (mission.getType()!=MissionType.CHECK) throw new MissionException(MissionErrorCode.MISSION_TYPE_MISMATCH); return mission.getAttendancePin(); }
     public SubmissionResult getSubmission(Long missionId, Long studentId) { Mission mission=getStudentMission(missionId,studentId); return submissionRepository.findByMissionIdAndUserId(missionId,studentId).map(s -> SubmissionResult.from(s,mission)).orElse(new SubmissionResult(null, SubmissionStatus.WAITING, null)); }
 
     public StatusBoard getStatusBoard(Long missionId, Long teacherId) {
@@ -142,16 +142,16 @@ public class MissionService {
     public void completeOnBehalf(Long missionId, Long teacherId, Long studentId) {
         Mission mission = findMission(missionId);
         requireTeacher(mission.getTripId(), teacherId);
-        if (participantRepository.findByTripIdAndUserId(mission.getTripId(), studentId).isEmpty()) throw new ApiException(CommonErrorCode.INVALID_REQUEST);
+        if (participantRepository.findByTripIdAndUserId(mission.getTripId(), studentId).isEmpty()) throw new MissionException(MissionErrorCode.NOT_A_TRIP_PARTICIPANT);
         submissionRepository.findByMissionIdAndUserId(missionId, studentId)
                 .map(submission -> { submission.completeByTeacher(); return submission; })
                 .orElseGet(() -> submissionRepository.save(MissionSubmission.completedByTeacher(missionId, studentId)));
     }
 
-    private Mission findMission(Long id) { return missionRepository.findById(id).orElseThrow(() -> new ApiException(CommonErrorCode.INVALID_REQUEST)); }
-    private void requireParticipant(Mission mission, Long userId) { if (!participantRepository.existsByTripIdAndUserId(mission.getTripId(),userId)) throw new ApiException(CommonErrorCode.FORBIDDEN); }
-    private void requireAccessible(Mission mission) { if (!mission.isAccessibleAt(LocalDateTime.now())) throw new ApiException(CommonErrorCode.FORBIDDEN); }
-    private void requireTeacher(Long tripId, Long teacherId) { Trip trip=tripRepository.findById(tripId).orElseThrow(() -> new ApiException(CommonErrorCode.INVALID_REQUEST)); if (!trip.getTeacherId().equals(teacherId)) throw new ApiException(CommonErrorCode.FORBIDDEN); }
+    private Mission findMission(Long id) { return missionRepository.findById(id).orElseThrow(() -> new MissionException(MissionErrorCode.MISSION_NOT_FOUND)); }
+    private void requireParticipant(Mission mission, Long userId) { if (!participantRepository.existsByTripIdAndUserId(mission.getTripId(),userId)) throw new MissionException(MissionErrorCode.NOT_A_TRIP_PARTICIPANT); }
+    private void requireAccessible(Mission mission) { if (!mission.isAccessibleAt(LocalDateTime.now())) throw new MissionException(MissionErrorCode.MISSION_NOT_ACCESSIBLE); }
+    private void requireTeacher(Long tripId, Long teacherId) { Trip trip=tripRepository.findById(tripId).orElseThrow(() -> new MissionException(MissionErrorCode.TRIP_NOT_FOUND)); if (!trip.getTeacherId().equals(teacherId)) throw new MissionException(MissionErrorCode.TRIP_ACCESS_FORBIDDEN); }
     public record SubmissionResult(Long submissionId, SubmissionStatus status, String imageKey) { static SubmissionResult from(MissionSubmission submission, Mission mission) { return new SubmissionResult(submission.getId(), submission.currentStatus(LocalDateTime.now(),mission), submission.getImageKey()); } }
     public record StatusBoard(Mission mission, int totalStudentCount, List<SubmittedEntry> submitted, List<NotSubmittedEntry> notSubmitted) {}
     public record SubmittedEntry(Long studentId, String studentName, String imageKey, String imageUrl, LocalDateTime submittedAt) {}

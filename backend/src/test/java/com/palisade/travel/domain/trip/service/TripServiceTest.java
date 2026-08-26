@@ -114,7 +114,7 @@ class TripServiceTest {
 
         // when & then
         assertThatThrownBy(() -> tripService.start(10L, 1L))
-                .hasMessageContaining("not ready");
+                .hasMessageContaining("준비 상태의 체험학습이 아닙니다");
         verify(tripRepository, never()).save(any());
     }
 
@@ -144,7 +144,7 @@ class TripServiceTest {
 
         // when & then
         assertThatThrownBy(() -> tripService.delete(10L, 1L))
-                .hasMessageContaining("not ready");
+                .hasMessageContaining("준비 상태의 체험학습이 아닙니다");
         verify(tripRepository, never()).delete(any());
     }
 
@@ -297,7 +297,7 @@ class TripServiceTest {
 
         given(participantRepository.existsByUserIdAndTripStatus(20L, TripStatus.ACTIVE)).willReturn(true);
         assertThatThrownBy(() -> tripService.join(20L, "AB1234"))
-                .hasMessageContaining("active trip");
+                .hasMessageContaining("참여 중인 체험학습");
     }
 
     @Test
@@ -306,7 +306,7 @@ class TripServiceTest {
         given(inviteCodeRepository.findByCode("AB1234")).willReturn(Optional.of(expired));
 
         assertThatThrownBy(() -> tripService.join(20L, "AB1234"))
-                .hasMessageContaining("invite code");
+                .hasMessageContaining("초대 코드");
         verify(participantRepository, never()).save(any());
     }
 
@@ -332,7 +332,7 @@ class TripServiceTest {
         given(tripRepository.findById(1L)).willReturn(Optional.of(trip));
 
         assertThatThrownBy(() -> tripService.finish(10L, 1L))
-                .hasMessageContaining("not active");
+                .hasMessageContaining("진행 중인 체험학습이 아닙니다");
         verify(tripRepository, never()).save(any());
     }
 

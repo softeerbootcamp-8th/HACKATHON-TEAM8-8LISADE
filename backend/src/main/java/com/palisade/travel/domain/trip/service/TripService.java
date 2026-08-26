@@ -15,12 +15,12 @@ import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
 import com.palisade.travel.domain.trip.entity.TripStatus;
 import com.palisade.travel.domain.trip.exception.TripErrorCode;
+import com.palisade.travel.domain.trip.exception.TripException;
 import com.palisade.travel.domain.trip.repository.InviteCodeRepository;
 import com.palisade.travel.domain.trip.repository.TripParticipantRepository;
 import com.palisade.travel.domain.trip.repository.TripRepository;
 import com.palisade.travel.domain.user.entity.User;
 import com.palisade.travel.domain.user.repository.UserRepository;
-import com.palisade.travel.global.error.ApiException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -66,7 +66,7 @@ public class TripService {
     public InviteCodeResponse start(Long teacherId, Long tripId) {
         Trip trip = findOwnedTrip(teacherId, tripId);
         if (trip.getStatus() != TripStatus.READY) {
-            throw new ApiException(TripErrorCode.TRIP_NOT_READY);
+            throw new TripException(TripErrorCode.TRIP_NOT_READY);
         }
         trip.start();
         tripRepository.save(trip);
@@ -79,7 +79,7 @@ public class TripService {
     public void delete(Long teacherId, Long tripId) {
         Trip trip = findOwnedTrip(teacherId, tripId);
         if (trip.getStatus() != TripStatus.READY) {
-            throw new ApiException(TripErrorCode.TRIP_NOT_READY);
+            throw new TripException(TripErrorCode.TRIP_NOT_READY);
         }
         inviteCodeRepository.deleteAllByTripId(tripId);
         if (trip.getGeofenceId() != null) {
@@ -101,15 +101,15 @@ public class TripService {
     public JoinTripResponse join(Long studentId, String inputCode) {
         InviteCode inviteCode = inviteCodeRepository.findByCode(inputCode.toUpperCase(Locale.ROOT))
                 .filter(code -> code.isUsableAt(now()))
-                .orElseThrow(() -> new ApiException(TripErrorCode.INVALID_INVITE_CODE));
+                .orElseThrow(() -> new TripException(TripErrorCode.INVALID_INVITE_CODE));
         Trip trip = tripRepository.findById(inviteCode.getTripId())
                 .filter(found -> found.getStatus() == TripStatus.ACTIVE)
-                .orElseThrow(() -> new ApiException(TripErrorCode.INVALID_INVITE_CODE));
+                .orElseThrow(() -> new TripException(TripErrorCode.INVALID_INVITE_CODE));
         if (participantRepository.findByTripIdAndUserId(trip.getId(), studentId).isPresent()) {
             return JoinTripResponse.from(trip);
         }
         if (participantRepository.existsByUserIdAndTripStatus(studentId, TripStatus.ACTIVE)) {
-            throw new ApiException(TripErrorCode.ACTIVE_TRIP_ALREADY_JOINED);
+            throw new TripException(TripErrorCode.ACTIVE_TRIP_ALREADY_JOINED);
         }
         participantRepository.save(TripParticipant.create(trip.getId(), studentId));
         return JoinTripResponse.from(trip);
@@ -161,7 +161,7 @@ public class TripService {
     public void finish(Long teacherId, Long tripId) {
         Trip trip = findOwnedTrip(teacherId, tripId);
         if (trip.getStatus() != TripStatus.ACTIVE) {
-            throw new ApiException(TripErrorCode.TRIP_NOT_ACTIVE);
+            throw new TripException(TripErrorCode.TRIP_NOT_ACTIVE);
         }
         trip.finish();
         tripRepository.save(trip);
@@ -182,13 +182,13 @@ public class TripService {
                 return candidate;
             }
         }
-        throw new IllegalStateException("Could not generate an unused invite code.");
+        throw new TripException(TripErrorCode.INVITE_CODE_GENERATION_FAILED);
     }
 
     private Trip findOwnedTrip(Long teacherId, Long tripId) {
-        Trip trip = tripRepository.findById(tripId).orElseThrow(() -> new ApiException(TripErrorCode.TRIP_NOT_FOUND));
+        Trip trip = tripRepository.findById(tripId).orElseThrow(() -> new TripException(TripErrorCode.TRIP_NOT_FOUND));
         if (!trip.getTeacherId().equals(teacherId)) {
-            throw new ApiException(TripErrorCode.TRIP_ACCESS_DENIED);
+            throw new TripException(TripErrorCode.TRIP_ACCESS_DENIED);
         }
         return trip;
     }

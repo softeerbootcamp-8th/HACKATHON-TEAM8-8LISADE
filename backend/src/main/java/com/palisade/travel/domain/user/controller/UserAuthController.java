@@ -4,10 +4,10 @@ import com.palisade.travel.domain.user.dto.CsrfTokenResponse;
 import com.palisade.travel.domain.user.dto.CurrentUserResponse;
 import com.palisade.travel.domain.user.dto.LoginRequest;
 import com.palisade.travel.domain.user.dto.SignUpRequest;
+import com.palisade.travel.domain.user.exception.UserErrorCode;
+import com.palisade.travel.domain.user.exception.UserException;
 import com.palisade.travel.domain.user.service.UserSignUpService;
 import com.palisade.travel.global.api.ApiResponse;
-import com.palisade.travel.global.error.ApiException;
-import com.palisade.travel.global.error.CommonErrorCode;
 import com.palisade.travel.global.security.SessionAuthenticationService;
 import com.palisade.travel.global.security.UserPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,6 +15,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -50,8 +51,10 @@ public class UserAuthController {
                     UsernamePasswordAuthenticationToken.unauthenticated(request.loginId(), request.password()));
             sessionAuthenticationService.login(authentication, servletRequest, servletResponse);
             return ApiResponse.success(CurrentUserResponse.from((UserPrincipal) authentication.getPrincipal()));
+        } catch (DisabledException exception) {
+            throw new UserException(UserErrorCode.ACCOUNT_DISABLED);
         } catch (AuthenticationException exception) {
-            throw new ApiException(CommonErrorCode.UNAUTHORIZED);
+            throw new UserException(UserErrorCode.INVALID_CREDENTIALS);
         }
     }
 

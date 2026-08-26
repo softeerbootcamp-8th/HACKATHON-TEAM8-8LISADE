@@ -6,11 +6,21 @@ import org.springframework.http.HttpStatus;
 
 @RequiredArgsConstructor
 public enum UserErrorCode implements ErrorCode {
-    DUPLICATE_LOGIN_ID(HttpStatus.BAD_REQUEST, "DUPLICATE_LOGIN_ID", "Login ID is already in use."),
-    ROLE_PROFILE_REQUIRED(HttpStatus.BAD_REQUEST, "ROLE_PROFILE_REQUIRED", "Required profile information is missing."),
-    GUARDIAN_CONSENT_REQUIRED(HttpStatus.BAD_REQUEST, "GUARDIAN_CONSENT_REQUIRED", "Guardian consent is required."),
-    INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "INVALID_PASSWORD", "Password must be 8 to 20 characters without spaces."),
-    INVALID_PHONE_NUMBER(HttpStatus.BAD_REQUEST, "INVALID_PHONE_NUMBER", "Phone number must be a valid Korean mobile number.");
+    DUPLICATE_LOGIN_ID(HttpStatus.BAD_REQUEST, "DUPLICATE_LOGIN_ID", "이미 사용 중인 아이디입니다."),
+    ROLE_PROFILE_REQUIRED(HttpStatus.BAD_REQUEST, "ROLE_PROFILE_REQUIRED", "필수 프로필 정보가 누락되었습니다."),
+    GUARDIAN_CONSENT_REQUIRED(HttpStatus.BAD_REQUEST, "GUARDIAN_CONSENT_REQUIRED", "보호자 동의가 필요합니다."),
+    INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "INVALID_PASSWORD", "비밀번호는 공백 없이 8자 이상 20자 이하로 입력해주세요."),
+    INVALID_PHONE_NUMBER(HttpStatus.BAD_REQUEST, "INVALID_PHONE_NUMBER", "휴대폰 번호 형식이 올바르지 않습니다."),
+    INVALID_CREDENTIALS(
+            HttpStatus.UNAUTHORIZED,
+            "INVALID_CREDENTIALS",
+            "아이디 또는 비밀번호가 일치하지 않습니다."
+    ),
+    ACCOUNT_DISABLED(
+            HttpStatus.UNAUTHORIZED,
+            "ACCOUNT_DISABLED",
+            "비활성화된 계정입니다. 관리자에게 문의해주세요."
+    );
 
     private final HttpStatus status;
     private final String code;
