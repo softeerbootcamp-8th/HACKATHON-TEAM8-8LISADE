@@ -35,3 +35,11 @@
 - 이 저장소는 `ios/` 플랫폼이 없어(Android만 사용) 취약한 코드 경로 자체가 원래도 실행되지 않았지만, breaking 다운그레이드가 실제로 android 빌드 파이프라인에 영향 없는지 `npx cap sync android`로 직접 확인했다(정상 동작).
 
 검증: `npm audit` 0 vulnerabilities, `npx vitest run`(42파일 286개), `npm run lint`, `npm run build`, `npx cap sync android` 모두 통과.
+
+## 브라우저 탭 제목 boilerplate 잔재 제거 (#229)
+
+- `index.html`의 `<title>`/`<meta name="description">`, `package.json`의 `name`이 프로젝트 초기 템플릿 값(`Spring React Boilerplate`)으로 남아 있었다. README/Android `strings.xml`/`AppHeader`는 이미 전부 `두리번`으로 통일돼 있었는데 이 두 파일만 빠져 있었다.
+- `<title>두리번</title>`, description은 시작 화면 카피("선생님 대신 두리번거릴게요")를 재사용해 채웠다. `package.json name`은 `doribun-frontend`로 바꾸고 `npm install`로 lockfile을 재동기화했다.
+- `capacitor.config.ts`의 `appName: '8LISADE'`(팀명)는 이번 범위 밖으로 남겨뒀다.
+
+검증: `npx vitest run`(42파일 289개), `npm run lint`, `npm run build` 모두 통과. 빌드 산출물 `dist/index.html`에서 `<title>두리번</title>` 직접 확인.
