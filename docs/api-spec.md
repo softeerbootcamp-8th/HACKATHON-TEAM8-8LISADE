@@ -64,7 +64,7 @@
 | `MissionType` | `ACTIVITY`, `CHECK` |
 | `SubmissionStatus` | `WAITING`, `COMPLETED`, `REJECTED`, `EXPIRED` |
 | `DevicePlatform` | `WEB`, `ANDROID`, `IOS` |
-| `NotificationType` | `RANGE_EXIT`, `MISSION_CREATED`, `MISSION_INCOMPLETED` |
+| `NotificationType` | `RANGE_EXIT`, `MISSION_CREATED`, `MISSION_INCOMPLETED`, `UNREACHABLE` |
 | `SseEventType` | `CONNECTED`, `HEARTBEAT`, `LOCATION_UPDATED` |
 
 ---
@@ -105,7 +105,8 @@
 | 30 | GET | `/api/missions/{missionId}/submission` | 인증 | 내 제출 조회 |
 | 31 | POST | `/api/notifications/devices` | 인증 | 기기 토큰 등록 |
 | 32 | DELETE | `/api/notifications/devices` | 인증 | 기기 토큰 해제 |
-| 33 | PUT | `/mock-storage/{objectKey}` | 공개 (local/test) | 로컬 목 스토리지 업로드 |
+| 33 | GET | `/api/teacher/notifications` | TEACHER | 교사 수신 알림 목록 조회 |
+| 34 | PUT | `/mock-storage/{objectKey}` | 공개 (local/test) | 로컬 목 스토리지 업로드 |
 
 ---
 
@@ -724,6 +725,38 @@ data: {"userId":3,"latitude":35.7901234,"longitude":129.3321234,"outside":true,"
 | `token` | string | O |
 
 **Response `204 No Content`** (body 없음)
+
+---
+
+### 11.3 GET `/api/teacher/notifications` — 교사 수신 알림 목록 조회
+
+| 항목 | 값 |
+| --- | --- |
+| 권한 | TEACHER |
+
+인증 교사에게 온 모든 알림을 `createdAt` 최신순으로 반환한다(유형 무관).
+
+**Response `200 OK`** — `data`: 배열
+
+| 필드 | 타입 | 설명 |
+| --- | --- | --- |
+| `id` | number | 알림 ID |
+| `type` | `NotificationType` | 알림 유형 |
+| `tripId` | number \| null | 관련 Trip |
+| `missionId` | number \| null | 관련 미션(미완료 등) |
+| `title` | string | 제목 |
+| `message` | string | 본문 |
+| `createdAt` | datetime | 생성 시각 |
+
+#### 교사 알림 정책 (§6.1)
+
+| 알림 | 유형 | 발송 조건 | 횟수 규칙 |
+| --- | --- | --- | --- |
+| 미션 미완료 | `MISSION_INCOMPLETED` | 미션 마감 시각에 미완료 학생이 있을 때. 출석체크(`CHECK`)는 마감이 없어 발송하지 않는다. | 미션당 1회, 미완료 인원 요약 |
+| 이탈 발생 | `RANGE_EXIT` | 학생이 이탈 판정될 때 | 학생당 1회, 해제 후 다시 이탈하면 재발송 |
+| 위치 확인 불가 | `UNREACHABLE` | 확인 불가 3분 지속 시 | 학생당 1회 |
+
+> 미완료(마감 배치)·확인 불가(3분 미수신 감지)의 발송 트리거 로직은 후속 이슈에서 구현한다. 현재 자동 발송은 이탈(`RANGE_EXIT`)만 동작한다.
 
 ---
 
