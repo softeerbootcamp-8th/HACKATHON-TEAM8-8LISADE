@@ -49,6 +49,13 @@ HTTPS로 리다이렉트하고 443에서 Spring을 프록시한다.
 
 웹과 API는 `8lisade.site`의 서브도메인을 사용하므로 같은 사이트로 취급된다.
 
+## S3 업로드 설정
+
+EC2 instance profile이 AWS 자격증명을 제공하고, Compose가 버킷 이름을 컨테이너에
+전달한다. 운영 기본 버킷은
+`8lisade-mission-image-upload-762794225137-ap-northeast-2-an`이며, 다른 환경은
+`S3_BUCKET` 환경변수로 덮어쓸 수 있다. Access key를 Compose나 CI 환경변수에 넣지 않는다.
+
 ## 배포 후 확인
 
 ```bash
