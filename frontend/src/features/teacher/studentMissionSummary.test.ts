@@ -4,7 +4,7 @@ import type { MissionStatusBoard } from '../../types/mission'
 
 function board(notSubmittedStudentIds: number[]): MissionStatusBoard {
   return {
-    mission: { id: 1, tripId: '7', title: '미션', description: '', type: 'ACTIVITY', startAt: null, endAt: null, pin: null },
+    mission: { id: 1, tripId: '7', title: '미션', description: '', type: 'ACTIVITY', startAt: null, endAt: null, pin: null, completedAt: null },
     totalStudentCount: 3,
     submitted: [],
     notSubmitted: notSubmittedStudentIds.map((studentId) => ({ studentId, studentName: '학생', rejectionReason: null })),

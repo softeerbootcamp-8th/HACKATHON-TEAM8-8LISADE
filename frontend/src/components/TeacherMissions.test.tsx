@@ -161,6 +161,29 @@ describe('TeacherMissions', () => {
     expect(screen.getByText('출석하지 않은 학생 4')).toBeInTheDocument()
   })
 
+  it('completes a mission after confirmation and hides the manual actions', async () => {
+    const initialBoard = { mission: activityMission, totalStudentCount: 5, submitted: [], notSubmitted: [{ studentId: 101, studentName: '김학생', rejectionReason: null }] }
+    const completedMission = { ...activityMission, completedAt: '2026-08-26T15:00:00' }
+    const afterCompleteBoard = { mission: completedMission, totalStudentCount: 5, submitted: [], notSubmitted: [{ studentId: 101, studentName: '김학생', rejectionReason: null }] }
+    vi.stubGlobal('fetch', createFetchRouter({
+      'GET /api/auth/csrf': [csrf],
+      'GET /api/teacher/trips/1/missions': [{ body: { success: true, data: [activityMission] } }],
+      'GET /api/teacher/missions/1/status-board': [{ body: { success: true, data: initialBoard } }, { body: { success: true, data: initialBoard } }, { body: { success: true, data: afterCompleteBoard } }],
+      'POST /api/teacher/missions/1/complete': [{ body: { success: true, data: null } }],
+    }))
+
+    render(<TeacherMissions tripId="1" />)
+
+    fireEvent.click(await screen.findByRole('button', { name: /첨성대 앞에서 사진 찍기/ }))
+    fireEvent.click(await screen.findByRole('button', { name: '완료 처리하기' }))
+    expect(screen.getByText(/완료 후에는 학생이 더 이상/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '완료 처리 확정' }))
+
+    expect(await screen.findByText('완료')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '완료 처리하기' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '대리 완료' })).not.toBeInTheDocument()
+  })
+
   it('deletes a mission after confirmation and returns to the list', async () => {
     const board = { mission: checkMission, totalStudentCount: 5, submitted: [], notSubmitted: [{ studentId: 101, studentName: '김학생', rejectionReason: null }] }
     vi.stubGlobal('fetch', createFetchRouter({

@@ -10,6 +10,7 @@ export interface TeacherMission {
   startAt: string | null
   endAt: string | null
   pin: string | null
+  completedAt: string | null
 }
 
 export interface MissionCreateInput {
