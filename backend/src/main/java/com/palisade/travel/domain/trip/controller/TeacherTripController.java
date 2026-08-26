@@ -55,6 +55,18 @@ public class TeacherTripController {
         return ApiResponse.success(tripService.getParticipants(teacher.userId(), tripId));
     }
 
+    @GetMapping("/{tripId}/invite-code")
+    public ApiResponse<InviteCodeResponse> getCurrentInviteCode(@AuthenticationPrincipal UserPrincipal teacher,
+                                                                 @PathVariable Long tripId) {
+        return ApiResponse.success(tripService.getCurrentInviteCode(teacher.userId(), tripId));
+    }
+
+    @PostMapping("/{tripId}/end")
+    public ApiResponse<Void> end(@AuthenticationPrincipal UserPrincipal teacher, @PathVariable Long tripId) {
+        tripService.finish(teacher.userId(), tripId);
+        return ApiResponse.success(null);
+    }
+
     @PostMapping("/{tripId}/participants/manual")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<TripParticipantResponse> addManualParticipant(@AuthenticationPrincipal UserPrincipal teacher,

@@ -264,7 +264,7 @@ h2 { font-size: 17px; margin: 0; }
 .teacher-profile span { color: #65728b; font-size: 12px; font-weight: 500; line-height: normal; }
 .management-tab > h1 { font-size: 18px; letter-spacing: normal; margin: 40px 0 19px; }
 .management-list { display: grid; gap: 18px; }
-.management-card { align-items: center; background: #fff; border-radius: 18px; box-shadow: var(--shadow-card); display: flex; justify-content: space-between; min-height: 76px; padding: 16px 16px 16px 18px; }
+.management-card { align-items: center; background: #fff; border-radius: 18px; box-shadow: var(--shadow-card); display: flex; justify-content: space-between; min-height: 76px; padding: 16px 16px 16px 18px; text-align: left; width: 100%; }
 .management-card h2 { font-size: 15px; letter-spacing: normal; line-height: normal; margin: 0; }
 .management-card p { color: #65728b; font-size: 12px; font-weight: 500; line-height: normal; margin: 4px 0 0; }
 .trip-status { border-radius: 8px; flex: 0 0 auto; font-size: 11px; font-weight: 700; margin-left: 12px; padding: 3px 8px; }
@@ -292,3 +292,23 @@ h2 { font-size: 17px; margin: 0; }
 .noti-badge-exit { background: var(--color-danger-soft); color: var(--color-danger); }
 .noti-badge-unreachable { background: rgb(102 112 133 / 12%); color: var(--color-text-muted); }
 .noti-badge-info { background: var(--color-accent-soft); color: #6b4f0d; }
+
+/* Trip detail (T-03-1 / T-03-2) */
+.trip-create-header h1 { flex: 1; }
+.trip-detail-content { display: grid; gap: 16px; }
+.trip-detail-card { background: #fff; border-radius: 18px; box-shadow: var(--shadow-card); display: grid; gap: 12px; padding: 16px 18px; }
+.trip-detail-card > div { align-items: baseline; display: flex; gap: 10px; }
+.trip-detail-card .label { color: var(--color-text-muted); flex: 0 0 auto; font-size: 13px; font-weight: 500; }
+.trip-detail-card .value { color: var(--color-text); font-size: 14px; font-weight: 700; }
+.trip-invite-card { align-items: center; text-align: center; }
+.trip-invite-card .invite-title { font-size: 15px; font-weight: 700; margin: 0; }
+.invite-code-box { background: var(--color-accent-soft); border-radius: 12px; font-size: 26px; font-weight: 700; letter-spacing: 5px; padding: 12px; width: 100%; }
+.invite-actions { align-items: center; display: flex; gap: 16px; justify-content: center; }
+.end-trip-confirm { display: grid; gap: 12px; text-align: center; }
+.end-trip-confirm p { color: var(--color-text-muted); font-size: 13px; margin: 0; }
+.end-trip-confirm-actions { display: flex; gap: 12px; }
+.end-trip-confirm-actions button { flex: 1; }
+.add-student-content { display: grid; gap: 16px; }
+.add-student-notice { background: var(--color-accent-soft); border-radius: 16px; display: grid; gap: 6px; padding: 14px 16px; }
+.add-student-notice p:first-child { font-size: 14px; font-weight: 700; margin: 0; }
+.add-student-notice p:last-child { color: var(--color-text-muted); font-size: 12px; margin: 0; line-height: 1.45; }

@@ -231,6 +231,55 @@ class TripServiceTest {
         verify(participantRepository, never()).save(any());
     }
 
+    @Test
+    void 진행중인_체험학습을_종료하면_상태를_바꾸고_유효한_초대코드를_무효화한다() {
+        Trip trip = new Trip(1L, 10L, null, "경복궁", "서울", null, null, null, TripStatus.ACTIVE,
+                LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
+        InviteCode current = new InviteCode(3L, 1L, "AB1234", LocalDateTime.of(2026, 8, 25, 9, 5), null);
+        given(tripRepository.findById(1L)).willReturn(Optional.of(trip));
+        given(inviteCodeRepository.findByTripIdAndRevokedAtIsNull(1L)).willReturn(Optional.of(current));
+
+        tripService.finish(10L, 1L);
+
+        assertThat(trip.getStatus()).isEqualTo(TripStatus.FINISHED);
+        assertThat(current.getRevokedAt()).isEqualTo(LocalDateTime.of(2026, 8, 25, 9, 0));
+        verify(tripRepository).save(trip);
+    }
+
+    @Test
+    void 이미_종료된_체험학습을_다시_종료하려하면_예외() {
+        Trip trip = new Trip(1L, 10L, null, "경복궁", "서울", null, null, null, TripStatus.FINISHED,
+                LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
+        given(tripRepository.findById(1L)).willReturn(Optional.of(trip));
+
+        assertThatThrownBy(() -> tripService.finish(10L, 1L))
+                .hasMessageContaining("not active");
+        verify(tripRepository, never()).save(any());
+    }
+
+    @Test
+    void 유효한_초대코드가_있으면_그대로_조회한다() {
+        Trip trip = new Trip(1L, 10L, null, "경복궁", "서울", null, null, null, TripStatus.ACTIVE,
+                LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
+        InviteCode current = new InviteCode(3L, 1L, "AB1234", LocalDateTime.of(2026, 8, 25, 9, 5), null);
+        given(tripRepository.findById(1L)).willReturn(Optional.of(trip));
+        given(inviteCodeRepository.findByTripIdAndRevokedAtIsNull(1L)).willReturn(Optional.of(current));
+
+        InviteCodeResponse response = tripService.getCurrentInviteCode(10L, 1L);
+
+        assertThat(response.code()).isEqualTo("AB1234");
+    }
+
+    @Test
+    void 유효한_초대코드가_없으면_null을_반환한다() {
+        Trip trip = new Trip(1L, 10L, null, "경복궁", "서울", null, null, null, TripStatus.ACTIVE,
+                LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
+        given(tripRepository.findById(1L)).willReturn(Optional.of(trip));
+        given(inviteCodeRepository.findByTripIdAndRevokedAtIsNull(1L)).willReturn(Optional.empty());
+
+        assertThat(tripService.getCurrentInviteCode(10L, 1L)).isNull();
+    }
+
     private CreateTripRequest createTripRequest() {
         return new CreateTripRequest(
                 "국립중앙박물관",

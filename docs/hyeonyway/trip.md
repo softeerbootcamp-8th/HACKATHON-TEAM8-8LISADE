@@ -36,3 +36,14 @@
 - 현재 서버 계약에 없는 일정 기간·미션 진행률·안전 경고는 기존 화면 mock 값을 유지한다. 해당 데이터가 포함된 학생 Trip 조회 계약이 추가되면 이 매핑을 교체한다.
 
 검증: `npm test` (16 passed), `npm run lint`, `npm run build`, `cd backend && ./gradlew test`
+
+## 체험학습 상세·종료 및 학생 직접 추가 (#63)
+
+- `LocationService`가 이미 `trip.status != ACTIVE`면 위치 업데이트를 거부하고(`TRIP_INACTIVE`), `join()`도 `ACTIVE` Trip만 받아들이므로 종료 처리는 `TripService.finish`에서 `Trip.status`를 `FINISHED`로 바꾸고 유효한 초대 코드를 폐기하는 것만으로 충분하다. 위치 추적 중단이나 초대 코드 무효화를 별도로 구현하지 않았다.
+- 새로고침 뒤에도 발급된 초대 코드를 다시 볼 수 있도록 `GET /api/teacher/trips/{tripId}/invite-code`(`TripService.getCurrentInviteCode`)를 추가했다. 폐기·만료된 코드는 `null`을 반환한다.
+- `TeacherDashboard`의 관리 탭 상태를 `LIST/CREATE/DETAIL/ADD_STUDENT` 뷰로 통합했다. `management-card`를 버튼으로 바꿔 상세 화면 진입점으로 사용한다.
+- `TripDetail`/`AddStudentForm`은 `TripCreationFlow`와 동일한 화면 셸(`trip-create-shell`)을 재사용한다. 종료는 되돌릴 수 없어 2단계 인라인 확인(취소/종료하기)을 거친다.
+- `teacherTripApi`를 공용 `httpClient`(`request`/`csrfJsonHeaders`/`sendJson`) 기반으로 정리하고 `getParticipants`/`addManualParticipant`/`getCurrentInviteCode`/`reissueInviteCode`/`end`를 추가했다.
+- Figma 시안의 "학부모 전화번호" 입력란은 `ManualParticipantRequest`에 대응 필드가 없어 제외했다. 학생 정보 카드의 전화번호도 현재 참가자 조회 계약에 없어 후속 이슈 대상이다.
+
+검증: `npm test`(103 passed), `npm run lint`, `npm run build`, `cd backend && ./gradlew test`

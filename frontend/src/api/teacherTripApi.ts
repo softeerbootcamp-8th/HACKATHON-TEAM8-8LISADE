@@ -1,15 +1,5 @@
-import type { CreateTeacherTripInput, InviteCode, TeacherTrip, TeacherTripStatus } from '../types/teacherTrip'
-
-type ApiResponse<T> = {
-  success: boolean
-  data: T
-  message?: string
-}
-
-type CsrfToken = {
-  token: string
-  headerName: string
-}
+import { csrfJsonHeaders, request, sendJson } from './httpClient'
+import type { CreateTeacherTripInput, InviteCode, TeacherTrip, TeacherTripStatus, TripParticipant, TripParticipantType } from '../types/teacherTrip'
 
 type TeacherTripResponse = {
   tripId: number
@@ -19,31 +9,23 @@ type TeacherTripResponse = {
   status: TeacherTripStatus
 }
 
-async function request<T>(path: string, init?: RequestInit, fallbackMessage = '현장체험학습 생성에 실패했습니다.'): Promise<T> {
-  const response = await fetch(path, { credentials: 'include', ...init })
-  const body = await response.json().catch(() => null) as ApiResponse<T> | null
-
-  if (!response.ok || !body?.success) {
-    throw new Error(body?.message ?? fallbackMessage)
-  }
-
-  return body.data
+type TripParticipantResponse = {
+  id: number
+  userId: number | null
+  name: string
+  type: TripParticipantType
+  createdAt: string
 }
 
 export const teacherTripApi = {
   async getTrips(): Promise<TeacherTrip[]> {
-    const trips = await request<TeacherTripResponse[]>('/api/teacher/trips', undefined, '체험학습 목록을 불러오지 못했습니다.')
+    const trips = await request<TeacherTripResponse[]>('/api/teacher/trips')
     return trips.map(({ tripId, ...trip }) => ({ id: tripId, ...trip }))
   },
   async create({ title, date, place, geofencePoints }: CreateTeacherTripInput): Promise<InviteCode> {
-    const csrf = await request<CsrfToken>('/api/auth/csrf')
-
     return request<InviteCode>('/api/teacher/trips', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        [csrf.headerName]: csrf.token,
-      },
+      headers: await csrfJsonHeaders(),
       body: JSON.stringify({
         title,
         place,
@@ -52,5 +34,27 @@ export const teacherTripApi = {
         geofencePoints,
       }),
     })
+  },
+  async getParticipants(tripId: number): Promise<TripParticipant[]> {
+    return request<TripParticipantResponse[]>(`/api/teacher/trips/${tripId}/participants`)
+  },
+  async addManualParticipant(tripId: number, name: string): Promise<TripParticipant> {
+    return request<TripParticipantResponse>(`/api/teacher/trips/${tripId}/participants/manual`, {
+      method: 'POST',
+      headers: await csrfJsonHeaders(),
+      body: JSON.stringify({ name }),
+    })
+  },
+  async getCurrentInviteCode(tripId: number): Promise<InviteCode | null> {
+    return request<InviteCode | null>(`/api/teacher/trips/${tripId}/invite-code`)
+  },
+  async reissueInviteCode(tripId: number): Promise<InviteCode> {
+    return request<InviteCode>(`/api/teacher/trips/${tripId}/invite-code`, {
+      method: 'POST',
+      headers: await csrfJsonHeaders(),
+    })
+  },
+  async end(tripId: number): Promise<void> {
+    return sendJson(`/api/teacher/trips/${tripId}/end`, 'POST', {})
   },
 }
