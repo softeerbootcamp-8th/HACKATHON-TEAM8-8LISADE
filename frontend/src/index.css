@@ -247,10 +247,11 @@ h2 { font-size: 17px; margin: 0; }
 .pin-mascot { display: block; height: auto; margin: 24px auto 0; width: 91px; }
 .pin-copy { font-size: 24px; font-weight: 700; line-height: 1.4; margin: 24px 0 0; text-align: center; }
 
-.start-screen { justify-content: space-between; min-height: 100vh; padding: 64px 0 32px; }
+.start-screen { justify-content: space-between; min-height: 100vh; min-height: 100dvh; padding: 64px 0 32px; padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
 .start-body { display: grid; gap: 16px; justify-items: center; margin-top: 120px; text-align: center; }
 .start-mascot { height: 96px; width: 110px; }
 .start-title { font-family: var(--font-brand); font-size: 34px; font-weight: 400; margin: 0; }
+.start-screen .sub-copy { font-size: 20px; }
 .start-screen .auth-form { gap: 16px; }
 .start-secondary { background: var(--color-surface); border: 1.5px solid var(--color-border); box-shadow: none; }
 
