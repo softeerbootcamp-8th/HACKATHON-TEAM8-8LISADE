@@ -1,9 +1,14 @@
 /**
- * 백엔드 `NotificationType`과 대응. 백엔드는 RANGE_EXIT / MISSION_CREATED /
- * MISSION_INCOMPLETED를 보내며, UNREACHABLE(위치 확인 불가)은 시안(T-07)용으로
- * 미리 둔 유형이다(백엔드 저장이 생기면 자동 표시).
+ * 백엔드 `NotificationType`과 대응. 교사(§6.1): RANGE_EXIT / MISSION_INCOMPLETED /
+ * UNREACHABLE. 학생(§6.2): RANGE_EXIT / MISSION_CREATED / DEADLINE_IMMINENT / MISSION_REJECTED.
  */
-export type NotificationType = 'RANGE_EXIT' | 'MISSION_INCOMPLETED' | 'MISSION_CREATED' | 'UNREACHABLE'
+export type NotificationType =
+  | 'RANGE_EXIT'
+  | 'MISSION_INCOMPLETED'
+  | 'MISSION_CREATED'
+  | 'UNREACHABLE'
+  | 'DEADLINE_IMMINENT'
+  | 'MISSION_REJECTED'
 
 export interface TeacherNotification {
   id: number
@@ -12,5 +17,14 @@ export interface TeacherNotification {
   title: string
   message: string
   /** 서버 저장 시각 (ISO 8601). 카드 우측 시각 라벨은 이 값으로 계산한다. */
+  createdAt: string
+}
+
+/** 학생 알림(S-06). 구조는 `TeacherNotification`과 동일 — 배지 매핑만 학생용으로 다르다. */
+export interface StudentNotification {
+  id: number
+  type: NotificationType | string
+  title: string
+  message: string
   createdAt: string
 }

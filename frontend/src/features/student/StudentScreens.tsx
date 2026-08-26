@@ -48,10 +48,10 @@ const locationStatusCopy: Record<LocationTrackingState['sendStatus'], { label: s
   NO_PERMISSION: { label: '위치 권한이 없어요', tone: 'neutral' },
 }
 
-export function StudentHome({ trip, location, notice, currentMission, onCurrentMission }: { trip: StudentTrip; location: LocationTrackingState; notice: string; currentMission: CurrentMission | null; onCurrentMission: () => void }) {
+export function StudentHome({ trip, location, notice, currentMission, onCurrentMission, onBellClick }: { trip: StudentTrip; location: LocationTrackingState; notice: string; currentMission: CurrentMission | null; onCurrentMission: () => void; onBellClick?: () => void }) {
   const status = locationStatusCopy[location.sendStatus]
   return <ScreenCard title="학생 홈">
-    <AppHeader showAvatar />
+    <AppHeader showAvatar onBellClick={onBellClick} />
     <p className="greeting" style={{ marginBottom: 8 }}>즐거운 여행 하세요!</p>
     <p className="hint screen-pad" style={{ marginBottom: 12 }}><span className="brand" style={{ display: 'inline' }}>{trip.status === 'ACTIVE' ? '진행 중' : '예정'}</span> · {trip.title} · {trip.place} · {trip.period}</p>
     <div className="screen-pad" style={{ marginBottom: 16 }}>
