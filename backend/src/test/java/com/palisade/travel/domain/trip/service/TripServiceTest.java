@@ -255,23 +255,6 @@ class TripServiceTest {
     }
 
     @Test
-    void reissuingInviteCodeRevokesPreviousCodeBeforeIssuingNewOne() {
-        Trip trip = new Trip(1L, 10L, null, "경복궁", "서울", null, null, null, TripStatus.ACTIVE,
-                LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
-        InviteCode previous = new InviteCode(3L, 1L, "AB1234", LocalDateTime.of(2026, 8, 25, 9, 5), null);
-        given(tripRepository.findById(1L)).willReturn(Optional.of(trip));
-        given(inviteCodeRepository.findByTripIdAndRevokedAtIsNull(1L)).willReturn(Optional.of(previous));
-        given(inviteCodeRepository.existsByCode("AB1234")).willReturn(true);
-        given(inviteCodeRepository.existsByCode("CD5678")).willReturn(false);
-
-        InviteCodeResponse response = tripService.reissueInviteCode(10L, 1L);
-
-        assertThat(previous.getRevokedAt()).isEqualTo(LocalDateTime.of(2026, 8, 25, 9, 0));
-        assertThat(response.code()).isEqualTo("CD5678");
-        verify(inviteCodeRepository).save(any(InviteCode.class));
-    }
-
-    @Test
     void 참여자_목록_조회시_앱으로_참여한_학생은_User_이름을_직접추가한_학생은_등록한_이름을_반환한다() {
         Trip trip = new Trip(1L, 10L, null, "경복궁", "서울", null, null, null, TripStatus.ACTIVE,
                 LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
@@ -316,9 +299,10 @@ class TripServiceTest {
     }
 
     @Test
-    void expiredOrRevokedCodeIsRejected() {
-        InviteCode expired = new InviteCode(3L, 1L, "AB1234", LocalDateTime.of(2026, 8, 25, 8, 59), null);
-        given(inviteCodeRepository.findByCode("AB1234")).willReturn(Optional.of(expired));
+    void revokedCodeIsRejected() {
+        InviteCode revoked = new InviteCode(3L, 1L, "AB1234", LocalDateTime.of(2026, 8, 25, 9, 5),
+                LocalDateTime.of(2026, 8, 25, 9, 0));
+        given(inviteCodeRepository.findByCode("AB1234")).willReturn(Optional.of(revoked));
 
         assertThatThrownBy(() -> tripService.join(20L, "AB1234"))
                 .hasMessageContaining("초대 코드");

@@ -48,12 +48,6 @@ export const teacherTripApi = {
   async getCurrentInviteCode(tripId: number): Promise<InviteCode | null> {
     return request<InviteCode | null>(`/api/teacher/trips/${tripId}/invite-code`)
   },
-  async reissueInviteCode(tripId: number): Promise<InviteCode> {
-    return request<InviteCode>(`/api/teacher/trips/${tripId}/invite-code`, {
-      method: 'POST',
-      headers: await csrfJsonHeaders(),
-    })
-  },
   async end(tripId: number): Promise<void> {
     return sendJson(`/api/teacher/trips/${tripId}/end`, 'POST', {})
   },

@@ -46,16 +46,6 @@ export function TripDetail({ trip, teacherName, onBack, onAddStudent, onStarted,
     return () => { active = false }
   }, [trip.id, isActive])
 
-  const reissue = async () => {
-    setError('')
-    try {
-      const code = await teacherTripApi.reissueInviteCode(trip.id)
-      setInviteCode(code.code)
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : '초대 코드 재발급에 실패했습니다.')
-    }
-  }
-
   const confirmEnd = async () => {
     setError('')
     setEnding(true)
@@ -113,7 +103,6 @@ export function TripDetail({ trip, teacherName, onBack, onAddStudent, onStarted,
         <p className="hint">학생에게 코드를 알려 주세요</p>
         <div className="invite-code-box">{inviteCode ?? '발급 중...'}</div>
         <div className="invite-actions">
-          <button type="button" className="text-button" onClick={reissue}>코드 재발급</button>
           <button type="button" className="text-button" onClick={onAddStudent}>학생 직접 추가하기 ›</button>
         </div>
       </div>}

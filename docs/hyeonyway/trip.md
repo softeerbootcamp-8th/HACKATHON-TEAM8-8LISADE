@@ -67,3 +67,12 @@
 - **PR 리뷰 반영**: 처음엔 "`create()`가 코드를 발급하되 화면엔 숨긴다"로 구현했는데, 리뷰에서 "애초에 발급을 안 하는 게 맞다"는 피드백을 받아 `create()`가 초대 코드를 아예 발급하지 않도록 바꿨다. 반환 타입도 `InviteCodeResponse` → 신규 `TripCreatedResponse(tripId)`로 교체(컨트롤러도 동일). 프론트 `teacherTripApi.create()` 반환 타입도 `{ tripId: number }`로 정정 — 원래 프론트가 그 값을 안 썼어서 동작 변화는 없다.
 
 검증: 백엔드 `./gradlew test` 전체 통과(READY 생성 + 코드 미발급, 시작 성공/이미 시작됨, 삭제 성공/진행중 삭제 시도), 프론트 `npx vitest run`(38 files, 236 passed), `npm run lint`, `npm run build` 통과.
+
+## 초대 코드 재발급 제거 및 만료시간 제거 (#155)
+
+- `InviteCode.isUsable()`이 `revokedAt == null`만 검사하도록 단순화했다 — 5분 시간 만료 개념을 제거했다. Trip이 `finish()`될 때만 코드가 무효화된다.
+- DB `expires_at` 컬럼은 `NOT NULL`이고 이 프로젝트에 마이그레이션 도구가 없어(`ddl-auto: update`만 사용) 컬럼은 남겨뒀다. `InviteCode.create(tripId, code)`가 내부적으로 2999-01-01 더미 값을 채워 제약만 만족시키고, 어떤 로직도 이 값을 더 이상 읽지 않는다.
+- `TripService.reissueInviteCode()`와 `POST /api/teacher/trips/{tripId}/invite-code`(재발급) 엔드포인트를 제거했다. `GET`(현재 코드 조회, `getCurrentInviteCode`)은 유지 — 만료가 없어졌으니 발급된 코드는 Trip이 끝날 때까지 계속 유효하게 조회된다.
+- 프론트 `TripDetail.tsx`에서 "코드 재발급" 버튼과 `teacherTripApi.reissueInviteCode`를 제거했다. `InviteCodeResponse`/`InviteCode` 타입에서 `expiresAt` 필드도 뺐다.
+
+검증: `cd backend && ./gradlew test` 전체 통과, `cd frontend && npm run lint && npx vitest run && npm run build` 통과(38 files, 235 passed).

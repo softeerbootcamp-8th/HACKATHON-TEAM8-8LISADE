@@ -12,7 +12,6 @@ export type CreateTeacherTripInput = {
 
 export type InviteCode = {
   code: string
-  expiresAt: string
 }
 
 export type TeacherTripStatus = 'READY' | 'ACTIVE' | 'FINISHED'

@@ -6,7 +6,6 @@ vi.mock('../../api/teacherTripApi', () => ({
   teacherTripApi: {
     getParticipants: vi.fn(),
     getCurrentInviteCode: vi.fn(),
-    reissueInviteCode: vi.fn(),
     end: vi.fn(),
     start: vi.fn(),
     delete: vi.fn(),
@@ -24,8 +23,7 @@ const readyTrip: TeacherTrip = { id: 3, title: '예정된 체험학습', place: 
 describe('TripDetail', () => {
   beforeEach(() => {
     vi.mocked(teacherTripApi.getParticipants).mockReset().mockResolvedValue([])
-    vi.mocked(teacherTripApi.getCurrentInviteCode).mockReset().mockResolvedValue({ code: 'AB1234', expiresAt: '2026-08-25T09:05:00' })
-    vi.mocked(teacherTripApi.reissueInviteCode).mockReset()
+    vi.mocked(teacherTripApi.getCurrentInviteCode).mockReset().mockResolvedValue({ code: 'AB1234' })
     vi.mocked(teacherTripApi.end).mockReset()
     vi.mocked(teacherTripApi.start).mockReset()
     vi.mocked(teacherTripApi.delete).mockReset()
@@ -43,7 +41,7 @@ describe('TripDetail', () => {
 
   it('시작하기를 누르면 시작을 요청하고 onStarted를 호출한다', async () => {
     const onStarted = vi.fn()
-    vi.mocked(teacherTripApi.start).mockResolvedValue({ code: 'EF9012', expiresAt: '2026-08-25T09:15:00' })
+    vi.mocked(teacherTripApi.start).mockResolvedValue({ code: 'EF9012' })
     render(<TripDetail trip={readyTrip} teacherName="고심" onBack={vi.fn()} onAddStudent={vi.fn()} onStarted={onStarted} onDeleted={vi.fn()} onFinished={vi.fn()} />)
     await screen.findByRole('button', { name: '현장체험학습 시작' })
 
@@ -92,6 +90,7 @@ describe('TripDetail', () => {
     expect(screen.getByText('경복궁')).toBeInTheDocument()
     expect(screen.getByText('고심 선생님')).toBeInTheDocument()
     expect(screen.getByText('진행 중')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '코드 재발급' })).not.toBeInTheDocument()
   })
 
   it('일정에 시간 없이 날짜와 요일만 보여준다(시간 입력을 받지 않으므로)', async () => {
@@ -108,16 +107,6 @@ describe('TripDetail', () => {
     expect(screen.queryByText('학생 초대')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '현장체험학습 종료' })).not.toBeInTheDocument()
     expect(teacherTripApi.getCurrentInviteCode).not.toHaveBeenCalled()
-  })
-
-  it('코드 재발급 버튼을 누르면 새 코드로 갱신한다', async () => {
-    vi.mocked(teacherTripApi.reissueInviteCode).mockResolvedValue({ code: 'CD5678', expiresAt: '2026-08-25T09:10:00' })
-    render(<TripDetail trip={activeTrip} teacherName="고심" onBack={vi.fn()} onAddStudent={vi.fn()} onStarted={vi.fn()} onDeleted={vi.fn()} onFinished={vi.fn()} />)
-    await screen.findByText('AB1234')
-
-    fireEvent.click(screen.getByRole('button', { name: '코드 재발급' }))
-
-    expect(await screen.findByText('CD5678')).toBeInTheDocument()
   })
 
   it('학생 직접 추가하기를 누르면 콜백을 호출한다', async () => {

@@ -160,7 +160,7 @@ class TripControllerTest {
     @Test
     void 교사는_현재_유효한_초대코드를_조회한다() throws Exception {
         given(tripService.getCurrentInviteCode(10L, 1L))
-                .willReturn(new InviteCodeResponse("AB1234", LocalDateTime.of(2026, 8, 25, 9, 5)));
+                .willReturn(new InviteCodeResponse("AB1234"));
 
         mockMvc.perform(get("/api/teacher/trips/1/invite-code"))
                 .andExpect(status().isOk())
@@ -178,7 +178,7 @@ class TripControllerTest {
     @Test
     void 교사는_예정된_체험학습을_시작한다() throws Exception {
         given(tripService.start(10L, 1L))
-                .willReturn(new InviteCodeResponse("CD5678", LocalDateTime.of(2026, 8, 25, 9, 5)));
+                .willReturn(new InviteCodeResponse("CD5678"));
 
         mockMvc.perform(post("/api/teacher/trips/1/start"))
                 .andExpect(status().isOk())
