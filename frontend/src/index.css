@@ -83,6 +83,7 @@ h2 { font-size: 17px; margin: 0; }
 .app-header-actions { align-items: center; display: flex; gap: 12px; }
 .app-header-actions img { display: block; height: 22px; width: 22px; }
 .avatar-chip { align-items: center; background: var(--color-accent-soft); border-radius: 15px; display: flex; font-size: 11px; font-weight: 700; height: 30px; justify-content: center; width: 30px; }
+.header-logout-button { align-items: center; background: var(--color-accent-soft); border-radius: 15px; box-shadow: none; display: flex; font-size: 11px; font-weight: 700; height: 30px; justify-content: center; min-height: 30px; padding: 0; width: 55px; }
 
 /* Header with back chevron (mission flows) */
 .back-header { align-items: center; background: var(--color-bg); border-bottom: 1px solid var(--color-border); display: flex; gap: 8px; min-height: 96px; padding: 0 16px; }

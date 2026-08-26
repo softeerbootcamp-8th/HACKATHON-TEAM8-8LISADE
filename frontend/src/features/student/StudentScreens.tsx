@@ -14,7 +14,7 @@ import { LocationOverrideControl } from './LocationOverrideControl'
 
 export type CurrentMission = StudentMission & { isResubmission: boolean }
 
-export function InviteCodeScreen({ onSubmit }: { onSubmit: (code: string) => Promise<void> }) {
+export function InviteCodeScreen({ onSubmit, onLogout }: { onSubmit: (code: string) => Promise<void>; onLogout?: () => void }) {
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -22,7 +22,7 @@ export function InviteCodeScreen({ onSubmit }: { onSubmit: (code: string) => Pro
     try { await onSubmit(code) } catch (caught) { setError(caught instanceof Error ? caught.message : '초대 코드 확인에 실패했습니다.') }
   }
   return <ScreenCard title="Trip 참여">
-    <AppHeader showAvatar />
+    <AppHeader showAvatar onLogout={onLogout} />
     <p className="greeting">반에 입장해 주세요</p>
     <img src={mascotInvite} alt="" className="pin-mascot" style={{ margin: '0 auto 24px' }} />
     <p className="hint" style={{ textAlign: 'center', margin: '0 0 16px' }}>교사가 공유한 6자리 초대 코드를 입력해 주세요.</p>
@@ -49,10 +49,10 @@ const locationStatusCopy: Record<LocationTrackingState['sendStatus'], { label: s
   NO_PERMISSION: { label: '위치 권한이 없어요', tone: 'neutral' },
 }
 
-export function StudentHome({ trip, location, notice, currentMission, onCurrentMission, onBellClick }: { trip: StudentTrip; location: LocationTrackingState; notice: string; currentMission: CurrentMission | null; onCurrentMission: () => void; onBellClick?: () => void }) {
+export function StudentHome({ trip, location, notice, currentMission, onCurrentMission, onBellClick, onLogout }: { trip: StudentTrip; location: LocationTrackingState; notice: string; currentMission: CurrentMission | null; onCurrentMission: () => void; onBellClick?: () => void; onLogout?: () => void }) {
   const status = locationStatusCopy[location.sendStatus]
   return <ScreenCard title="학생 홈">
-    <AppHeader showAvatar onBellClick={onBellClick} />
+    <AppHeader showAvatar onBellClick={onBellClick} onLogout={onLogout} />
     <p className="greeting" style={{ marginBottom: 8 }}>즐거운 여행 하세요!</p>
     <p className="hint screen-pad" style={{ marginBottom: 12 }}><span className="brand" style={{ display: 'inline' }}>{trip.status === 'ACTIVE' ? '진행 중' : '예정'}</span> · {trip.title} · {trip.place} · {trip.period}</p>
     <div className="screen-pad" style={{ marginBottom: 16 }}>
