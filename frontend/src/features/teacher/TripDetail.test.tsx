@@ -28,8 +28,8 @@ const activeTrip: TeacherTrip = { id: 1, title: '경복궁 현장체험학습', 
 const finishedTrip: TeacherTrip = { id: 2, title: '지난 체험학습', place: '국립중앙박물관', startAt: '2026-07-01T09:00:00', status: 'FINISHED' }
 const readyTrip: TeacherTrip = { id: 3, title: '예정된 체험학습', place: '경주', startAt: '2026-10-02T09:00:00', status: 'READY' }
 const finishedMissions: TeacherMission[] = [
-  { id: 1, tripId: '2', title: '불국사에서 사진 찍기', description: '', type: 'ACTIVITY', startAt: null, endAt: null, pin: null },
-  { id: 2, tripId: '2', title: '석굴암에서 출석 인증하기', description: '', type: 'CHECK', startAt: null, endAt: null, pin: '1234' },
+  { id: 1, tripId: '2', title: '불국사에서 사진 찍기', description: '', type: 'ACTIVITY', startAt: null, endAt: null, pin: null, completedAt: null },
+  { id: 2, tripId: '2', title: '석굴암에서 출석 인증하기', description: '', type: 'CHECK', startAt: null, endAt: null, pin: '1234', completedAt: null },
 ]
 
 describe('TripDetail', () => {
