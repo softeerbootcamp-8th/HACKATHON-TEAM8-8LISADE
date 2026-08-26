@@ -45,6 +45,23 @@ describe('missionApi', () => {
     }))
   })
 
+  it('always uploads with Content-Type image/jpeg, matching the presigned signature, even if the captured Blob reports a different MIME type', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(apiResponse({ success: true, data: { token: 'csrf-token', headerName: 'X-CSRF-TOKEN' } }))
+      .mockResolvedValueOnce(apiResponse({ success: true, data: { objectKey: 'missions/11/students/2/photo.jpg', uploadUrl: 'https://storage.example/upload' } }))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }))
+      .mockResolvedValueOnce(apiResponse({ success: true, data: { token: 'csrf-token', headerName: 'X-CSRF-TOKEN' } }))
+      .mockResolvedValueOnce(apiResponse({ success: true, data: { submissionId: 9, status: 'WAITING', imageKey: 'missions/11/students/2/photo.jpg' } }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await missionApi.submitPhoto(11, new Blob(['photo'], { type: 'image/png' }))
+
+    expect(fetchMock).toHaveBeenNthCalledWith(3, 'https://storage.example/upload', expect.objectContaining({
+      method: 'PUT',
+      headers: { 'Content-Type': 'image/jpeg' },
+    }))
+  })
+
   it('sends the four-digit PIN to the mission submission API', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(apiResponse({ success: true, data: { token: 'csrf-token', headerName: 'X-CSRF-TOKEN' } }))
