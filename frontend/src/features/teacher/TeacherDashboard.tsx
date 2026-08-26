@@ -14,6 +14,7 @@ import icStudents from '../../assets/icons/ic-students.svg'
 import icMission from '../../assets/icons/ic-mission.svg'
 import icPin from '../../assets/icons/ic-pin.svg'
 import icSliders from '../../assets/icons/ic-sliders.svg'
+import mascotLarge from '../../assets/icons/mascot-large.svg'
 import { TripCreationFlow } from './TripCreationFlow'
 import { AddStudentForm, TripDetail } from './TripDetail'
 import { TeacherLocationMap } from './TeacherLocationMap'
@@ -129,14 +130,22 @@ export function TeacherDashboard({ user }: { user: CurrentUser }) {
       : <div className="teacher-body">
         <Field label="기준 Trip" id="teacher-trip"><select id="teacher-trip" className="teacher-trip-select" value={tripId} onChange={(event) => setTripId(event.target.value)}>{teacherTrips.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.title} · {candidate.status}</option>)}</select></Field>
         <div className="teacher-status-row"><h2>{trip.title}</h2><span className={`status-pill ${trip.status === '진행 중' ? 'status-pill--success' : 'status-pill--neutral'}`}>{trip.status}</span></div>
-        {tab === 'HOME' ? <>
-          <div className="stat-grid">
-            <div className="stat-card"><p>참여 학생 {trip.students}명</p><p>전체 참여 학생</p></div>
-            <div className="stat-card"><p>정상 위치 {trip.normal}명</p><p>이탈 {trip.outside}명 · 확인 필요 {trip.missing}명</p></div>
-            <div className="stat-card"><p>미션 완료율 {trip.missionRate}%</p><p>미확인 제출 {trip.pendingSubmissions}건</p></div>
+        {tab === 'HOME' ? (
+          trips === null && !tripError ? <p className="hint" role="status">체험학습 목록을 불러오는 중입니다.</p>
+          : trips !== null && trips.length === 0 ? <div className="home-empty">
+            <img src={mascotLarge} alt="" className="start-mascot" />
+            <p className="hint" style={{ textAlign: 'center', margin: '16px 0 24px' }}>아직 예정된<br />현장체험학습이 없어요</p>
+            <button type="button" className="add-trip-button" onClick={() => setManageView({ name: 'CREATE' })}>+ 현장체험학습 생성하기</button>
           </div>
-          <p className="hint">마지막 갱신: {trip.updatedAt}</p>
-        </> : tab === 'STUDENTS'
+          : <>
+            <div className="stat-grid">
+              <div className="stat-card"><p>참여 학생 {trip.students}명</p><p>전체 참여 학생</p></div>
+              <div className="stat-card"><p>정상 위치 {trip.normal}명</p><p>이탈 {trip.outside}명 · 확인 필요 {trip.missing}명</p></div>
+              <div className="stat-card"><p>미션 완료율 {trip.missionRate}%</p><p>미확인 제출 {trip.pendingSubmissions}건</p></div>
+            </div>
+            <p className="hint">마지막 갱신: {trip.updatedAt}</p>
+          </>
+        ) : tab === 'STUDENTS'
           ? (activeTripId ? <TeacherStudents key={activeTripId} tripId={activeTripId} /> : <section className="stat-card"><p className="hint">체험학습을 먼저 만들어 주세요.</p></section>)
           : tab === 'MISSIONS'
           ? (activeTripId ? <TeacherMissions key={activeTripId} tripId={activeTripId} /> : <section className="stat-card"><p className="hint">체험학습을 먼저 만들어 주세요.</p></section>)

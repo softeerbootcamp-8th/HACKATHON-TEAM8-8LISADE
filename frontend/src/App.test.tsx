@@ -172,7 +172,7 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: '로그인' }))
 
     expect(await screen.findByLabelText('기준 Trip')).toHaveValue('trip-1')
-    expect(screen.getByText('참여 학생 24명')).toBeInTheDocument()
+    expect(await screen.findByText('참여 학생 24명')).toBeInTheDocument()
     expect(screen.getByText('마지막 갱신: 방금 전')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '학생' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '미션' })).toBeInTheDocument()

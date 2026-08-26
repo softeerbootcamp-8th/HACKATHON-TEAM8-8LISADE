@@ -87,6 +87,29 @@ describe('TeacherDashboard', () => {
     // then
     expect(await screen.findByRole('alert')).toHaveTextContent('체험학습 목록을 불러오지 못했습니다.')
   })
+
+  it('shows a loading state on the home tab while the trip list is being fetched', () => {
+    vi.mocked(teacherTripApi.getTrips).mockReturnValue(new Promise(() => {}))
+    render(<TeacherDashboard user={user} />)
+
+    expect(screen.getByRole('status')).toHaveTextContent('체험학습 목록을 불러오는 중입니다.')
+  })
+
+  it('shows the empty state and lets the teacher start creating a trip when there are none', async () => {
+    vi.mocked(teacherTripApi.getTrips).mockResolvedValue([])
+    render(<TeacherDashboard user={user} />)
+
+    expect(await screen.findByText(/아직 예정된현장체험학습이 없어요/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '+ 현장체험학습 생성하기' })).toBeInTheDocument()
+  })
+
+  it('shows the existing home tab stats once a trip exists', async () => {
+    vi.mocked(teacherTripApi.getTrips).mockResolvedValue([기존체험학습])
+    render(<TeacherDashboard user={user} />)
+
+    expect(await screen.findByText('참여 학생 24명')).toBeInTheDocument()
+    expect(screen.queryByText(/아직 예정된/)).not.toBeInTheDocument()
+  })
 })
 
 function trip(id: number, title: string): TeacherTrip {
