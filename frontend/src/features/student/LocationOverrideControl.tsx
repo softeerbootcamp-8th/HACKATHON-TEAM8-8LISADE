@@ -3,7 +3,7 @@ import { locationOverrideApi, type LocationOverrideState, type LocationPoint } f
 import { loadKakaoMaps, type KakaoCustomOverlay, type KakaoMap, type KakaoMapsApi } from '../teacher/kakaoMaps'
 
 const DEFAULT_CENTER = { latitude: 37.5665, longitude: 126.978 }
-const AUTOMATIC_LOCATION: LocationOverrideState = { enabled: false, latitude: null, longitude: null }
+const AUTOMATIC_LOCATION: LocationOverrideState = { enabled: false, latitude: null, longitude: null, defaultCenter: null }
 
 export function LocationOverrideControl({ place }: { place: string }) {
   const [override, setOverride] = useState<LocationOverrideState>(AUTOMATIC_LOCATION)
@@ -49,6 +49,7 @@ function LocationOverrideDialog({ place, override, onClose, onChange }: {
     ? { latitude: override.latitude, longitude: override.longitude }
     : null
   const initialPointRef = useRef<LocationPoint | null>(initialPoint)
+  const defaultCenterRef = useRef<LocationPoint | null>(override.defaultCenter)
   const [selected, setSelected] = useState<LocationPoint | null>(initialPoint)
   const [message, setMessage] = useState('지도를 불러오는 중입니다.')
   const [isError, setIsError] = useState(false)
@@ -69,7 +70,7 @@ function LocationOverrideDialog({ place, override, onClose, onChange }: {
     loadKakaoMaps(import.meta.env.VITE_KAKAO_MAP_APP_KEY).then((maps) => {
       if (!active || !containerRef.current) return
 
-      const initial = initialPointRef.current ?? DEFAULT_CENTER
+      const initial = initialPointRef.current ?? defaultCenterRef.current ?? DEFAULT_CENTER
       const map = new maps.Map(containerRef.current, {
         center: new maps.LatLng(initial.latitude, initial.longitude),
         level: 3,
@@ -97,7 +98,7 @@ function LocationOverrideDialog({ place, override, onClose, onChange }: {
       mapsRef.current = maps
       mapRef.current = map
       if (initialPointRef.current) showMarker(initialPointRef.current)
-      else centerOnPlace(maps, map, place)
+      else if (!defaultCenterRef.current) centerOnPlace(maps, map, place)
       map.relayout()
       setIsError(false)
       setMessage('지도를 눌러 사용할 위치를 선택해 주세요.')
