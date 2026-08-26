@@ -49,3 +49,12 @@
 - 프론트 `missionApi.ts`는 캡처된 Blob의 `type`이 지원 목록(`image/jpeg`, `image/png`)에 있으면 그대로, 아니면 `image/jpeg`로 정규화해서 `/photo-upload` 요청 본문과 실제 S3 PUT 헤더 양쪽에 동일한 값을 쓴다(요청 한 번에 한 값만 계산해 재사용 — 두 곳에서 따로 판정하다 어긋나는 걸 방지).
 
 검증: 백엔드 `./gradlew build`(전체 통과, presigner 2종 + `MissionServiceTest` + 신규 `PhotoUploadPrepareRequestTest` 포함), 프론트 `npm test`(신규 케이스 포함 37파일 224개), `npm run lint`, `npm run build` 모두 통과. 로컬 백엔드를 직접 띄우고 curl로 `contentType: image/png` → objectKey가 `.png`로 발급되는 것과 `image/webp` → 400 거부를 실제로 확인했다.
+
+## 웹 카메라 촬영이 실제 카메라 뷰를 쓰도록 pwa-elements 등록 (#145)
+
+- #135에서 jpeg/png 외 형식(HEIC, WEBP, GIF 등)이 왜 올라올 수 있는지 추적하다가 근본 원인을 찾았다: `@ionic/pwa-elements`가 설치돼 있지 않아 Capacitor Camera가 웹에서 `<pwa-camera-modal>` 커스텀 엘리먼트를 못 찾고, 즉시(등록 여부만 확인하고) `accept` 속성도 없는 일반 `<input type=file>`로 폴백하고 있었다 — 즉 웹에서는 "카메라 촬영"이 아니라 사실상 기기의 아무 파일이나 고를 수 있는 상태였다.
+- `@ionic/pwa-elements`를 설치하고 `main.tsx`에서 `defineCustomElements(window)`를 호출해 등록했다. 이제 Capacitor Camera가 모달 존재를 확인하고 실제 `getUserMedia` 기반 라이브 카메라 뷰로 진입한다.
+- 브라우저로 직접 확인: 카메라 하드웨어가 없는 환경(이 개발 환경)에서는 모달이 "No camera found" 메시지와 "Choose image" 버튼을 명확히 보여주고(기존처럼 조용히 파일 선택창으로 새지 않음), 카메라 있는 환경에서는 라이브 뷰가 뜬다. 취소 시 앱은 깨지지 않고 원래 촬영 화면으로 돌아간다(다만 취소 자체에 대한 사용자 안내는 없음 — 별도 후속 작업으로 분리).
+- 네이티브 Android/iOS 빌드는 이미 실제 네이티브 카메라 API를 쓰므로 이 변경과 무관하다.
+
+검증: `npm test`(37파일 225개 통과), `npm run lint`, `npm run build` 모두 통과. 로컬 백엔드+프론트를 직접 띄우고 학생 계정으로 로그인해 실제 미션 촬영 화면에서 셔터를 눌러 pwa-camera-modal이 뜨는 것과 "No camera found" 처리, 취소 후 정상 복귀를 브라우저로 직접 확인했다.
