@@ -21,3 +21,6 @@ services:
     volumes:
       # Restored on the host by backend-cd.yml before `docker compose up`; never baked into the image.
       - ./firebase-service-account.json:/run/secrets/firebase-service-account.json:ro
+      # FILE appender writes here (logback-spring.xml); mounted so backend-cd.yml can read
+      # travel.log from the host even though the console appender only shows WARN+ (#213).
+      - ./logs:/app/logs
