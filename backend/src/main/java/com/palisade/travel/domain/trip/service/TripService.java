@@ -68,6 +68,9 @@ public class TripService {
         if (trip.getStatus() != TripStatus.READY) {
             throw new TripException(TripErrorCode.TRIP_NOT_READY);
         }
+        if (tripRepository.existsByTeacherIdAndStatus(teacherId, TripStatus.ACTIVE)) {
+            throw new TripException(TripErrorCode.TEACHER_ALREADY_HAS_ACTIVE_TRIP);
+        }
         trip.start();
         tripRepository.save(trip);
         inviteCodeRepository.findByTripIdAndRevokedAtIsNull(tripId)
