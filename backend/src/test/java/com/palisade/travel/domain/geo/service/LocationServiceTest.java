@@ -369,14 +369,35 @@ class LocationServiceTest {
             locationService.update(USER_ID, outsideRequest());
         }
 
-        // then
-        then(notificationRepository).should(times(1)).save(notificationCaptor.capture());
-        Notification saved = notificationCaptor.getValue();
+        // then — 교사(1건) + 학생 본인(1건)
+        then(notificationRepository).should(times(2)).save(notificationCaptor.capture());
+        Notification saved = notificationCaptor.getAllValues().get(0);
         assertThat(saved.getUserId()).isEqualTo(TEACHER_ID);
         assertThat(saved.getTripId()).isEqualTo(TRIP_ID);
         assertThat(saved.getMissionId()).isNull();
         assertThat(saved.getType()).isEqualTo(NotificationType.RANGE_EXIT);
         assertThat(saved.getMessage()).contains("김철수");
+    }
+
+    @Test
+    void 연속_외부_12회에_도달하면_학생_본인에게도_이탈_알림을_저장하고_push한다() {
+        // given
+        givenActiveTrip(USER_ID);
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(student("김철수")));
+        ArgumentCaptor<Notification> notificationCaptor = ArgumentCaptor.forClass(Notification.class);
+
+        // when
+        for (int count = 0; count < 12; count++) {
+            locationService.update(USER_ID, outsideRequest());
+        }
+
+        // then
+        then(notificationRepository).should(times(2)).save(notificationCaptor.capture());
+        Notification studentNotification = notificationCaptor.getAllValues().get(1);
+        assertThat(studentNotification.getUserId()).isEqualTo(USER_ID);
+        assertThat(studentNotification.getTripId()).isEqualTo(TRIP_ID);
+        assertThat(studentNotification.getType()).isEqualTo(NotificationType.RANGE_EXIT);
+        then(pushNotificationService).should(times(1)).sendToUser(eq(USER_ID), any(), any());
     }
 
     @Test
@@ -392,7 +413,8 @@ class LocationServiceTest {
 
         // then
         then(pushNotificationService).should(times(1)).sendToUser(eq(TEACHER_ID), any(), any());
-        then(notificationRepository).should(times(1)).save(any());
+        then(pushNotificationService).should(times(1)).sendToUser(eq(USER_ID), any(), any());
+        then(notificationRepository).should(times(2)).save(any());
     }
 
     @Test

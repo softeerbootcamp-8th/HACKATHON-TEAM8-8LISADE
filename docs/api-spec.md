@@ -64,7 +64,7 @@
 | `MissionType` | `ACTIVITY`, `CHECK` |
 | `SubmissionStatus` | `WAITING`, `COMPLETED`, `REJECTED`, `EXPIRED` |
 | `DevicePlatform` | `WEB`, `ANDROID`, `IOS` |
-| `NotificationType` | `RANGE_EXIT`, `MISSION_CREATED`, `MISSION_INCOMPLETED`, `UNREACHABLE` |
+| `NotificationType` | `RANGE_EXIT`, `MISSION_CREATED`, `MISSION_INCOMPLETED`, `UNREACHABLE`, `DEADLINE_IMMINENT`, `MISSION_REJECTED` |
 | `SseEventType` | `CONNECTED`, `HEARTBEAT`, `LOCATION_UPDATED` |
 
 ---
@@ -106,7 +106,8 @@
 | 31 | POST | `/api/notifications/devices` | 인증 | 기기 토큰 등록 |
 | 32 | DELETE | `/api/notifications/devices` | 인증 | 기기 토큰 해제 |
 | 33 | GET | `/api/teacher/notifications` | TEACHER | 교사 수신 알림 목록 조회 |
-| 34 | PUT | `/mock-storage/{objectKey}` | 공개 (local/test) | 로컬 목 스토리지 업로드 |
+| 34 | GET | `/api/student/notifications` | STUDENT | 학생 수신 알림 목록 조회 |
+| 35 | PUT | `/mock-storage/{objectKey}` | 공개 (local/test) | 로컬 목 스토리지 업로드 |
 
 ---
 
@@ -761,7 +762,29 @@ data: {"userId":3,"latitude":35.7901234,"longitude":129.3321234,"outside":true,"
 | 이탈 발생 | `RANGE_EXIT` | 학생이 이탈 판정될 때 | 학생당 1회, 해제 후 다시 이탈하면 재발송 |
 | 위치 확인 불가 | `UNREACHABLE` | 확인 불가 3분 지속 시 | 학생당 1회 |
 
-> 미완료(마감 배치)·확인 불가(3분 미수신 감지)의 발송 트리거 로직은 후속 이슈에서 구현한다. 현재 자동 발송은 이탈(`RANGE_EXIT`)만 동작한다.
+---
+
+### 11.4 GET `/api/student/notifications` — 학생 수신 알림 목록 조회
+
+| 항목 | 값 |
+| --- | --- |
+| 권한 | STUDENT |
+
+인증 학생에게 온 모든 알림을 `createdAt` 최신순으로 반환한다(유형 무관). 응답 필드는
+11.3과 동일한 `NotificationResponse`.
+
+**Response `200 OK`** — `data`: 배열 (필드는 11.3 참고)
+
+#### 학생 알림 정책 (§6.2)
+
+| 알림 | 유형 | 발송 조건 | 횟수 규칙 |
+| --- | --- | --- | --- |
+| 위치 이탈 | `RANGE_EXIT` | 학생 본인이 이탈 판정될 때 | 학생당 1회, 해제 후 다시 이탈하면 재발송 |
+| 새 미션 | `MISSION_CREATED` | 교사가 미션을 생성했을 때 | 참여 학생 전원에게, 미션당 1회 |
+| 마감 임박 | `DEADLINE_IMMINENT` | 활동 미션 마감 5분 전, 그 시점까지 미완료일 때 | 미완료 학생에게만, 미션당 1회 |
+| 다시 하기 | `MISSION_REJECTED` | 교사가 활동 미션 제출을 반려했을 때 | 해당 학생에게 반려마다 |
+
+탭 시 딥링크: 미션류(새 미션·마감 임박·다시 하기)는 미션 수행 화면으로, 위치 이탈은 학생 홈으로 이동한다.
 
 ---
 
