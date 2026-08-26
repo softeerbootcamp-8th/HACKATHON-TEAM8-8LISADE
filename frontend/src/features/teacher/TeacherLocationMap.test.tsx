@@ -81,8 +81,8 @@ import { TeacherLocationMap } from './TeacherLocationMap'
 import { loadKakaoMaps } from './kakaoMaps'
 
 const trips: TeacherTrip[] = [
-  { id: 7, title: '경복궁 현장체험학습', place: '경복궁', startAt: '2026-08-25T09:00:00', endAt: '2026-08-25T16:00:00', status: 'ACTIVE' },
-  { id: 8, title: '서울 역사 탐방', place: '서울숲', startAt: '2026-08-26T09:00:00', endAt: '2026-08-26T16:00:00', status: 'READY' },
+  { id: 7, title: '경복궁 현장체험학습', place: '경복궁', startAt: '2026-08-25T09:00:00', status: 'ACTIVE' },
+  { id: 8, title: '서울 역사 탐방', place: '서울숲', startAt: '2026-08-26T09:00:00', status: 'READY' },
 ]
 
 let sseListener: ((location: TeacherLocation) => void) | null

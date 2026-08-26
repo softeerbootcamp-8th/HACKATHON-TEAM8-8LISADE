@@ -224,7 +224,7 @@ function UpcomingTrips({ trips, teacherName, onStarted, onSelect }: {
           <span className="upcoming-trip-dday">{formatDday(trip.startAt)}</span>
         </span>
         <h3>{trip.title}</h3>
-        <span className="upcoming-trip-meta"><span className="label">시간</span><span className="value">{formatTripSchedule(trip.startAt, trip.endAt)}</span></span>
+        <span className="upcoming-trip-meta"><span className="label">날짜</span><span className="value">{formatTripSchedule(trip.startAt)}</span></span>
         <span className="upcoming-trip-meta"><span className="label">장소</span><span className="value">{trip.place}</span></span>
         <span className="upcoming-trip-meta"><span className="label">담당자</span><span className="value">{teacherName} 선생님</span></span>
       </button>
@@ -253,30 +253,13 @@ function formatDday(startAt: string | null) {
   return daysLeft > 0 ? `D-${daysLeft}` : `D+${-daysLeft}`
 }
 
-/**
- * 체험학습 일정 표기 (Figma T-02 "2026. 09. 12 (토) 09:00 – 16:00").
- * 생성 화면이 일자만 받으면 자정~자정으로 저장되는데, 그때의 "00:00 – 23:59"는 정보가 아니라 잡음이므로
- * 하루 전체를 덮는 일정은 날짜까지만 보여준다.
- */
-function formatTripSchedule(startAt: string | null, endAt: string | null) {
+/** 체험학습은 일자 단위로만 만들어지므로(생성 화면이 일자만 받는다) 날짜와 요일까지만 보여준다. */
+function formatTripSchedule(startAt: string | null) {
   if (!startAt) return '일정 미정'
-  const start = new Date(startAt)
-  if (Number.isNaN(start.getTime())) return '일정 미정'
-  const weekday = new Intl.DateTimeFormat('ko-KR', { weekday: 'short' }).format(start)
-  const day = `${formatTripDate(startAt)} (${weekday})`
-
-  const end = endAt ? new Date(endAt) : null
-  if (!end || Number.isNaN(end.getTime())) return day
-  if (coversWholeDay(start, end)) return day
-  return `${day} ${formatTime(start)} – ${formatTime(end)}`
-}
-
-function coversWholeDay(start: Date, end: Date) {
-  return start.getHours() === 0 && start.getMinutes() === 0 && end.getHours() === 23 && end.getMinutes() >= 59
-}
-
-function formatTime(date: Date) {
-  return new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false }).format(date)
+  const date = new Date(startAt)
+  if (Number.isNaN(date.getTime())) return '일정 미정'
+  const weekday = new Intl.DateTimeFormat('ko-KR', { weekday: 'short' }).format(date)
+  return `${formatTripDate(startAt)} (${weekday})`
 }
 
 function formatPhoneNumber(phoneNumber: string | null) {

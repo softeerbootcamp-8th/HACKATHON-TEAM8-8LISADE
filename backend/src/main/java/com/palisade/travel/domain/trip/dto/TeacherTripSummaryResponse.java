@@ -10,11 +10,10 @@ public record TeacherTripSummaryResponse(
         String title,
         String place,
         LocalDateTime startAt,
-        LocalDateTime endAt,
         TripStatus status
 ) {
     public static TeacherTripSummaryResponse from(Trip trip) {
         return new TeacherTripSummaryResponse(
-                trip.getId(), trip.getTitle(), trip.getPlace(), trip.getStartAt(), trip.getEndAt(), trip.getStatus());
+                trip.getId(), trip.getTitle(), trip.getPlace(), trip.getStartAt(), trip.getStatus());
     }
 }
