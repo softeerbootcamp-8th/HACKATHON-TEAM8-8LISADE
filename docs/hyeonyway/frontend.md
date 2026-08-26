@@ -13,3 +13,11 @@
 - 이 클래스는 `TeacherHomeProgress.tsx`(홈 탭, 진행 중 체험학습)와 `TripDetail.tsx`(관리 탭 상세) 두 곳에서 공유하므로, CSS 한 줄 수정으로 양쪽 다 고쳐졌다.
 
 검증: 실행 중인 로컬 dev 서버(Browser 도구)에서 `getComputedStyle`로 수정 전 `width: 146.5px`(콘텐츠 크기) → 별도 워크트리에 동일 수정을 적용한 서버에서 `width: 100%`(부모 폭 채움)로 바뀌는 것을 직접 확인. `npm test`(41파일 255개), `npm run lint` 모두 통과.
+
+## 2026-08-26 — 홈 확인 필요 학생 행 및 종료 UI 정리 (#189)
+
+- `TeacherHomeProgress`의 확인 필요 학생 행에 `teacher-home-attention-row`를 추가하고, 홈 전용 CSS에서 `width: 100%`를 적용했다. 공통 `student-row`에는 영향을 주지 않아 학생 탭의 목록 레이아웃을 유지한다.
+- 홈 진행 현황에서는 종료 확인 상태·종료 API 호출·종료 버튼을 제거했다. 체험학습 종료 기능은 관리 탭의 `TripDetail`에서 계속 제공한다.
+- 홈 컴포넌트의 종료 콜백을 대시보드와 테스트 목에서 함께 제거하고, 전체 폭 클래스와 종료 UI 미노출을 회귀 테스트로 고정했다.
+
+검증: `npm test -- --run` (41개 파일, 276개 테스트 통과), `npm run build` 통과.
