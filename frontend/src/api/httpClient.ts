@@ -13,11 +13,15 @@ type ApiResponse<T> = {
 
 const FAILURE_MESSAGE = '요청 처리에 실패했습니다.'
 export const SESSION_EXPIRED_EVENT = 'session-expired'
+// 이 경로의 401은 세션 만료 통보가 아니라 호출자가 그대로 해석하는 응답이다.
+// - 로그인: 자격 증명 오류이므로 폼에서 처리한다.
+// - 세션 조회: 세션이 있는지 확인하는 조회이므로 첫 진입(세션 없음)과 만료를 구분할 수 없다.
+//   앱 시작 화면 분기는 호출자가 결정한다.
+const SESSION_AGNOSTIC_PATHS = ['/api/auth/login', '/api/auth/me']
 
 export async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
   const response = await fetch(apiUrl(path), { credentials: 'include', ...init })
-  // 로그인 실패 401은 세션 만료가 아니라 입력 오류이므로 폼에서 그대로 처리한다.
-  if (response.status === 401 && path !== '/api/auth/login') {
+  if (response.status === 401 && !SESSION_AGNOSTIC_PATHS.includes(path)) {
     window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
   }
   return response
