@@ -39,3 +39,13 @@
 - `uploadToStorage`가 Blob의 실제 타입과 무관하게 항상 `image/jpeg`로 고정해서 보내도록 수정했다(백엔드가 항상 그 값으로 서명하므로).
 
 검증: `npm test`(신규 케이스 포함 37파일 222개 통과), `npm run lint`, `npm run build` 모두 통과.
+
+## 사진 업로드 실제 Content-Type 정식 지원 (#135)
+
+- #132의 "무조건 image/jpeg로 라벨링" 임시조치를 되돌리고, 실제 지원 형식을 정식으로 다뤘다. 웹 카메라 폴백이 진짜 PNG를 캡처하는 경로가 `@capacitor/camera`의 web 구현에 실제로 존재해서(`file.type === 'image/png'` 분기), S3에 잘못된 Content-Type 메타데이터를 저장하는 문제가 있었다.
+- `StoragePresigner.presignPut(objectKey, contentType)`으로 시그니처를 바꿔 `S3StoragePresigner`가 실제 넘어온 값으로 서명하도록 했다. `LocalStoragePresigner`는 로컬 mock이라 값 자체는 안 쓰지만 인터페이스는 맞춘다.
+- `POST /api/missions/{missionId}/photo-upload`에 `contentType` 요청 필드를 추가하고 `@Pattern(regexp = "image/jpeg|image/png")`로 허용 목록 밖 값을 400 `VALIDATION_ERROR`로 거부한다.
+- S3 object key 확장자를 실제 타입에 맞춰 생성한다(`image/png` → `.png`, 그 외 → `.jpg`).
+- 프론트 `missionApi.ts`는 캡처된 Blob의 `type`이 지원 목록(`image/jpeg`, `image/png`)에 있으면 그대로, 아니면 `image/jpeg`로 정규화해서 `/photo-upload` 요청 본문과 실제 S3 PUT 헤더 양쪽에 동일한 값을 쓴다(요청 한 번에 한 값만 계산해 재사용 — 두 곳에서 따로 판정하다 어긋나는 걸 방지).
+
+검증: 백엔드 `./gradlew build`(전체 통과, presigner 2종 + `MissionServiceTest` + 신규 `PhotoUploadPrepareRequestTest` 포함), 프론트 `npm test`(신규 케이스 포함 37파일 224개), `npm run lint`, `npm run build` 모두 통과. 로컬 백엔드를 직접 띄우고 curl로 `contentType: image/png` → objectKey가 `.png`로 발급되는 것과 `image/webp` → 400 거부를 실제로 확인했다.
