@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { TeacherMission } from '../../types/mission'
 import type { TeacherTrip } from '../../types/teacherTrip'
 
 vi.mock('../../api/teacherTripApi', () => ({
@@ -13,12 +14,23 @@ vi.mock('../../api/teacherTripApi', () => ({
   },
 }))
 
+vi.mock('../../api/missionApi', () => ({
+  teacherMissionApi: {
+    listMissions: vi.fn(),
+  },
+}))
+
+import { teacherMissionApi } from '../../api/missionApi'
 import { teacherTripApi } from '../../api/teacherTripApi'
 import { AddStudentForm, TripDetail } from './TripDetail'
 
 const activeTrip: TeacherTrip = { id: 1, title: '경복궁 현장체험학습', place: '경복궁', startAt: '2026-09-12T09:00:00', status: 'ACTIVE' }
 const finishedTrip: TeacherTrip = { id: 2, title: '지난 체험학습', place: '국립중앙박물관', startAt: '2026-07-01T09:00:00', status: 'FINISHED' }
 const readyTrip: TeacherTrip = { id: 3, title: '예정된 체험학습', place: '경주', startAt: '2026-10-02T09:00:00', status: 'READY' }
+const finishedMissions: TeacherMission[] = [
+  { id: 1, tripId: '2', title: '불국사에서 사진 찍기', description: '', type: 'ACTIVITY', startAt: null, endAt: null, pin: null },
+  { id: 2, tripId: '2', title: '석굴암에서 출석 인증하기', description: '', type: 'CHECK', startAt: null, endAt: null, pin: '1234' },
+]
 
 describe('TripDetail', () => {
   beforeEach(() => {
@@ -27,6 +39,7 @@ describe('TripDetail', () => {
     vi.mocked(teacherTripApi.end).mockReset()
     vi.mocked(teacherTripApi.start).mockReset()
     vi.mocked(teacherTripApi.delete).mockReset()
+    vi.mocked(teacherMissionApi.listMissions).mockReset().mockResolvedValue([])
   })
 
   it('예정 상태 체험학습은 초대 코드 대신 시작하기·삭제하기 버튼을 보여준다', async () => {
@@ -100,13 +113,78 @@ describe('TripDetail', () => {
     expect(screen.queryByText(/\d{2}:\d{2}/)).not.toBeInTheDocument()
   })
 
-  it('완료된 체험학습은 초대 코드와 종료 버튼을 보여주지 않는다', async () => {
+  it('종료된 체험학습은 초대 코드와 종료 버튼을 보여주지 않는다', async () => {
     render(<TripDetail trip={finishedTrip} teacherName="고심" onBack={vi.fn()} onAddStudent={vi.fn()} onStarted={vi.fn()} onDeleted={vi.fn()} onFinished={vi.fn()} />)
 
-    expect(await screen.findByText('0명')).toBeInTheDocument()
+    expect(await screen.findByText('종료')).toBeInTheDocument()
+    expect(screen.queryByText('참여 학생')).not.toBeInTheDocument()
     expect(screen.queryByText('학생 초대')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '현장체험학습 종료' })).not.toBeInTheDocument()
     expect(teacherTripApi.getCurrentInviteCode).not.toHaveBeenCalled()
+  })
+
+  it('종료된 체험학습은 수행한 미션 수와 목록을 보여준다', async () => {
+    // given
+    vi.mocked(teacherMissionApi.listMissions).mockResolvedValue(finishedMissions)
+
+    // when
+    render(<TripDetail trip={finishedTrip} teacherName="고심" onBack={vi.fn()} onAddStudent={vi.fn()} onStarted={vi.fn()} onDeleted={vi.fn()} onFinished={vi.fn()} />)
+
+    // then
+    expect(await screen.findByRole('heading', { name: '수행한 미션 2개' })).toBeInTheDocument()
+    expect(screen.getByText('미션1 · 불국사에서 사진 찍기')).toBeInTheDocument()
+    expect(screen.getByText('미션2 · 석굴암에서 출석 인증하기')).toBeInTheDocument()
+    expect(teacherMissionApi.listMissions).toHaveBeenCalledWith('2')
+  })
+
+  it('종료된 체험학습의 삭제하기는 확인 후 삭제를 요청한다', async () => {
+    // given
+    const onDeleted = vi.fn()
+    vi.mocked(teacherTripApi.delete).mockResolvedValue(undefined)
+    render(<TripDetail trip={finishedTrip} teacherName="고심" onBack={vi.fn()} onAddStudent={vi.fn()} onStarted={vi.fn()} onDeleted={onDeleted} onFinished={vi.fn()} />)
+
+    // when
+    fireEvent.click(screen.getByRole('button', { name: '삭제하기' }))
+    fireEvent.click(screen.getByRole('button', { name: '삭제하기' }))
+
+    // then
+    await waitFor(() => expect(teacherTripApi.delete).toHaveBeenCalledWith(2))
+    await waitFor(() => expect(onDeleted).toHaveBeenCalled())
+  })
+
+  it('종료된 체험학습의 미션 항목은 탭 동작을 제공하지 않는다', async () => {
+    // given
+    vi.mocked(teacherMissionApi.listMissions).mockResolvedValue(finishedMissions)
+
+    // when
+    render(<TripDetail trip={finishedTrip} teacherName="고심" onBack={vi.fn()} onAddStudent={vi.fn()} onStarted={vi.fn()} onDeleted={vi.fn()} onFinished={vi.fn()} />)
+    await screen.findByText('미션1 · 불국사에서 사진 찍기')
+
+    // then
+    expect(screen.queryByRole('button', { name: /미션1/ })).not.toBeInTheDocument()
+  })
+
+  it('종료된 체험학습은 자료 내보내기를 제공하지 않는다', async () => {
+    // given
+    vi.mocked(teacherMissionApi.listMissions).mockResolvedValue(finishedMissions)
+
+    // when
+    render(<TripDetail trip={finishedTrip} teacherName="고심" onBack={vi.fn()} onAddStudent={vi.fn()} onStarted={vi.fn()} onDeleted={vi.fn()} onFinished={vi.fn()} />)
+    await screen.findByText('미션1 · 불국사에서 사진 찍기')
+
+    // then
+    expect(screen.queryByRole('button', { name: '자료 내보내기' })).not.toBeInTheDocument()
+  })
+
+  it('종료된 체험학습의 미션 목록을 불러오지 못하면 오류를 보여준다', async () => {
+    // given
+    vi.mocked(teacherMissionApi.listMissions).mockRejectedValue(new Error('미션 목록을 불러오지 못했습니다.'))
+
+    // when
+    render(<TripDetail trip={finishedTrip} teacherName="고심" onBack={vi.fn()} onAddStudent={vi.fn()} onStarted={vi.fn()} onDeleted={vi.fn()} onFinished={vi.fn()} />)
+
+    // then
+    expect(await screen.findByRole('alert')).toHaveTextContent('미션 목록을 불러오지 못했습니다.')
   })
 
   it('학생 직접 추가하기를 누르면 콜백을 호출한다', async () => {
