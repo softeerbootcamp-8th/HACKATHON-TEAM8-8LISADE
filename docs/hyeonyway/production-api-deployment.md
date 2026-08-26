@@ -92,3 +92,7 @@ curl -i -X OPTIONS https://api.8lisade.site/api/auth/csrf \
 
 두 번째 요청은 `Access-Control-Allow-Origin: https://8lisade.site`,
 `Access-Control-Allow-Credentials: true`와 `X-XSRF-TOKEN` 허용 헤더를 반환해야 한다.
+
+## `apiUrl()` 누락 재발 (#103)
+
+`teacherLocationApi.ts`의 `request()`와 `subscribe()`가 `apiUrl()`을 거치지 않고 `fetch`/`EventSource`에 상대경로를 직접 넘기고 있었다. 로컬 dev 프록시에서는 우연히 동작하지만 `VITE_API_BASE_URL`이 설정된 배포 빌드에서는 프론트 자신의 Vercel 도메인으로 요청이 가서 교사 위치 지도(초기 조회 + SSE) 전체가 실패한다. 새 API 클라이언트를 추가할 때 `fetch`/`EventSource`를 직접 호출하지 않고 반드시 `apiUrl(path)`를 거치도록 한다 — `httpClient.ts`의 `request`/`sendJson`을 재사용하면 자동으로 보장된다.

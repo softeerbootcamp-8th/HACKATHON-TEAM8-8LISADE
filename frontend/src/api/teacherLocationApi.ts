@@ -1,4 +1,5 @@
 import type { GeoPoint } from '../types/teacherTrip'
+import { apiUrl } from './apiUrl'
 
 type ApiResponse<T> = {
   success: boolean
@@ -31,7 +32,7 @@ export type TeacherLocationContext = {
 }
 
 async function request<T>(path: string): Promise<T> {
-  const response = await fetch(path, { credentials: 'include' })
+  const response = await fetch(apiUrl(path), { credentials: 'include' })
   const body = await response.json().catch(() => null) as ApiResponse<T> | null
   if (!response.ok || !body?.success) {
     throw new Error(body?.message ?? '학생 위치를 불러오지 못했습니다.')
@@ -50,7 +51,7 @@ export const teacherLocationApi = {
   },
 
   subscribe(onLocation: (location: TeacherLocation) => void) {
-    const source = new EventSource('/api/teacher/sse/connect', { withCredentials: true })
+    const source = new EventSource(apiUrl('/api/teacher/sse/connect'), { withCredentials: true })
     source.addEventListener('LOCATION_UPDATED', (event) => {
       try {
         const location: unknown = JSON.parse((event as MessageEvent<string>).data)
