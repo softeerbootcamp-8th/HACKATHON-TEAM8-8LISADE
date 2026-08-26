@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { teacherNotificationApi } from '../../api/teacherNotificationApi'
 import type { TeacherNotification } from '../../types/notification'
+import { formatKoreanNotificationTime } from '../../shared/dateTime'
 import chevronLeft from '../../assets/icons/chevron-left.svg'
 
 /** 유형별 배지 라벨/스타일 (Figma T-07). 서버가 새 유형을 보내면 fallback으로 안전 처리. */
@@ -11,20 +12,6 @@ const badgeByType: Record<string, { label: string; className: string }> = {
   UNREACHABLE: { label: '확인 불가', className: 'noti-badge-unreachable' },
 }
 const fallbackBadge = { label: '알림', className: 'noti-badge-unreachable' }
-
-/** ISO 저장 시각 → 카드 우측 상대 시각 라벨. */
-function toTimeLabel(iso: string): string {
-  const then = new Date(iso).getTime()
-  if (Number.isNaN(then)) return ''
-  const diffMinutes = Math.floor((Date.now() - then) / 60000)
-  if (diffMinutes < 1) return '방금 전'
-  if (diffMinutes < 60) return `${diffMinutes}분 전`
-  const date = new Date(iso)
-  if (date.toDateString() === new Date().toDateString()) {
-    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-  }
-  return `${date.getMonth() + 1}월 ${date.getDate()}일`
-}
 
 export function TeacherNotifications({ onBack, onSelect }: {
   onBack: () => void
@@ -55,7 +42,7 @@ export function TeacherNotifications({ onBack, onSelect }: {
               <span className={`noti-badge ${badge.className}`}>{badge.label}</span>
               <span className="noti-card-message">{notification.message}</span>
             </span>
-            <span className="noti-card-time">{toTimeLabel(notification.createdAt)}</span>
+            <span className="noti-card-time">{formatKoreanNotificationTime(notification.createdAt)}</span>
           </button>
         </li>
       })}

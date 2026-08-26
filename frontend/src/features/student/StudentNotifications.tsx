@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { studentNotificationApi } from '../../api/studentNotificationApi'
 import type { StudentNotification } from '../../types/notification'
+import { formatKoreanNotificationTime } from '../../shared/dateTime'
 import { AppHeader } from '../../shared/ui/AppHeader'
 import { ScreenCard } from '../../shared/ui/ScreenCard'
 import chevronLeft from '../../assets/icons/chevron-left.svg'
@@ -13,20 +14,6 @@ const badgeByType: Record<string, { label: string; className: string }> = {
   MISSION_REJECTED: { label: '다시 하기', className: 'noti-badge-redo' },
 }
 const fallbackBadge = { label: '알림', className: 'noti-badge-unreachable' }
-
-/** ISO 저장 시각 → 카드 우측 상대 시각 라벨. */
-function toTimeLabel(iso: string): string {
-  const then = new Date(iso).getTime()
-  if (Number.isNaN(then)) return ''
-  const diffMinutes = Math.floor((Date.now() - then) / 60000)
-  if (diffMinutes < 1) return '방금 전'
-  if (diffMinutes < 60) return `${diffMinutes}분 전`
-  const date = new Date(iso)
-  if (date.toDateString() === new Date().toDateString()) {
-    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-  }
-  return `${date.getMonth() + 1}월 ${date.getDate()}일`
-}
 
 export function StudentNotifications({ onBack, onSelect }: {
   onBack: () => void
@@ -59,7 +46,7 @@ export function StudentNotifications({ onBack, onSelect }: {
                 <span className={`noti-badge ${badge.className}`}>{badge.label}</span>
                 <span className="noti-card-message">{notification.message}</span>
               </span>
-              <span className="noti-card-time">{toTimeLabel(notification.createdAt)}</span>
+              <span className="noti-card-time">{formatKoreanNotificationTime(notification.createdAt)}</span>
             </button>
           </li>
         })}
