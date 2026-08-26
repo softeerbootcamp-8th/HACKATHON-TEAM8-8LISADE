@@ -185,9 +185,12 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('비밀번호 확인'), { target: { value: 'password1234' } })
     fireEvent.change(screen.getByLabelText('학생 전화번호'), { target: { value: '01012345678' } })
     fireEvent.change(screen.getByLabelText('학부모 전화번호'), { target: { value: '01087654321' } })
-    fireEvent.click(screen.getByRole('button', { name: '가입하기' }))
 
-    expect(screen.getByText('보호자 동의가 필요합니다.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '가입하기' })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('checkbox'))
+
+    expect(screen.getByRole('button', { name: '가입하기' })).toBeEnabled()
   })
 
   it('blocks sign-up when password confirmation does not match', () => {
@@ -200,6 +203,7 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('비밀번호 확인'), { target: { value: 'password4321' } })
     fireEvent.change(screen.getByLabelText('학생 전화번호'), { target: { value: '01012345678' } })
     fireEvent.change(screen.getByLabelText('학부모 전화번호'), { target: { value: '01087654321' } })
+    fireEvent.click(screen.getByRole('checkbox'))
     fireEvent.click(screen.getByRole('button', { name: '가입하기' }))
 
     expect(screen.getByRole('alert')).toHaveTextContent('비밀번호가 일치하지 않습니다.')
