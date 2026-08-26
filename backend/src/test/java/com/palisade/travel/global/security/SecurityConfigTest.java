@@ -13,7 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = "app.security.cors.allowed-origins[0]=https://8lisade.vercel.app")
+@SpringBootTest(properties = "app.security.cors.allowed-origins[0]=https://www.8lisade.site")
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class SecurityConfigTest {
@@ -30,13 +30,13 @@ class SecurityConfigTest {
     }
 
     @Test
-    void allowsCredentialedPreflightFromTheConfiguredVercelOrigin() throws Exception {
+    void allowsCredentialedPreflightFromTheConfiguredProductionOrigin() throws Exception {
         mockMvc.perform(options("/api/auth/csrf")
-                        .header("Origin", "https://8lisade.vercel.app")
+                        .header("Origin", "https://www.8lisade.site")
                         .header("Access-Control-Request-Method", "GET")
                         .header("Access-Control-Request-Headers", "X-XSRF-TOKEN"))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Access-Control-Allow-Origin", "https://8lisade.vercel.app"))
+                .andExpect(header().string("Access-Control-Allow-Origin", "https://www.8lisade.site"))
                 .andExpect(header().string("Access-Control-Allow-Credentials", "true"))
                 .andExpect(header().string("Access-Control-Allow-Headers", org.hamcrest.Matchers.containsString("X-XSRF-TOKEN")));
     }
