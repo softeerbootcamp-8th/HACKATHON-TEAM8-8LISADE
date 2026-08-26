@@ -111,6 +111,21 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
           test -s "$RUNNER_TEMP/release.jks"
 
+      # google-services.json은 .gitignore 대상이라 checkout에 들어오지 않는다. 없으면
+      # google-services 플러그인이 빠진 APK가 나오고, 그 앱은 로그인 시 종료된다 (#151).
+      # VITE_FIREBASE_* secret은 웹 JS SDK용이라 네이티브 FCM을 대신하지 못한다.
+      - name: Restore google-services.json
+        run: |
+          set -euo pipefail
+          echo "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" | base64 -d > frontend/android/app/google-services.json
+          test -s frontend/android/app/google-services.json
+          PKG=$(python3 -c "import json; print(json.load(open('frontend/android/app/google-services.json'))['client'][0]['client_info']['android_client_info']['package_name'])")
+          if [ "$PKG" != "com.softeerbootcamp.eightlisade" ]; then
+            echo "::error::google-services.json의 package_name이 '$PKG'다. com.softeerbootcamp.eightlisade여야 한다."
+            exit 1
+          fi
+          echo "google-services.json 복원 확인됨 ($PKG)."
+
       - name: Build signed release APK
         working-directory: frontend/android
         run: |
@@ -123,6 +138,18 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_VERSION_CODE: ${{ github.run_number }}
           ANDROID_VERSION_NAME: ${{ steps.version.outputs.version }}
+
+      # google-services 플러그인이 적용되면 이 리소스가 생성된다. 없으면 default FirebaseApp이
+      # 없는 APK라는 뜻이고, 배포하면 로그인 시 앱이 종료된다 (#151).
+      - name: Verify Firebase config is embedded
+        run: |
+          set -euo pipefail
+          GENERATED=frontend/android/app/build/generated/res/processReleaseGoogleServices/values/values.xml
+          if [ ! -f "$GENERATED" ] || ! grep -q "google_app_id" "$GENERATED"; then
+            echo "::error::google-services 플러그인이 적용되지 않았다. 이 APK는 로그인 시 종료된다."
+            exit 1
+          fi
+          echo "Firebase 설정 확인됨."
 
       # 서명이 빠지면 gradle은 app-release-unsigned.apk를 만들고 빌드는 성공한다.
       # 그대로 배포하면 설치 자체가 불가능하므로 여기서 끊는다.
