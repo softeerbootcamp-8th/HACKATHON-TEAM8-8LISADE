@@ -53,6 +53,13 @@ export default function App() {
   const showSignUp = () => { setError(''); setNotice(''); setScreen('SIGN_UP') }
   const incrementMissionProgress = () => setStudentTrip((trip) => trip ? { ...trip, missionCompleted: Math.min(trip.missionCompleted + 1, trip.missionTotal) } : trip)
 
+  const loadCurrentMission = async (tripId: number) => {
+    const missions = await missionApi.getCurrentMissions(tripId)
+    const current = missions.map((mission) => ({ ...mission, isResubmission: false }))
+    setAvailableMissions(current)
+    setCurrentMission(current[0] ?? null)
+  }
+
   const enterAuthenticatedUser = useCallback(async (user: CurrentUser) => {
     setCurrentUser(user)
     registerPushNotifications()
@@ -66,6 +73,7 @@ export default function App() {
     const tracking = trip
       ? await locationTrackingAdapter.startTracking()
       : await locationTrackingAdapter.stopTracking()
+    if (trip) await loadCurrentMission(trip.id).catch(() => undefined)
     setStudentTrip(trip)
     setLocationState(tracking)
     setScreen(resolvePostLoginScreen({
@@ -126,6 +134,14 @@ export default function App() {
     return () => window.clearInterval(interval)
   }, [currentUser?.role, screen, showLoginForExpiredSession, studentTrip])
 
+  useEffect(() => {
+    if (currentUser?.role !== 'STUDENT' || !studentTrip) return
+
+    const tripId = studentTrip.id
+    const interval = window.setInterval(() => { void loadCurrentMission(tripId).catch(() => undefined) }, 20_000)
+    return () => window.clearInterval(interval)
+  }, [currentUser?.role, studentTrip])
+
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); setError('')
     try {
@@ -147,12 +163,6 @@ export default function App() {
     } catch (caughtError) { setError(caughtError instanceof Error ? caughtError.message : '회원가입에 실패했습니다.') }
   }
 
-  const loadCurrentMission = async (tripId: number) => {
-    const missions = await missionApi.getCurrentMissions(tripId)
-    const current = missions.map((mission) => ({ ...mission, isResubmission: false }))
-    setAvailableMissions(current)
-    setCurrentMission(current[0] ?? null)
-  }
   const joinTrip = async (code: string) => {
     const trip = await studentTripApi.joinWithInviteCode(code)
     const tracking = await locationTrackingAdapter.startTracking()
