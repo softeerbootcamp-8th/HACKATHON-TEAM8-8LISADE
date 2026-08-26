@@ -38,6 +38,7 @@ export function SignUpScreen({ input, error, onChange, onSubmit, onCancel }: {
   onSubmit: (event: FormEvent<HTMLFormElement>) => void; onCancel: () => void
 }) {
   const update = <Key extends keyof SignUpInput>(key: Key, value: SignUpInput[Key]) => onChange({ ...input, [key]: value })
+  const guardianConsentMissing = input.role === 'STUDENT' && !input.guardianConsent
   return <main className="app-shell"><section className="screen" aria-labelledby="auth-title">
     <h1 id="auth-title" className="page-title">회원가입</h1>
     {error && <p className="error" role="alert">{error}</p>}
@@ -52,7 +53,7 @@ export function SignUpScreen({ input, error, onChange, onSubmit, onCancel }: {
       <Field label="비밀번호" id="sign-up-password"><input id="sign-up-password" type="password" minLength={8} maxLength={20} value={input.password} onChange={(event) => update('password', event.target.value)} required /></Field>
       <Field label="비밀번호 확인" id="sign-up-password-confirmation"><input id="sign-up-password-confirmation" type="password" minLength={8} maxLength={20} value={input.passwordConfirmation} onChange={(event) => update('passwordConfirmation', event.target.value)} required /></Field>
       {input.role === 'STUDENT' && <label className="check-label"><input type="checkbox" checked={Boolean(input.guardianConsent)} onChange={(event) => update('guardianConsent', event.target.checked)} /><span className="check-box" aria-hidden="true">{input.guardianConsent ? '✓' : ''}</span><span className="check-label-text"><span className="check-label-title">보호자 동의를 받았어요</span><span className="check-label-hint">가정통신문 동의서를 선생님께 제출했어요</span></span></label>}
-      <button type="submit">가입하기</button><button className="text-button" type="button" onClick={onCancel}>로그인으로 돌아가기</button>
+      <button type="submit" disabled={guardianConsentMissing}>가입하기</button><button className="text-button" type="button" onClick={onCancel}>로그인으로 돌아가기</button>
     </form>
   </section></main>
 }
