@@ -89,6 +89,17 @@
 
 검증: 백엔드 `MissionServiceTest`에 2개 케이스 추가(완료한 미션 제외, 반려된 미션은 재제출 가능하도록 유지) 후 `./gradlew test` 전체 통과. 프론트 `App.test.tsx`에 출석체크 완료 후 다음 미션으로 전환되는 회귀 테스트 1개 추가, 기존 3개 테스트는 완료 후 재조회 결과를 모킹하도록 갱신 후 `npm test`(41파일 256개), `npm run lint`, `npx tsc -b --noEmit` 모두 통과.
 
+## 활동 미션 촬영 화면 삭제 — 카메라 바로 진입 (#202)
+
+- Figma S-04-1은 미션 진입 시 바로 카메라로 들어가야 하는데, `ActivityMissionScreen`이 뷰파인더 목업 이미지 + "촬영하기" 셔터 버튼이 있는 중간 화면을 먼저 보여주고 학생이 그 버튼을 눌러야 `captureMissionPhoto`가 호출되던 문제를 고쳤다.
+- 처음에는 `ActivityMissionScreen`을 남겨두고 마운트 시 자동으로 캡처를 호출하는 방향으로 구현했으나, 이슈 작성자가 "CHECK 미션이 `CheckMissionScreen`으로 바로 들어가는 것처럼, ACTIVITY 미션도 화면 자체 없이 바로 캡처를 호출해야 한다"고 방향을 정정해 최종적으로는 그 방향으로 다시 구현했다.
+- `App.tsx`에 `captureActivityMission(mission)`을 추가해 `captureMissionPhoto`를 직접 호출한다. "현재 미션 수행" 클릭, 알림 딥링크, 사진 확인 화면의 "재촬영하기"가 모두 이 함수 하나를 공유한다. 성공하면 `ACTIVITY_CONFIRMATION`으로 전환하고, 실패/취소 시에는 화면 전환 없이 학생 홈에 남아 오류 문구만 보여준다(재촬영 실패 시에도 기존 사진 확인 화면에 그대로 머문다).
+- 더 이상 라우팅되지 않는 `ActivityMissionScreen` 컴포넌트, 전용 화면 값 `'ACTIVITY_MISSION'`(`features/app/appFlow.ts`의 `Screen` 유니언), 그 화면에서만 쓰이던 `assets/icons/viewfinder.svg`를 함께 제거했다(`.viewfinder-wrap` CSS 클래스 자체는 `ActivityConfirmation`의 사진 미리보기가 계속 쓰므로 유지).
+- 반려 재제출 안내 문구("반려 사유를 확인하고 다시 촬영해 주세요." / "사진이 흐릿합니다...")는 기존에 `ActivityMissionScreen`에만 있었는데, 그 화면 자체가 없어지면서 대체할 곳 없이 함께 제거됐다 — 토스트 등 새 알림 수단을 이 이슈 범위에서 새로 만들지는 않기로 했다(이슈 작성자 확인). `isResubmission` 플래그는 `App.tsx`에서 항상 `false`로만 채워지고 있어(`loadCurrentMission`) 실제로는 아직 트리거되지 않는 상태이기도 하다.
+- Figma MCP를 이번 세션에 연결할 수 없어 픽셀 단위 비교는 생략하고, 이슈에 적힌 요구사항 문구를 기준으로 판단했다.
+
+검증: `npm test`(42파일 279개 통과), `npm run lint`, `npm run build` 모두 통과.
+
 ## 학생 상세 미션 현황 및 Figma 레이아웃 (#180)
 
 - `TeacherStudents`의 학생 상세를 Figma T-04-1 구조(상단 뒤로가기, 학생 정보 카드, 위치 placeholder, 미션 현황 행)로 구성했다. 전화번호 API가 아직 없으므로 학생/학부모 `전화 걸기` 버튼은 비활성 UI만 제공하며 `tel:` 연결이나 번호 표시는 하지 않는다.
