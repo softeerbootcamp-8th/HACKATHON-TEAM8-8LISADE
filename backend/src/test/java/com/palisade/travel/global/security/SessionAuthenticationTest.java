@@ -88,7 +88,8 @@ class SessionAuthenticationTest {
                         .content("{\"loginId\":\"student1\",\"password\":\"wrong-password\"}"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+                .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"))
+                .andExpect(jsonPath("$.message").value("아이디 또는 비밀번호가 일치하지 않습니다."));
     }
 
     @Test
@@ -112,7 +113,7 @@ class SessionAuthenticationTest {
                         .contentType("application/json")
                         .content("{\"loginId\":\"student1\",\"password\":\"password123\"}"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+                .andExpect(jsonPath("$.code").value("ACCOUNT_DISABLED"));
     }
 
     @Test
