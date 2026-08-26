@@ -58,3 +58,14 @@
 - 네이티브 Android/iOS 빌드는 이미 실제 네이티브 카메라 API를 쓰므로 이 변경과 무관하다.
 
 검증: `npm test`(37파일 225개 통과), `npm run lint`, `npm run build` 모두 통과. 로컬 백엔드+프론트를 직접 띄우고 학생 계정으로 로그인해 실제 미션 촬영 화면에서 셔터를 눌러 pwa-camera-modal이 뜨는 것과 "No camera found" 처리, 취소 후 정상 복귀를 브라우저로 직접 확인했다.
+
+## 미션 수동 완료 처리 (#168)
+
+- 마감(`endAt`)이 지나도 미션이 "진행중"으로 계속 표시되고, 교사가 직접 종료할 방법이 없던 문제를 해결했다. `Mission`에 `completedAt`(nullable) 필드와 `complete()`/`isCompleted()`를 추가했다 — 별도 status enum 대신 시각 필드로 완료 여부를 표현한다.
+- `POST /api/teacher/missions/{missionId}/complete`(`MissionService.complete`)를 추가했다. 담당 교사만 호출 가능하고, 이미 완료된 미션을 다시 완료 처리하면 `MISSION_ALREADY_COMPLETED`로 거부한다.
+- 완료된 미션은 학생이 더 이상 접근할 수 없다 — 기존 `requireAccessible()`(제출/PIN 검증/사진 presign이 모두 거치는 단일 지점)에 `mission.isCompleted()` 체크를 추가해 한 곳 수정으로 전부 막았다. `getCurrentStudentMissions`도 완료된 미션을 목록에서 제외한다.
+- `MissionResponse`에 `completedAt`을 실어 프론트에 노출한다.
+- 프론트: `missionDispatchStatus`가 `완료` 상태를 추가로 반환하고(대기/진행중/완료 3종), 리스트·현황판 뱃지에 반영된다. `MissionStatusScreen`에 "완료 처리하기" 버튼 + 확인 모달(기존 삭제하기 확인 패턴과 동일한 2단계 확인 UX)을 추가했다. 완료된 미션에서는 "완료 처리하기", "대리 완료", "반려" 버튼이 모두 사라진다(읽기 전용 현황판).
+- 자료 내보내기, 마감 시각 기준 자동 완료 전환은 이번 범위에서 다루지 않는다.
+
+검증: 백엔드 `MissionServiceTest`에 4개 케이스 추가(수동 완료, 중복 완료 거부, 완료된 미션 학생 접근 차단, 완료된 미션이 학생 현재 미션 목록에서 제외) 후 `./gradlew test` 전체 통과. 프론트 `TeacherMissions.test.tsx`에 완료 처리 플로우 테스트 추가 후 `npm test`(41파일 256개), `npm run lint` 모두 통과.
