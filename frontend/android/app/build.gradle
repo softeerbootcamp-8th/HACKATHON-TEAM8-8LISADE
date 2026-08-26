@@ -78,13 +78,26 @@ dependencies {
 
 apply from: 'capacitor.build.gradle'
 
-try {
-    def servicesJSON = file('google-services.json')
-    if (servicesJSON.text) {
-        apply plugin: 'com.google.gms.google-services'
+// Capacitor 기본 블록을 대체한다. google-services.json은 .gitignore 대상이라 checkout에
+// 포함되지 않고, 없으면 이 플러그인이 빠진 채 빌드가 성공한다. 그 APK에는 google_app_id
+// 리소스가 없어 default FirebaseApp이 초기화되지 않고, 로그인 시 PushNotifications.register()가
+// 메인 스레드에서 IllegalStateException을 던져 앱이 즉시 종료된다 (#151).
+// 로컬 개발과 android-ci(assembleDebug)는 이 파일 없이도 동작해야 하므로 release에서만 끊는다.
+def googleServicesJSON = file('google-services.json')
+if (googleServicesJSON.exists() && googleServicesJSON.length() > 0) {
+    apply plugin: 'com.google.gms.google-services'
+} else {
+    logger.lifecycle('google-services.json not found — google-services plugin not applied. Push Notifications will not work.')
+    gradle.taskGraph.whenReady { graph ->
+        def releaseTask = graph.allTasks.find { it.project == project && it.name ==~ /(assemble|bundle)Release.*/ }
+        if (releaseTask != null) {
+            throw new GradleException(
+                    'google-services.json이 없어 release 빌드를 중단한다. 이 설정 없이 만든 APK는 ' +
+                            '로그인 시 앱이 종료된다. CI는 GOOGLE_SERVICES_JSON_BASE64 secret으로 ' +
+                            'frontend/android/app/google-services.json을 복원해야 한다 (#151).'
+            )
+        }
     }
-} catch(Exception e) {
-    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
 }
 
 // gradle property를 우선 보고, 없으면 환경변수를 본다. 둘 다 없으면 null.
