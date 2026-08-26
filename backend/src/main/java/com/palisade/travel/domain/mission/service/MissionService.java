@@ -70,7 +70,7 @@ public class MissionService {
         mission.change(title, description, startAt, endAt); return mission;
     }
     public Mission getStudentMission(Long missionId, Long studentId) { Mission mission = findMission(missionId); requireParticipant(mission, studentId); requireAccessible(mission); return mission; }
-    public List<Mission> getCurrentStudentMissions(Long tripId, Long studentId) { if (!participantRepository.existsByTripIdAndUserId(tripId, studentId)) throw new MissionException(MissionErrorCode.NOT_A_TRIP_PARTICIPANT); LocalDateTime now=LocalDateTime.now(); return missionRepository.findByTripIdOrderByStartAtAsc(tripId).stream().filter(m -> m.isAccessibleAt(now)).toList(); }
+    public List<Mission> getCurrentStudentMissions(Long tripId, Long studentId) { if (!participantRepository.existsByTripIdAndUserId(tripId, studentId)) throw new MissionException(MissionErrorCode.NOT_A_TRIP_PARTICIPANT); LocalDateTime now=LocalDateTime.now(); return missionRepository.findByTripIdOrderByStartAtAsc(tripId).stream().filter(m -> m.isAccessibleAt(now) && !m.isCompleted()).toList(); }
     @Transactional
     public SubmissionResult verifyPin(Long missionId, Long studentId, String pin) {
         Mission mission = getStudentMission(missionId, studentId);
@@ -139,6 +139,14 @@ public class MissionService {
     }
 
     @Transactional
+    public void complete(Long missionId, Long teacherId) {
+        Mission mission = findMission(missionId);
+        requireTeacher(mission.getTripId(), teacherId);
+        if (mission.isCompleted()) throw new MissionException(MissionErrorCode.MISSION_ALREADY_COMPLETED);
+        mission.complete(LocalDateTime.now());
+    }
+
+    @Transactional
     public void completeOnBehalf(Long missionId, Long teacherId, Long studentId) {
         Mission mission = findMission(missionId);
         requireTeacher(mission.getTripId(), teacherId);
@@ -150,7 +158,7 @@ public class MissionService {
 
     private Mission findMission(Long id) { return missionRepository.findById(id).orElseThrow(() -> new MissionException(MissionErrorCode.MISSION_NOT_FOUND)); }
     private void requireParticipant(Mission mission, Long userId) { if (!participantRepository.existsByTripIdAndUserId(mission.getTripId(),userId)) throw new MissionException(MissionErrorCode.NOT_A_TRIP_PARTICIPANT); }
-    private void requireAccessible(Mission mission) { if (!mission.isAccessibleAt(LocalDateTime.now())) throw new MissionException(MissionErrorCode.MISSION_NOT_ACCESSIBLE); }
+    private void requireAccessible(Mission mission) { if (!mission.isAccessibleAt(LocalDateTime.now()) || mission.isCompleted()) throw new MissionException(MissionErrorCode.MISSION_NOT_ACCESSIBLE); }
     private void requireTeacher(Long tripId, Long teacherId) { Trip trip=tripRepository.findById(tripId).orElseThrow(() -> new MissionException(MissionErrorCode.TRIP_NOT_FOUND)); if (!trip.getTeacherId().equals(teacherId)) throw new MissionException(MissionErrorCode.TRIP_ACCESS_FORBIDDEN); }
     public record SubmissionResult(Long submissionId, SubmissionStatus status, String imageKey) { static SubmissionResult from(MissionSubmission submission, Mission mission) { return new SubmissionResult(submission.getId(), submission.currentStatus(LocalDateTime.now(),mission), submission.getImageKey()); } }
     public record StatusBoard(Mission mission, int totalStudentCount, List<SubmittedEntry> submitted, List<NotSubmittedEntry> notSubmitted) {}

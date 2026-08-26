@@ -116,6 +116,7 @@ export interface TeacherMissionApi {
   getStatusBoard(missionId: number): Promise<MissionStatusBoard>
   rejectSubmission(missionId: number, studentId: number, reason: string): Promise<void>
   completeOnBehalf(missionId: number, studentId: number): Promise<void>
+  completeMission(missionId: number): Promise<void>
   deleteMission(missionId: number): Promise<void>
   getPin(missionId: number): Promise<string>
 }
@@ -128,6 +129,7 @@ type TeacherMissionResponse = {
   type: MissionType
   startAt: string | null
   endAt: string | null
+  completedAt: string | null
 }
 
 function toTeacherMission(response: TeacherMissionResponse): TeacherMission {
@@ -140,6 +142,7 @@ function toTeacherMission(response: TeacherMissionResponse): TeacherMission {
     startAt: response.startAt,
     endAt: response.endAt,
     pin: null,
+    completedAt: response.completedAt,
   }
 }
 
@@ -178,6 +181,10 @@ export const teacherMissionApi: TeacherMissionApi = {
 
   async completeOnBehalf(missionId, studentId) {
     await post<void>(`/api/teacher/missions/${missionId}/submissions/${studentId}/complete`)
+  },
+
+  async completeMission(missionId) {
+    await post<void>(`/api/teacher/missions/${missionId}/complete`)
   },
 
   async deleteMission(missionId) {

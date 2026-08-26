@@ -21,7 +21,7 @@ const roster = [
   { participantId: 3, userId: 13, name: '이도윤', type: 'APP' as const, outside: false, lastSentAt: new Date().toISOString(), joinedAt: new Date().toISOString() },
 ]
 
-const mission = { id: 1, tripId: '7', title: '사진 미션', description: '', type: 'ACTIVITY' as const, startAt: null, endAt: null, pin: null }
+const mission = { id: 1, tripId: '7', title: '사진 미션', description: '', type: 'ACTIVITY' as const, startAt: null, endAt: null, pin: null, completedAt: null }
 
 describe('TeacherHomeProgress', () => {
   beforeEach(() => {

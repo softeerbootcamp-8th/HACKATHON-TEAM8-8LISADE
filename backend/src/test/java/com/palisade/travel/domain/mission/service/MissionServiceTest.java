@@ -313,4 +313,48 @@ class MissionServiceTest {
 
         org.mockito.Mockito.verify(storagePresigner).presignPut(org.mockito.ArgumentMatchers.endsWith(".png"), org.mockito.ArgumentMatchers.eq("image/png"));
     }
+
+    @Test
+    void teacherCanManuallyCompleteAMission() {
+        Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, null);
+        when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
+        when(tripRepository.findById(1L)).thenReturn(Optional.of(trip(100L)));
+
+        missionService.complete(2L, 100L);
+
+        assertThat(mission.isCompleted()).isTrue();
+    }
+
+    @Test
+    void completingAnAlreadyCompletedMissionThrows() {
+        Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, null);
+        mission.complete(LocalDateTime.now());
+        when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
+        when(tripRepository.findById(1L)).thenReturn(Optional.of(trip(100L)));
+
+        assertThatThrownBy(() -> missionService.complete(2L, 100L))
+                .isInstanceOf(ApiException.class);
+    }
+
+    @Test
+    void studentCannotAccessACompletedMission() {
+        Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, null);
+        mission.complete(LocalDateTime.now());
+        when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
+        when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(true);
+
+        assertThatThrownBy(() -> missionService.getStudentMission(2L, 10L))
+                .isInstanceOf(ApiException.class);
+    }
+
+    @Test
+    void completedMissionsAreExcludedFromTheStudentsCurrentMissionList() {
+        Mission open = Mission.create(1L, "진행중", "", MissionType.ACTIVITY, null, null);
+        Mission completed = Mission.create(1L, "완료됨", "", MissionType.ACTIVITY, null, null);
+        completed.complete(LocalDateTime.now());
+        when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(true);
+        when(missionRepository.findByTripIdOrderByStartAtAsc(1L)).thenReturn(List.of(open, completed));
+
+        assertThat(missionService.getCurrentStudentMissions(1L, 10L)).containsExactly(open);
+    }
 }

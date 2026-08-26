@@ -250,6 +250,7 @@ h2 { font-size: 17px; margin: 0; }
 .badge-type { background: #eef1f7; color: #556; }
 .badge-status { background: #f4f7fb; color: #6b778c; }
 .badge-status-active { background: #eef7f0; color: #1b6d34; }
+.badge-status-done { background: #eceef1; color: #4b5563; }
 .progress-bar { background: #eef1f7; border-radius: 999px; height: 8px; overflow: hidden; }
 .progress-bar-fill { background: #276ef1; height: 100%; }
 .segmented-control { background: #f4f7fb; border-radius: 10px; display: flex; gap: 4px; padding: 4px; }
