@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core'
 import { notificationApi, type NotificationApi } from '../api/notificationApi'
 import { deleteFcmToken, listenForForegroundMessages, requestFcmToken } from '../firebase/firebaseConfig'
+import { foregroundNotifications } from './foregroundNotifications'
 import { nativeFcm } from '../native/fcm'
 
 interface NativeFcmBridge {
@@ -66,7 +67,8 @@ export const pushNotifications = createPushNotifications(
   {
     requestToken: requestFcmToken,
     deleteToken: deleteFcmToken,
-    listenForegroundMessages: listenForForegroundMessages,
+    // 수신한 포그라운드 알림은 구독 저장소로 넘겨 화면이 토스트/배지로 표시한다(#41).
+    listenForegroundMessages: () => listenForForegroundMessages(foregroundNotifications.publish),
   },
   notificationApi,
 )
