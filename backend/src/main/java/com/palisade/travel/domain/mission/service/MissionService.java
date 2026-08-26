@@ -59,12 +59,12 @@ public class MissionService {
     @Transactional
     public SubmissionResult submitPhoto(Long missionId, Long studentId, String imageKey) {
         Mission mission=getStudentMission(missionId, studentId);
-        String requiredPrefix = "missions/" + missionId + "/students/" + studentId + "/";
+        String requiredPrefix = "upload/missions/" + missionId + "/students/" + studentId + "/";
         if (mission.getType()!=MissionType.ACTIVITY || mission.isExpiredAt(LocalDateTime.now()) || imageKey==null || !imageKey.startsWith(requiredPrefix)) throw new ApiException(CommonErrorCode.INVALID_REQUEST);
         MissionSubmission submission=submissionRepository.findByMissionIdAndUserId(missionId, studentId).map(s -> { if (s.getStatus()!=SubmissionStatus.REJECTED) throw new ApiException(CommonErrorCode.INVALID_REQUEST); s.resubmit(imageKey); return s; }).orElseGet(() -> submissionRepository.save(MissionSubmission.photo(missionId,studentId,imageKey)));
         return SubmissionResult.from(submission, mission);
     }
-    public StoragePresigner.PresignedUpload preparePhotoUpload(Long missionId, Long studentId) { Mission mission=getStudentMission(missionId,studentId); if (mission.getType()!=MissionType.ACTIVITY || mission.isExpiredAt(LocalDateTime.now())) throw new ApiException(CommonErrorCode.INVALID_REQUEST); return storagePresigner.presignPut("missions/"+missionId+"/students/"+studentId+"/"+java.util.UUID.randomUUID()+".jpg"); }
+    public StoragePresigner.PresignedUpload preparePhotoUpload(Long missionId, Long studentId) { Mission mission=getStudentMission(missionId,studentId); if (mission.getType()!=MissionType.ACTIVITY || mission.isExpiredAt(LocalDateTime.now())) throw new ApiException(CommonErrorCode.INVALID_REQUEST); return storagePresigner.presignPut("upload/missions/"+missionId+"/students/"+studentId+"/"+java.util.UUID.randomUUID()+".jpg"); }
     @Transactional
     public void reject(Long missionId, Long studentId, Long teacherId, String reason) { Mission mission=findMission(missionId); requireTeacher(mission.getTripId(),teacherId); MissionSubmission submission=submissionRepository.findByMissionIdAndUserId(missionId,studentId).orElseThrow(() -> new ApiException(CommonErrorCode.INVALID_REQUEST)); submission.reject(reason); }
     @Transactional
