@@ -1,18 +1,14 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TeacherHomeProgress } from './TeacherHomeProgress'
 import { teacherStudentApi } from '../../api/teacherStudentApi'
 import { teacherMissionApi } from '../../api/missionApi'
-import { teacherTripApi } from '../../api/teacherTripApi'
 
 vi.mock('../../api/teacherStudentApi', () => ({
   teacherStudentApi: { listStudents: vi.fn(), getStudentDetail: vi.fn() },
 }))
 vi.mock('../../api/missionApi', () => ({
   teacherMissionApi: { listMissions: vi.fn(), getStatusBoard: vi.fn() },
-}))
-vi.mock('../../api/teacherTripApi', () => ({
-  teacherTripApi: { end: vi.fn() },
 }))
 
 const roster = [
@@ -33,16 +29,16 @@ describe('TeacherHomeProgress', () => {
       submitted: [],
       notSubmitted: [{ studentId: 12, studentName: '박서준', rejectionReason: null }, { studentId: 13, studentName: '이도윤', rejectionReason: null }],
     })
-    vi.mocked(teacherTripApi.end).mockReset().mockResolvedValue(undefined)
   })
 
   it('이탈·미완료 학생을 확인이 필요한 학생 목록으로 보여준다', async () => {
-    render(<TeacherHomeProgress tripId="7" onViewStudents={vi.fn()} onFinished={vi.fn()} />)
+    render(<TeacherHomeProgress tripId="7" onViewStudents={vi.fn()} />)
 
     expect(await screen.findByText('확인이 필요한 학생 3')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /김하늘.*이탈/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /박서준.*미완료/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /이도윤.*미완료/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /김하늘.*이탈/ })).toHaveClass('teacher-home-attention-row')
   })
 
   it('위치·미션 사유를 동시에 가진 학생은 태그 두 개를 함께 보여준다', async () => {
@@ -53,7 +49,7 @@ describe('TeacherHomeProgress', () => {
       notSubmitted: [{ studentId: 11, studentName: '김하늘', rejectionReason: null }],
     })
 
-    render(<TeacherHomeProgress tripId="7" onViewStudents={vi.fn()} onFinished={vi.fn()} />)
+    render(<TeacherHomeProgress tripId="7" onViewStudents={vi.fn()} />)
 
     expect(await screen.findByRole('button', { name: /김하늘.*이탈.*미완료/ })).toBeInTheDocument()
   })
@@ -62,29 +58,25 @@ describe('TeacherHomeProgress', () => {
     vi.mocked(teacherStudentApi.listStudents).mockResolvedValue([{ ...roster[0], outside: false }])
     vi.mocked(teacherMissionApi.getStatusBoard).mockResolvedValue({ mission, totalStudentCount: 1, submitted: [], notSubmitted: [] })
 
-    render(<TeacherHomeProgress tripId="7" onViewStudents={vi.fn()} onFinished={vi.fn()} />)
+    render(<TeacherHomeProgress tripId="7" onViewStudents={vi.fn()} />)
 
     expect(await screen.findByText('확인이 필요한 학생이 없습니다.')).toBeInTheDocument()
   })
 
   it('학생 항목을 누르면 학생 탭으로 이동한다', async () => {
     const onViewStudents = vi.fn()
-    render(<TeacherHomeProgress tripId="7" onViewStudents={onViewStudents} onFinished={vi.fn()} />)
+    render(<TeacherHomeProgress tripId="7" onViewStudents={onViewStudents} />)
 
     fireEvent.click(await screen.findByRole('button', { name: /김하늘/ }))
 
     expect(onViewStudents).toHaveBeenCalled()
   })
 
-  it('종료 버튼을 두 번째 확인까지 누르면 teacherTripApi.end를 호출한다', async () => {
-    const onFinished = vi.fn()
-    render(<TeacherHomeProgress tripId="7" onViewStudents={vi.fn()} onFinished={onFinished} />)
+  it('홈 화면에는 현장체험학습 종료 버튼을 노출하지 않는다', async () => {
+    render(<TeacherHomeProgress tripId="7" onViewStudents={vi.fn()} />)
     await screen.findByText('확인이 필요한 학생 3')
 
-    fireEvent.click(screen.getByRole('button', { name: '현장체험학습 종료' }))
-    fireEvent.click(screen.getByRole('button', { name: '종료하기' }))
-
-    await waitFor(() => expect(teacherTripApi.end).toHaveBeenCalledWith(7))
-    await waitFor(() => expect(onFinished).toHaveBeenCalled())
+    expect(screen.queryByRole('button', { name: '현장체험학습 종료' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '종료하기' })).not.toBeInTheDocument()
   })
 })

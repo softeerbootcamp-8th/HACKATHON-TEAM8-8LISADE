@@ -148,7 +148,6 @@ export function TeacherDashboard({ user, onLogout }: { user: CurrentUser; onLogo
             key={currentTrip.id}
             tripId={String(currentTrip.id)}
             onViewStudents={() => setTab('STUDENTS')}
-            onFinished={async () => { await refreshTrips(); setNotice('현장체험학습을 종료했습니다.') }}
           />
           : upcomingTrips.length > 0 ? <UpcomingTrips
             trips={upcomingTrips}
