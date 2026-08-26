@@ -153,6 +153,7 @@ h2 { font-size: 17px; margin: 0; }
 .teacher-status-row h2 { font-size: 18px; }
 .teacher-section-title { font-size: 16px; font-weight: 700; margin: 8px 0 0; }
 .student-row { align-items: center; background: var(--color-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-card); display: flex; justify-content: space-between; min-height: 68px; padding: 12px 12px 12px 14px; }
+.teacher-home-attention-row { width: 100%; }
 .student-row .student-name { align-items: center; display: flex; font-size: 15px; font-weight: 700; gap: 6px; }
 .student-tag { border-radius: 8px; font-size: 11px; font-weight: 700; padding: 3px 8px; }
 .student-tag--danger { background: var(--color-danger-soft); color: var(--color-danger); }
