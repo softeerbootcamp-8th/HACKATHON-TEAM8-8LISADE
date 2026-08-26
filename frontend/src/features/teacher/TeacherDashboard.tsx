@@ -131,8 +131,8 @@ export function TeacherDashboard({ user }: { user: CurrentUser }) {
         <Field label="기준 Trip" id="teacher-trip"><select id="teacher-trip" className="teacher-trip-select" value={tripId} onChange={(event) => setTripId(event.target.value)}>{teacherTrips.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.title} · {candidate.status}</option>)}</select></Field>
         <div className="teacher-status-row"><h2>{trip.title}</h2><span className={`status-pill ${trip.status === '진행 중' ? 'status-pill--success' : 'status-pill--neutral'}`}>{trip.status}</span></div>
         {tab === 'HOME' ? (
-          trips === null ? <p className="hint" role="status">체험학습 목록을 불러오는 중입니다.</p>
-          : trips.length === 0 ? <div className="home-empty">
+          trips === null && !tripError ? <p className="hint" role="status">체험학습 목록을 불러오는 중입니다.</p>
+          : trips !== null && trips.length === 0 ? <div className="home-empty">
             <img src={mascotLarge} alt="" className="start-mascot" />
             <p className="hint" style={{ textAlign: 'center', margin: '16px 0 24px' }}>아직 예정된<br />현장체험학습이 없어요</p>
             <button type="button" className="add-trip-button" onClick={() => setCreating(true)}>+ 현장체험학습 생성하기</button>
