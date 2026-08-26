@@ -125,3 +125,12 @@
 - 회귀 테스트는 `vi.setSystemTime`으로 "지금"을 고정하고, 이 개발 환경의 실제 시간대(Asia/Seoul)에서 수정 전 코드가 실제로 9시간 어긋난 결과를 내는 것을 먼저 확인(RED)한 뒤 고쳤다. vitest 4.1.11의 `useFakeTimers`는 `timezone` 옵션을 지원하지 않는다(타입에도 없고 런타임에서도 조용히 무시된다) — 실행 환경 자체의 시간대에 의존해서만 이 버그를 재현할 수 있었다는 뜻이며, `parseServerDate` 기반 수정 후에는 `Z` 접미사 덕에 실행 환경 시간대와 무관하게 항상 옳은 결과를 낸다.
 
 검증: 프런트 `npx vitest run`(42파일 286개 통과), `npm run lint`(0 errors — `export` 추가로 인한 `react-refresh/only-export-components` warning 3개는 기존에도 같은 패턴을 쓰는 다른 파일들처럼 파일 분리로 없앨 수 있으나 이번 수정 범위 밖으로 남겨둠), `npm run build` 모두 통과.
+
+## 출석 PIN 입력 박스 크기 붕괴 수정 (#218)
+
+- 모바일 뷰포트(375px)에서 `CheckMissionScreen`의 PIN 4칸이 60×70px 대신 6~8px로 극단적으로 작게 렌더링됐다. `InviteCodeScreen`(초대 코드 6칸)은 정상이라 `CheckMissionScreen`만의 문제로 좁혔다.
+- 원인: `CheckMissionScreen`의 `<form className="auth-form" style={{ justifyItems: 'center' }}>`가 버튼·문구를 가운데 정렬하려고 붙였는데, 이 때문에 자식 grid item `<Field>`가 기본 `stretch` 대신 `max-content`(자기 콘텐츠 크기)로 줄어든다. `.code-boxes-wrap { width: 100%; }` + `.code-box { flex: 1 1 0; max-width: Npx; }` 구조는 조상이 **정해진 너비**를 줄 때만 제대로 동작하는데, `.field`가 shrink-to-fit 되면서 `width: 100%`가 기준 삼을 너비 자체가 거의 0으로 순환 계산됐다(`flex-basis: 0`인 빈 박스는 조상의 shrink-to-fit 계산에 `max-width`가 아니라 자기 콘텐츠 크기로만 기여한다).
+- 브라우저에서 직접 계측: `.code-box` computed width가 6.7px(기대 60px). `.field { justify-self: stretch; }`를 임시로 걸어보니 즉시 60px로 복구되는 걸 확인한 뒤 그대로 `index.css`에 반영했다. `.code-box`를 다시 고정 `width`로 되돌리지 않은 이유는 `flex: 1 1 0 + max-width` 자체는 좁은 화면에서 안 넘치게 하려는 의도된 반응형 설계로 보여서, 그 설계는 유지하고 진짜 원인만 고쳤다.
+- `.field`는 폼 필드 전용 클래스라 `justify-self: stretch`가 항상 맞는 기본값이다 — `justifyItems:'center'`를 안 쓰는 다른 폼(로그인, 초대 코드 등)은 이미 기본값이 stretch라 이번 변경으로 영향받지 않는다.
+
+검증: `npm test`(42파일 281개 통과), `npm run lint`, `npm run build` 모두 통과. 로컬 백엔드+프론트로 학생 계정 로그인 → CHECK 미션 진입 → PIN 화면에서 박스 크기를 DevTools로 직접 측정해 확인(모바일 375px 뷰포트, 수정 전 6.7px → 수정 후 60px). jsdom은 실제 레이아웃 계산을 하지 않아 이 회귀를 잡는 자동 테스트는 추가하지 않았다 — 브라우저 실측으로 대체.
