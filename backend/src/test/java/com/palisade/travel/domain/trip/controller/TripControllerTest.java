@@ -2,6 +2,7 @@ package com.palisade.travel.domain.trip.controller;
 
 import com.palisade.travel.domain.trip.dto.InviteCodeResponse;
 import com.palisade.travel.domain.trip.dto.JoinTripResponse;
+import com.palisade.travel.domain.trip.dto.TripCreatedResponse;
 import com.palisade.travel.domain.trip.dto.TripParticipantResponse;
 import com.palisade.travel.domain.trip.dto.TeacherTripSummaryResponse;
 import com.palisade.travel.domain.trip.entity.TripParticipantType;
@@ -25,6 +26,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -49,7 +51,7 @@ class TripControllerTest {
     @Test
     void 교사는_세_개_이상의_지오펜스_좌표로_체험학습을_생성한다() throws Exception {
         // given
-        given(tripService.create(eq(10L), any())).willReturn(new InviteCodeResponse("AB1234", LocalDateTime.of(2026, 8, 25, 9, 5)));
+        given(tripService.create(eq(10L), any())).willReturn(new TripCreatedResponse(1L));
 
         // when
         ResultActions result = mockMvc.perform(post("/api/teacher/trips")
@@ -72,7 +74,7 @@ class TripControllerTest {
         result
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.code").value("AB1234"));
+                .andExpect(jsonPath("$.data.tripId").value(1));
     }
 
     @Test
@@ -171,5 +173,24 @@ class TripControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
         org.mockito.Mockito.verify(tripService).finish(10L, 1L);
+    }
+
+    @Test
+    void 교사는_예정된_체험학습을_시작한다() throws Exception {
+        given(tripService.start(10L, 1L))
+                .willReturn(new InviteCodeResponse("CD5678", LocalDateTime.of(2026, 8, 25, 9, 5)));
+
+        mockMvc.perform(post("/api/teacher/trips/1/start"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.code").value("CD5678"));
+        org.mockito.Mockito.verify(tripService).start(10L, 1L);
+    }
+
+    @Test
+    void 교사는_예정된_체험학습을_삭제한다() throws Exception {
+        mockMvc.perform(delete("/api/teacher/trips/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+        org.mockito.Mockito.verify(tripService).delete(10L, 1L);
     }
 }

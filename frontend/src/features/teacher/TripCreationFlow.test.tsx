@@ -62,7 +62,7 @@ describe('TripCreationFlow', () => {
 
   it('생성하면 20m 버퍼 좌표와 앞 단계 정보를 API로 전달한다', async () => {
     // given
-    vi.mocked(teacherTripApi.create).mockResolvedValue({ code: 'AB1234', expiresAt: '2026-08-25T09:05:00' })
+    vi.mocked(teacherTripApi.create).mockResolvedValue({ tripId: 1 })
     const onCreated = vi.fn()
     render(<TripCreationFlow onCancel={vi.fn()} onCreated={onCreated} />)
     fillDetails()
@@ -83,7 +83,7 @@ describe('TripCreationFlow', () => {
         { latitude: 37.523, longitude: 126.983 },
       ],
     }))
-    expect(onCreated).toHaveBeenCalledWith('AB1234')
+    expect(onCreated).toHaveBeenCalledWith()
   })
 
 })

@@ -7,7 +7,7 @@ import { KakaoGeofenceMap } from './KakaoGeofenceMap'
 
 type Props = {
   onCancel: () => void
-  onCreated: (inviteCode: string) => void
+  onCreated: () => void
 }
 
 export function TripCreationFlow({ onCancel, onCreated }: Props) {
@@ -30,8 +30,8 @@ export function TripCreationFlow({ onCancel, onCreated }: Props) {
 
     try {
       const geofencePoints = await bufferGeofence(points)
-      const response = await teacherTripApi.create({ ...details, geofencePoints })
-      onCreated(response.code)
+      await teacherTripApi.create({ ...details, geofencePoints })
+      onCreated()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '현장체험학습 생성에 실패했습니다.')
     } finally {

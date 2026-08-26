@@ -60,6 +60,10 @@ public class Trip {
         return new Trip(null, teacherId, geofenceId, title, place, description, startAt, endAt, status, LocalDateTime.now());
     }
 
+    public void start() {
+        this.status = TripStatus.ACTIVE;
+    }
+
     public void finish() {
         this.status = TripStatus.FINISHED;
     }

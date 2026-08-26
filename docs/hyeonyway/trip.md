@@ -55,3 +55,15 @@
 - `.trip-detail-content { align-content: start }` 한 줄로 해결. jsdom은 실제 grid 트랙 크기를 계산하지 않아 자동화 테스트로는 못 잡는 문제라, 임시 디버그 진입점(`main.tsx`에 `TripDetail`을 직접 mount, 커밋 전 원복)으로 브라우저에서 실제 렌더링해 Figma 시안(T-03-1 진행중, node 80:613)과 대조하며 확인했다.
 
 검증: `npx vitest run`(37 files, 222 passed), `npm run lint`, `npm run build` 통과.
+
+## 체험학습을 예정 상태로 생성하고 시작/삭제 추가 (#128)
+
+- `TripService.create()`가 항상 `TripStatus.ACTIVE`로 생성해, 만들자마자 학생이 참여하고 위치 추적이 시작되던 문제 수정. `Trip.create(..., TripStatus.READY)`로 바꾸고 `Trip.start()`(`finish()`와 대칭) 엔티티 메서드를 추가했다.
+- `TripService.start(teacherId, tripId)`: READY가 아니면 `TRIP_NOT_READY`(409). 기존 미폐기 초대 코드가 있으면 폐기하고 새로 발급한다 — `create()`가 발급하는 코드는 5분 만료라 생성 직후 바로 시작하지 않으면 아무도 못 보고 죽으므로, 실제로 학생에게 보여줄 코드는 항상 `start()` 시점에 새로 발급하도록 설계했다.
+- `TripService.delete(teacherId, tripId)`: READY가 아니면 `TRIP_NOT_READY`. 초대 코드 전부 삭제 → 지오펜스 좌표·지오펜스 삭제 → Trip 삭제 순으로 정리한다. READY 상태에는 참가자·위치·미션 데이터가 없으므로(`join()`이 ACTIVE만 허용) 정리 대상이 이걸로 충분하다. 진행 중/종료 체험학습 삭제(Figma T-03-2에도 있음)는 참가자·위치·미션까지 정리해야 해서 스코프 밖 — 결과보고서 Issue #20에서 함께 다룬다.
+- `POST /api/teacher/trips/{tripId}/start`, `DELETE /api/teacher/trips/{tripId}` 컨트롤러 엔드포인트 추가. `InviteCodeRepository.deleteAllByTripId`, `GeofencePointRepository.deleteAllByGeofenceId` 파생 쿼리 추가.
+- 프론트 `TripDetail.tsx`: READY 상태에 "현장체험학습 시작"(`trip-primary-button` 재사용)과 "삭제하기"(`danger-button` 재사용, 종료와 동일한 2단계 확인) 버튼 추가. `TeacherDashboard.tsx`의 `onStarted`는 같은 상세 화면에 머물러 새로고침된 ACTIVE 상태를 보여주고, `onDeleted`는 목록으로 돌아간다.
+- `TripCreationFlow.tsx`/`TeacherDashboard.tsx`: 생성 완료 알림에서 초대 코드 노출을 뺐다 — 그 코드는 `start()` 시점에 폐기되고 새 코드로 교체되므로 미리 보여주면 혼란만 준다.
+- **PR 리뷰 반영**: 처음엔 "`create()`가 코드를 발급하되 화면엔 숨긴다"로 구현했는데, 리뷰에서 "애초에 발급을 안 하는 게 맞다"는 피드백을 받아 `create()`가 초대 코드를 아예 발급하지 않도록 바꿨다. 반환 타입도 `InviteCodeResponse` → 신규 `TripCreatedResponse(tripId)`로 교체(컨트롤러도 동일). 프론트 `teacherTripApi.create()` 반환 타입도 `{ tripId: number }`로 정정 — 원래 프론트가 그 값을 안 썼어서 동작 변화는 없다.
+
+검증: 백엔드 `./gradlew test` 전체 통과(READY 생성 + 코드 미발급, 시작 성공/이미 시작됨, 삭제 성공/진행중 삭제 시도), 프론트 `npx vitest run`(38 files, 236 passed), `npm run lint`, `npm run build` 통과.
