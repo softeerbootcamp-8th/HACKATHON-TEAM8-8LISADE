@@ -37,6 +37,14 @@ docker-compose.override.yml
 
 # ---- Firebase (FCM) secrets ----
 backend/src/main/resources/firebase-service-account.json
+
+# ---- Android signing keys ----
+# keystore는 repository 밖(예: ~/.keystores/)에 두고 경로를 주입한다.
+# 아래는 실수로 repo 안에 만들었을 때를 막는 안전장치다.
+*.jks
+*.keystore
+*.p12
+keystore.properties
 frontend/android/app/google-services.json
 
 # ---- Capacitor ----
