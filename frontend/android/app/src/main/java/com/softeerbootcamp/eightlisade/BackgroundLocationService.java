@@ -27,7 +27,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class BackgroundLocationService extends Service {
     static final String ACTION_STOP = "com.softeerbootcamp.eightlisade.STOP_LOCATION";
-    private static final long INTERVAL_MILLIS = 10_000;
+    static final long COLLECTION_INTERVAL_MILLIS = 1_000;
+    static final long UPLOAD_INTERVAL_MILLIS = 10_000;
+    static final long MAX_LOCATION_AGE_MILLIS = 10_000;
     private static final AtomicBoolean TRACKING = new AtomicBoolean(false);
 
     private final AtomicBoolean uploading = new AtomicBoolean(false);
@@ -35,17 +37,24 @@ public class BackgroundLocationService extends Service {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private ExecutorService executor;
     private FusedLocationProviderClient locationClient;
-    private long lastSentAt;
+    private Location latestLocation;
+    private long lastAttemptedRecordedAt = Long.MIN_VALUE;
 
     private final LocationCallback locationCallback = new LocationCallback() {
         @Override
         public void onLocationResult(LocationResult result) {
             Location location = result.getLastLocation();
-            long now = SystemClock.elapsedRealtime();
-            if (location != null && now - lastSentAt >= INTERVAL_MILLIS && uploading.compareAndSet(false, true)) {
-                lastSentAt = now;
-                executor.execute(() -> upload(location));
+            if (location != null) {
+                latestLocation = location;
             }
+        }
+    };
+
+    private final Runnable uploadRunnable = new Runnable() {
+        @Override
+        public void run() {
+            uploadLatestLocation();
+            mainHandler.postDelayed(this, UPLOAD_INTERVAL_MILLIS);
         }
     };
 
@@ -78,6 +87,8 @@ public class BackgroundLocationService extends Service {
         }
 
         startForeground(TrackingNotifications.TRACKING_ID, TrackingNotifications.tracking(this));
+        mainHandler.removeCallbacks(uploadRunnable);
+        mainHandler.postDelayed(uploadRunnable, UPLOAD_INTERVAL_MILLIS);
         requestLocationUpdates();
         return START_NOT_STICKY;
     }
@@ -90,6 +101,7 @@ public class BackgroundLocationService extends Service {
 
     @Override
     public void onDestroy() {
+        mainHandler.removeCallbacks(uploadRunnable);
         locationClient.removeLocationUpdates(locationCallback);
         TRACKING.set(false);
         executor.shutdownNow();
@@ -109,11 +121,32 @@ public class BackgroundLocationService extends Service {
             return;
         }
 
-        LocationRequest request = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, INTERVAL_MILLIS)
-            .setMinUpdateIntervalMillis(INTERVAL_MILLIS)
-            .setMaxUpdateDelayMillis(INTERVAL_MILLIS)
+        LocationRequest request = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, COLLECTION_INTERVAL_MILLIS)
+            .setMinUpdateIntervalMillis(COLLECTION_INTERVAL_MILLIS)
+            .setMaxUpdateDelayMillis(COLLECTION_INTERVAL_MILLIS)
             .build();
         locationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper());
+    }
+
+    private void uploadLatestLocation() {
+        Location location = latestLocation;
+        if (location == null) {
+            return;
+        }
+
+        long nowElapsedNanos = SystemClock.elapsedRealtimeNanos();
+        if (!LocationUploadPolicy.isFresh(nowElapsedNanos, location.getElapsedRealtimeNanos(), MAX_LOCATION_AGE_MILLIS)) {
+            return;
+        }
+        if (!LocationUploadPolicy.isNewer(location.getTime(), lastAttemptedRecordedAt)) {
+            return;
+        }
+        if (!uploading.compareAndSet(false, true)) {
+            return;
+        }
+
+        lastAttemptedRecordedAt = location.getTime();
+        executor.execute(() -> upload(location));
     }
 
     private void upload(Location location) {
@@ -128,10 +161,10 @@ public class BackgroundLocationService extends Service {
             if (policy == TrackingResponsePolicy.EXPIRE_SESSION) {
                 mainHandler.post(this::expireSession);
             } else if (policy == TrackingResponsePolicy.STOP_TRACKING) {
-                mainHandler.post(this::stopTracking);
+                mainHandler.post(this::endTrip);
             }
         } catch (Exception ignored) {
-            // 다음 10초 위치에서 다시 시도한다. 쿠키와 위치 값은 로그에 남기지 않는다.
+            // 다음 전송 주기에서 새로 수집한 좌표를 처리한다.
         } finally {
             uploading.set(false);
         }
@@ -139,14 +172,19 @@ public class BackgroundLocationService extends Service {
 
     private void expireSession() {
         String endpoint = BackgroundLocationState.endpoint(this);
-        NativeSessionCookieStore.expire(endpoint);
         WebViewSessionCookies.expireSession(endpoint);
         BackgroundLocationState.markSessionExpired(this);
         TrackingNotifications.showSessionExpired(this);
         stopTracking();
     }
 
+    private void endTrip() {
+        BackgroundLocationState.markTripEnded(this);
+        stopTracking();
+    }
+
     private void stopTracking() {
+        mainHandler.removeCallbacks(uploadRunnable);
         locationClient.removeLocationUpdates(locationCallback);
         TRACKING.set(false);
         stopForeground(STOP_FOREGROUND_REMOVE);

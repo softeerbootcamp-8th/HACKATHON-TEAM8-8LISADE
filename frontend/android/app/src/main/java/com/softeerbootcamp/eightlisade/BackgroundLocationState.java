@@ -26,6 +26,10 @@ final class BackgroundLocationState {
         preferences(context).edit().putString(REASON, "SESSION_EXPIRED").apply();
     }
 
+    static void markTripEnded(Context context) {
+        preferences(context).edit().putString(REASON, "TRIP_ENDED").apply();
+    }
+
     static String reason(Context context) {
         return preferences(context).getString(REASON, null);
     }
