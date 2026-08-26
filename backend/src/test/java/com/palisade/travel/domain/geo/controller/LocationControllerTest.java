@@ -13,19 +13,26 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.never;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -167,6 +174,131 @@ class LocationControllerTest {
                 .andExpect(status().isGone())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("TRIP_INACTIVE"));
+    }
+
+    @Test
+    void 수동_위치를_활성화하면_선택한_좌표를_즉시_현재_위치로_전달한다() throws Exception {
+        // given
+        MockHttpSession session = new MockHttpSession();
+        given(locationService.update(eq(42L), any()))
+                .willReturn(new LocationUpdateResponse(10L, false, 0));
+
+        // when
+        mockMvc.perform(put("/api/student/locations/override")
+                        .session(session)
+                        .principal(authentication)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"latitude\":37.501,\"longitude\":127.001}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.enabled").value(true))
+                .andExpect(jsonPath("$.data.latitude").value(37.501))
+                .andExpect(jsonPath("$.data.longitude").value(127.001));
+
+        // then
+        ArgumentCaptor<LocationUpdateRequest> request = ArgumentCaptor.forClass(LocationUpdateRequest.class);
+        then(locationService).should().update(eq(42L), request.capture());
+        assertThat(request.getValue().latitude()).isEqualByComparingTo("37.501");
+        assertThat(request.getValue().longitude()).isEqualByComparingTo("127.001");
+        assertThat(request.getValue().accuracy()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void 수동_위치가_활성화되면_기기_GPS보다_선택한_좌표를_우선한다() throws Exception {
+        // given
+        MockHttpSession session = new MockHttpSession();
+        given(locationService.update(eq(42L), any()))
+                .willReturn(new LocationUpdateResponse(10L, false, 0));
+        mockMvc.perform(put("/api/student/locations/override")
+                        .session(session)
+                        .principal(authentication)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"latitude\":37.501,\"longitude\":127.001}"))
+                .andExpect(status().isOk());
+        clearInvocations(locationService);
+
+        // when
+        mockMvc.perform(post("/api/student/locations")
+                        .session(session)
+                        .principal(authentication)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validJson()))
+                .andExpect(status().isOk());
+
+        // then
+        then(locationService).should().update(42L, new LocationUpdateRequest(
+                new BigDecimal("37.501"),
+                new BigDecimal("127.001"),
+                BigDecimal.ZERO,
+                Instant.parse("2026-08-25T08:55:30.123Z")
+        ));
+    }
+
+    @Test
+    void 수동_위치를_해제하면_다음_기기_GPS를_그대로_사용한다() throws Exception {
+        // given
+        MockHttpSession session = new MockHttpSession();
+        given(locationService.update(eq(42L), any()))
+                .willReturn(new LocationUpdateResponse(10L, false, 0));
+        mockMvc.perform(put("/api/student/locations/override")
+                        .session(session)
+                        .principal(authentication)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"latitude\":37.501,\"longitude\":127.001}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(delete("/api/student/locations/override")
+                        .session(session)
+                        .principal(authentication))
+                .andExpect(status().isOk());
+        clearInvocations(locationService);
+
+        // when
+        mockMvc.perform(post("/api/student/locations")
+                        .session(session)
+                        .principal(authentication)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validJson()))
+                .andExpect(status().isOk());
+
+        // then
+        then(locationService).should().update(42L, validRequest());
+    }
+
+    @Test
+    void 수동_위치_조회는_현재_활성화된_좌표를_반환한다() throws Exception {
+        // given
+        MockHttpSession session = new MockHttpSession();
+        given(locationService.update(eq(42L), any()))
+                .willReturn(new LocationUpdateResponse(10L, false, 0));
+        mockMvc.perform(put("/api/student/locations/override")
+                        .session(session)
+                        .principal(authentication)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"latitude\":37.501,\"longitude\":127.001}"))
+                .andExpect(status().isOk());
+
+        // when & then
+        mockMvc.perform(get("/api/student/locations/override")
+                        .session(session)
+                        .principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.enabled").value(true))
+                .andExpect(jsonPath("$.data.latitude").value(37.501))
+                .andExpect(jsonPath("$.data.longitude").value(127.001));
+    }
+
+    @Test
+    void 범위를_벗어난_수동_위도는_검증_오류를_반환한다() throws Exception {
+        // given
+        String invalidLocation = "{\"latitude\":91,\"longitude\":127.001}";
+
+        // when & then
+        mockMvc.perform(put("/api/student/locations/override")
+                        .principal(authentication)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidLocation))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+        then(locationService).should(never()).update(any(), any());
     }
 
     private LocationUpdateRequest validRequest() {
