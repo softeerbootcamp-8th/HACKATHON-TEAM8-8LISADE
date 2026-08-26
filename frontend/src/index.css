@@ -113,6 +113,26 @@ h2 { font-size: 17px; margin: 0; }
 .trip-summary dt { color: var(--color-text-muted); display: inline; }
 .trip-summary dd { display: inline; font-weight: 700; margin: 0 0 0 6px; }
 
+/* 학생 GPS 수동 위치 선택 */
+.location-override-control { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); display: grid; gap: 10px; padding: 12px; }
+.location-override-control > div { align-items: center; display: flex; gap: 8px; justify-content: space-between; }
+.location-override-control strong { font-size: 14px; }
+.location-override-open { background: var(--color-accent-soft); box-shadow: none; min-height: 42px; }
+.location-override-dialog { background: var(--color-bg); border: 0; border-radius: 22px; box-shadow: 0 18px 50px rgb(39 48 58 / 30%); color: var(--color-text); margin: auto; max-width: 408px; padding: 18px; width: calc(100% - 32px); }
+.location-override-dialog::backdrop { background: rgb(39 48 58 / 48%); }
+.location-override-header { align-items: flex-start; display: flex; gap: 12px; justify-content: space-between; margin-bottom: 14px; }
+.location-override-header h2 { font-size: 19px; margin: 0 0 5px; }
+.location-override-header p { color: var(--color-danger); font-size: 12px; line-height: 1.45; margin: 0; }
+.location-picker-frame { background: #f4efe2; border-radius: 16px; height: 330px; overflow: hidden; position: relative; }
+.location-picker-map { height: 100%; touch-action: pan-x pan-y pinch-zoom; width: 100%; }
+.location-picker-message { background: rgb(255 253 246 / 94%); border-radius: 11px; color: var(--color-text-muted); font-size: 12px; left: 50%; margin: 0; max-width: calc(100% - 24px); padding: 8px 10px; position: absolute; text-align: center; top: 12px; transform: translateX(-50%); width: max-content; }
+.location-picker-message[role="alert"] { color: var(--color-danger); }
+.location-picker-marker { background: var(--color-danger); border: 3px solid #fff; border-radius: 50% 50% 50% 0; box-shadow: 0 3px 9px rgb(39 48 58 / 28%); display: block; height: 30px; transform: rotate(-45deg); width: 30px; }
+.location-picker-coordinate { color: var(--color-text-muted); font-size: 12px; margin: 10px 2px 0; }
+.location-override-actions { display: flex; gap: 10px; margin-top: 14px; }
+.location-override-actions button { flex: 1; min-height: 48px; }
+.location-auto-button { background: var(--color-danger-soft); box-shadow: none; color: var(--color-danger); }
+
 /* Bottom nav (teacher) */
 .screen:has(.teacher-tabs) { padding-bottom: 0; }
 .teacher-tabs { align-items: center; background: var(--color-surface); border-top: 1px solid var(--color-border); bottom: 0; display: flex; gap: 4px; height: 74px; left: 0; padding: 8px 10px 0; position: sticky; right: 0; width: 100%; }

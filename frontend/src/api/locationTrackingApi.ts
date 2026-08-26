@@ -16,8 +16,9 @@ function toState(status: TrackingStatus): LocationTrackingState {
     locationEnabled: status.locationEnabled,
     sendStatus: status.permission !== 'GRANTED' || !status.locationEnabled
       ? 'NO_PERMISSION'
+      : status.sendFailed ? 'FAILED'
       : status.tracking ? 'NORMAL' : 'STOPPED',
-    lastSentAt: null,
+    lastSentAt: status.lastSentAt ?? null,
     reason: status.reason,
   }
 }
@@ -27,33 +28,8 @@ export function createLocationTrackingAdapter(
   apiBaseUrl: string | undefined,
   isNative: boolean,
 ): LocationTrackingAdapter {
-  if (!isNative) {
-    let state: LocationTrackingState = {
-      permission: 'PENDING',
-      locationEnabled: true,
-      sendStatus: 'NO_PERMISSION',
-      lastSentAt: null,
-    }
-    return {
-      async getState() { return state },
-      async startTracking() {
-        state = { permission: 'GRANTED', locationEnabled: true, sendStatus: 'NORMAL', lastSentAt: '방금 전' }
-        return state
-      },
-      async stopTracking() {
-        state = { ...state, sendStatus: 'STOPPED' }
-        return state
-      },
-      async expireSession() {
-        state = { permission: 'PENDING', locationEnabled: true, sendStatus: 'STOPPED', lastSentAt: null }
-        return state
-      },
-      async openSettings() { return state },
-    }
-  }
-
   const syncSession = () => client.syncSession({
-    apiBaseUrl: apiBaseUrl || 'http://localhost:8080',
+    apiBaseUrl: apiBaseUrl || (isNative ? 'http://localhost:8080' : window.location.origin),
   })
 
   return {

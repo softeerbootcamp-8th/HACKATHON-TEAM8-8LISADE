@@ -10,6 +10,7 @@ import { CodeBoxes } from '../../shared/ui/CodeBoxes'
 import mascotInvite from '../../assets/icons/mascot-invite.svg'
 import viewfinder from '../../assets/icons/viewfinder.svg'
 import mascotPin from '../../assets/icons/mascot-pin.svg'
+import { LocationOverrideControl } from './LocationOverrideControl'
 
 export type CurrentMission = StudentMission & { isResubmission: boolean }
 
@@ -37,7 +38,7 @@ export function LocationBlockedScreen({ onOpenSettings }: { onOpenSettings: () =
   return <main className="app-shell"><section className="screen">
     <h1 className="page-title">위치 권한 필요</h1>
     <p className="hint screen-pad" style={{ marginBottom: 24 }}>위치 권한을 허용해야 Trip과 미션 기능을 이용할 수 있습니다.</p>
-    <div className="auth-form"><button onClick={onOpenSettings}>설정으로 이동</button></div>
+    <div className="auth-form"><button onClick={onOpenSettings}>위치 권한 다시 확인</button></div>
   </section></main>
 }
 
@@ -57,6 +58,7 @@ export function StudentHome({ trip, location, notice, currentMission, onCurrentM
     <div className="screen-pad" style={{ marginBottom: 16 }}>
       <span className={`status-pill status-pill--${status.tone}`}>{status.label}{location.lastSentAt && <span className="hint"> · {location.lastSentAt}</span>}</span>
     </div>
+    <div className="screen-pad" style={{ marginBottom: 16 }}><LocationOverrideControl place={trip.place} /></div>
     {notice && <p className="notice" role="status">{notice}</p>}
     <div className="home-body">
       {currentMission ? <><section className="mission-card"><p className="mission-eyebrow">새 미션이 도착했어요!</p><h2>{currentMission.title}</h2><p>{currentMission.description ?? (currentMission.type === 'CHECK' ? '교사가 공유한 4자리 PIN을 입력해 주세요.' : '카메라로 촬영한 사진만 제출할 수 있습니다.')}</p><button onClick={onCurrentMission}>현재 미션 수행</button></section><section className="locked-mission"><p>미완료 미션을 먼저 진행해 주세요.</p></section></> : <section className="locked-mission"><p className="hint">현재 진행할 미션이 없습니다.</p></section>}
