@@ -7,8 +7,9 @@ import { TeacherNotifications } from './TeacherNotifications'
 const now = new Date().toISOString()
 
 const sample: TeacherNotification[] = [
-  { id: 2, type: 'RANGE_EXIT', title: '안전 구역 이탈 알림', message: '김하늘이 허용 구역을 벗어났어요.', createdAt: now },
-  { id: 1, type: 'MISSION_INCOMPLETED', title: '미션 미완료 알림', message: "학생1이 '어디서 사진 찍기' 미션을 수행하지 않았어요.", createdAt: now },
+  { id: 3, type: 'UNREACHABLE', title: '위치 확인 불가 알림', message: '박서준의 위치를 3분 이상 확인하지 못했어요.', createdAt: now },
+  { id: 2, type: 'RANGE_EXIT', title: '안전 구역 이탈 알림', message: '김하늘이 안전 구역을 벗어났어요.', createdAt: now },
+  { id: 1, type: 'MISSION_INCOMPLETED', title: '미션 미완료 알림', message: "'어디서 사진 찍기' 미션을 3명이 완료하지 못했어요.", createdAt: now },
 ]
 
 afterEach(() => { vi.restoreAllMocks() })
@@ -18,9 +19,11 @@ describe('TeacherNotifications', () => {
     vi.spyOn(teacherNotificationApi, 'list').mockResolvedValue(sample)
     render(<TeacherNotifications onBack={() => {}} onSelect={() => {}} />)
 
-    expect(await screen.findByText('김하늘이 허용 구역을 벗어났어요.')).toBeInTheDocument()
+    expect(await screen.findByText('김하늘이 안전 구역을 벗어났어요.')).toBeInTheDocument()
+    expect(screen.getByText("'어디서 사진 찍기' 미션을 3명이 완료하지 못했어요.")).toBeInTheDocument()
     expect(screen.getByText('이탈')).toBeInTheDocument()
     expect(screen.getByText('미완료')).toBeInTheDocument()
+    expect(screen.getByText('확인 불가')).toBeInTheDocument()
   })
 
   it('calls onSelect with the tapped notification', async () => {
@@ -28,7 +31,7 @@ describe('TeacherNotifications', () => {
     const onSelect = vi.fn()
     render(<TeacherNotifications onBack={() => {}} onSelect={onSelect} />)
 
-    fireEvent.click(await screen.findByRole('button', { name: /김하늘이 허용 구역을 벗어났어요/ }))
+    fireEvent.click(await screen.findByRole('button', { name: /김하늘이 안전 구역을 벗어났어요/ }))
 
     expect(onSelect).toHaveBeenCalledOnce()
     expect(onSelect.mock.calls[0][0]).toMatchObject({ type: 'RANGE_EXIT' })
