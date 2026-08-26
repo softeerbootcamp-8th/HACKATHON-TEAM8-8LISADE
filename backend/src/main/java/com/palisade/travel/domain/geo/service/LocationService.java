@@ -16,6 +16,7 @@ import com.palisade.travel.domain.notification.entity.Notification;
 import com.palisade.travel.domain.notification.entity.NotificationType;
 import com.palisade.travel.domain.notification.repository.NotificationRepository;
 import com.palisade.travel.domain.notification.service.PushNotificationService;
+import com.palisade.travel.domain.notification.service.UnreachableAlertService;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
 import com.palisade.travel.domain.trip.entity.TripStatus;
@@ -52,6 +53,7 @@ public class LocationService {
     private final UserRepository userRepository;
     private final PushNotificationService pushNotificationService;
     private final NotificationRepository notificationRepository;
+    private final UnreachableAlertService unreachableAlertService;
 
     // ponytail: 요구사항의 단일 인스턴스 인메모리 카운터다. 다중 인스턴스가 필요해지면 Redis 원자 연산으로 교체한다.
     private final ConcurrentMap<Long, Integer> consecutiveOutsideCounts = new ConcurrentHashMap<>();
@@ -86,6 +88,9 @@ public class LocationService {
                         recordedAt
                 ));
         currentLocationRepository.save(currentLocation);
+
+        // 위치 보고 수신 기록 — 확인 불가(미수신 지속) 감지 카운터 리셋. (§6.1)
+        unreachableAlertService.markReported(userId, trip.getId());
 
         sseConnectionService.send(
                 trip.getTeacherId(),
