@@ -30,6 +30,14 @@ vi.mock('./notifications/pushNotifications', () => ({
   pushNotifications: pushNotificationsMock,
 }))
 
+const missionPhotoRecoveryMock = vi.hoisted(() => ({
+  captureMissionPhoto: vi.fn(),
+  clearPendingMissionPhoto: vi.fn(),
+  listenForRestoredMissionPhoto: vi.fn(),
+}))
+
+vi.mock('./native/missionPhotoRecovery', () => missionPhotoRecoveryMock)
+
 import App from './App'
 
 describe('App', () => {
@@ -45,6 +53,9 @@ describe('App', () => {
       if (pin !== '1234') throw new Error('PIN 번호를 확인해 주세요.')
       return { submissionId: 2, status: 'COMPLETED', imageKey: '' }
     })
+    missionPhotoRecoveryMock.captureMissionPhoto.mockResolvedValue({ uri: 'mock://mission-photo.jpg' })
+    missionPhotoRecoveryMock.clearPendingMissionPhoto.mockResolvedValue(undefined)
+    missionPhotoRecoveryMock.listenForRestoredMissionPhoto.mockResolvedValue({ remove: vi.fn() })
   })
 
   it('shows the start screen before a session is established', () => {

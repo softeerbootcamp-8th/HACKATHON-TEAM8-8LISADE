@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { mockCameraAdapter } from '../../api/cameraAdapter'
+import { captureMissionPhoto } from '../../native/missionPhotoRecovery'
 import type { StudentMission } from '../../api/missionApi'
 import type { LocationTrackingState, StudentTrip } from '../../types/studentTrip'
 import { Field } from '../../shared/ui/Field'
@@ -76,7 +76,7 @@ export function StudentHome({ trip, location, notice, currentMission, onCurrentM
 }
 
 export function ActivityMissionScreen({ mission, onCaptured }: { mission: CurrentMission; onCaptured: (uri: string) => void }) {
-  const capture = async () => { const photo = await mockCameraAdapter.takePhoto(); onCaptured(photo.uri) }
+  const capture = async () => { const photo = await captureMissionPhoto(mission); onCaptured(photo.uri) }
   return <ScreenCard title={mission.isResubmission ? '사진 미션 재제출' : '사진 미션'}>
     <BackHeader title={mission.isResubmission ? '반려된 사진 미션' : mission.title} />
     <p className="hint screen-pad" style={{ margin: '16px 0' }}>{mission.isResubmission ? '반려 사유를 확인하고 다시 촬영해 주세요.' : mission.description ?? '카메라로 촬영한 사진만 제출할 수 있습니다.'}</p>
