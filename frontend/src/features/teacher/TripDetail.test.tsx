@@ -95,7 +95,7 @@ describe('TripDetail', () => {
   })
 
   it('일정에 시간 없이 날짜와 요일만 보여준다(시간 입력을 받지 않으므로)', async () => {
-    render(<TripDetail trip={activeTrip} teacherName="고심" onBack={vi.fn()} onAddStudent={vi.fn()} onFinished={vi.fn()} />)
+    render(<TripDetail trip={activeTrip} teacherName="고심" onBack={vi.fn()} onAddStudent={vi.fn()} onStarted={vi.fn()} onDeleted={vi.fn()} onFinished={vi.fn()} />)
 
     expect(await screen.findByText('2026. 09. 12 (토)')).toBeInTheDocument()
     expect(screen.queryByText(/\d{2}:\d{2}/)).not.toBeInTheDocument()
