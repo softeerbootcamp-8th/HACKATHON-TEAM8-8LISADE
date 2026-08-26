@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { teacherLocationApi, type TeacherLocation, type TeacherLocationContext } from '../../api/teacherLocationApi'
+import { teacherTripApi } from '../../api/teacherTripApi'
+import { pollEverySecond } from '../../shared/pollEverySecond'
 import type { TeacherTrip, TeacherTripStatus } from '../../types/teacherTrip'
 import { loadKakaoMaps, type KakaoCustomOverlay, type KakaoMap, type KakaoMapsApi, type KakaoPolygon } from './kakaoMaps'
 
@@ -38,6 +40,7 @@ export function TeacherLocationMap({ trips }: { trips: TeacherTrip[] }) {
   const [error, setError] = useState('')
   const [mapError, setMapError] = useState('')
   const [now, setNow] = useState<number | null>(null)
+  const contextLoaded = context !== null
   const containerRef = useRef<HTMLDivElement>(null)
   const mapsRef = useRef<KakaoMapsApi | null>(null)
   const mapRef = useRef<KakaoMap | null>(null)
@@ -64,13 +67,26 @@ export function TeacherLocationMap({ trips }: { trips: TeacherTrip[] }) {
 
     let active = true
     teacherLocationApi.getContext(selectedTripId)
-      .then((loaded) => { if (active) setContext(loaded) })
+      .then((loaded) => { if (active) { setContext(loaded); setError('') } })
       .catch((caught) => {
         if (active) setError(caught instanceof Error ? caught.message : '학생 위치를 불러오지 못했습니다.')
       })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [selectedTripId])
+
+  useEffect(() => {
+    if (selectedTripId === null || !contextLoaded) return
+    return pollEverySecond(
+      () => teacherTripApi.getParticipants(selectedTripId),
+      (participants) => {
+        setContext(current => current ? { ...current, participants } : current)
+        setError('')
+      },
+      (caught) => setError(caught instanceof Error ? caught.message : '참여 학생을 불러오지 못했습니다.'),
+      false,
+    )
+  }, [contextLoaded, selectedTripId])
 
   useEffect(() => teacherLocationApi.subscribe((location) => {
     if (location.tripId !== selectedTripIdRef.current) return

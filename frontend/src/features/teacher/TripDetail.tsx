@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { teacherMissionApi } from '../../api/missionApi'
 import { teacherTripApi } from '../../api/teacherTripApi'
 import chevronLeft from '../../assets/chevron-left.svg'
+import { pollEverySecond } from '../../shared/pollEverySecond'
 import type { TeacherMission } from '../../types/mission'
 import type { TeacherTrip } from '../../types/teacherTrip'
 
@@ -39,19 +40,21 @@ export function TripDetail({ trip, teacherName, onBack, onAddStudent, onStarted,
   const isFinished = trip.status === 'FINISHED'
 
   useEffect(() => {
+    if (isFinished) return
+    return pollEverySecond(
+      () => teacherTripApi.getParticipants(trip.id),
+      (list) => setParticipantCount(list.length),
+    )
+  }, [trip.id, isFinished])
+
+  useEffect(() => {
+    if (!isActive) return
     let active = true
-    if (!isFinished) {
-      teacherTripApi.getParticipants(trip.id)
-        .then((list) => { if (active) setParticipantCount(list.length) })
-        .catch(() => { if (active) setParticipantCount(null) })
-    }
-    if (isActive) {
-      teacherTripApi.getCurrentInviteCode(trip.id)
-        .then((code) => { if (active) setInviteCode(code?.code ?? null) })
-        .catch(() => { if (active) setInviteCode(null) })
-    }
+    teacherTripApi.getCurrentInviteCode(trip.id)
+      .then((code) => { if (active) setInviteCode(code?.code ?? null) })
+      .catch(() => { if (active) setInviteCode(null) })
     return () => { active = false }
-  }, [trip.id, isActive, isFinished])
+  }, [trip.id, isActive])
 
   useEffect(() => {
     if (!isFinished) return
