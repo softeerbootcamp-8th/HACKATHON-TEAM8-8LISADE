@@ -10,18 +10,17 @@
 - D-day는 시각이 아니라 **자정 기준 날짜 차이**로 센다. `Math.round((시작일 00:00 - 오늘 00:00) / 86400000)` — 이렇게 해야 "오늘 09:00 시작"이 D-1이 아니라 D-DAY가 된다. 지난 예정은 `D+n`.
 - 정렬은 `startAt` 문자열 `localeCompare`. 서버가 ISO-8601 고정 포맷으로 주므로 `Date` 파싱 없이 사전순 비교로 충분하고, `startAt`이 null인 건 뒤로 보낸다.
 
-### endAt 노출
+### 시간 표기 — endAt을 노출했다가 되돌린 기록
 
-- 시안의 시간 표기는 `2026. 09. 12 (토) 09:00 – 16:00`인데 `GET /api/teacher/trips`가 `endAt`을 주지 않았다. [`Trip`](../../backend/src/main/java/com/palisade/travel/domain/trip/entity/Trip.java) 엔티티에는 이미 `endAt`이 있고 [`TeacherTripSummaryResponse`](../../backend/src/main/java/com/palisade/travel/domain/trip/dto/TeacherTripSummaryResponse.java)에서만 빠져 있어서, DTO에 필드를 추가하는 것으로 끝났다. `docs/api-spec.md` 5.2 예시도 함께 갱신했다.
-- 다만 **생성 화면이 일자만 받는다**([`TripCreationFlow`](../../frontend/src/features/teacher/TripCreationFlow.tsx) — T-03-3 시안에도 시각 입력이 없다). `teacherTripApi.create`가 `startAt: {date}T00:00:00` / `endAt: {date}T23:59:59`로 조립하므로, 현재 데이터로는 endAt이 있어도 `00:00 – 23:59`가 찍힌다.
-- 그래서 `formatTripSchedule`은 **하루 전체를 덮는 일정이면 날짜까지만** 보여준다(`coversWholeDay`). `00:00 – 23:59`는 정보가 아니라 잡음이다. 시각이 지정된 데이터가 들어오면 그때부터 시안대로 시간 범위가 나온다 — 프론트를 다시 고칠 필요가 없다.
-- 시각 입력 자체를 생성 화면에 추가하는 건 시안에 없는 화면 변경이라 이번 범위에서 뺐다.
+- 시안의 시간 행이 `2026. 09. 12 (토) 09:00 – 16:00`이라 이걸 스펙으로 읽고, `GET /api/teacher/trips` 응답에 `endAt`을 추가하고 카드에 시간 범위를 렌더했다(`a3f991d`). **잘못된 판단이었고 `8f540ba`에서 되돌렸다.**
+- 체험학습은 **일자 단위로만 생성된다.** [`TripCreationFlow`](../../frontend/src/features/teacher/TripCreationFlow.tsx)는 제목·일자·장소만 받고, 시각을 입력할 경로가 앱 어디에도 없다(프론트 전체에서 시각 입력은 미션 생성 화면의 `datetime-local` 두 개뿐이다). `teacherTripApi.create`가 `@NotNull`인 `startAt`/`endAt`을 채우려고 `T00:00:00`/`T23:59:59`를 조립할 뿐이다.
+- 그래서 `endAt`은 항상 자정으로 채워진 값이라 정보량이 0이고, 시간 범위 분기는 실행될 수 없는 코드였다. 게다가 그 분기가 만들어내는 `00:00 – 23:59`를 다시 숨기려고 `coversWholeDay()` 특수 케이스까지 만들었다 — **지워야 했던 건 잡음이 아니라 잡음을 만든 코드였다.**
+- 시안의 `09:00 – 16:00`은 실제 스펙이 아니라 더미 텍스트다. 시안 텍스트를 스펙으로 읽기 전에 그 값이 들어올 경로가 있는지부터 확인해야 했다.
+- 최종적으로 카드는 날짜와 요일까지만 보여주고(`formatTripSchedule`), 라벨도 실제 내용에 맞춰 시안의 "시간" 대신 **"날짜"**로 썼다 — `TripDetail`의 기존 라벨과도 같다.
 
 ### 테스트
 
-- `TeacherDashboard.test.tsx`에 9건 추가: 카드 노출(제목·칩·D-day·장소·담당자), 시간 범위 표기, 자정~자정은 날짜만, D-DAY, 날짜순 정렬, 시작 성공(→ `start` 호출 + 진행 현황 전환), 시작 실패(사유 노출 + 카드 유지), 카드 탭 → 관리 상세, ACTIVE 우선.
+- `TeacherDashboard.test.tsx`에 8건 추가: 카드 노출(제목·칩·D-day·장소·담당자), 날짜·요일 표기, D-DAY, 날짜순 정렬, 시작 성공(→ `start` 호출 + 진행 현황 전환), 시작 실패(사유 노출 + 카드 유지), 카드 탭 → 관리 상세, ACTIVE 우선.
 - D-day는 오늘 기준이라 고정 날짜 fixture를 쓰면 시간이 지나면서 깨진다. `readyTrip(id, title, daysFromToday)` 헬퍼로 **상대 날짜**를 만들어 fake timer 없이 안정화했다.
-- `endAt`이 `TeacherTrip`의 필수 필드가 되면서 `TeacherLocationMap.test.tsx` / `TripDetail.test.tsx` fixture도 함께 채웠다.
-- 백엔드 `TripControllerTest`의 목록 조회 테스트에 `startAt`/`endAt` 응답 검증을 추가했다.
 
-검증: `npm test` 41 files / 264 tests 전부 pass, `npm run lint` 무경고, `npm run build`(tsc -b + vite build) 성공, `./gradlew test` BUILD SUCCESSFUL. 카드 마크업을 dev server로 정적 렌더해 시안과 대조 확인.
+검증: `npm test` 41 files / 263 tests 전부 pass, `npm run lint` 무경고, `npm run build`(tsc -b + vite build) 성공, `./gradlew test` BUILD SUCCESSFUL. 카드 마크업을 dev server로 정적 렌더해 시안과 대조 확인.
