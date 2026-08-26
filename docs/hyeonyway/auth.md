@@ -51,3 +51,11 @@
 - 하이픈·공백은 제거한 숫자 형태로 API에 전달하므로, 잘못된 번호는 서버 요청 전에 화면에서 안내한다.
 
 검증: `npm test` (26 passed), `npm run lint`, `npm run build`
+
+## 배포 프론트 CORS 허용 (#27)
+
+- 세션 쿠키를 사용하는 브라우저 API 요청을 위해 Spring Security CORS 허용 origin에 `https://8lisade.vercel.app`, `https://8lisade.shop`을 추가했다. 로컬 Vite 개발 주소도 유지한다.
+- 실제 CSRF 쿠키 저장소가 사용하는 `X-XSRF-TOKEN` 요청 헤더를 허용 목록에 포함했다.
+- MockMvc OPTIONS preflight 테스트로 배포 도메인의 `Access-Control-Allow-Origin`과 credentials 응답을 검증한다.
+
+검증: `./gradlew test`
