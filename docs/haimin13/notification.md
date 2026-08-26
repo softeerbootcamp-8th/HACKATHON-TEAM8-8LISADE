@@ -53,6 +53,8 @@
 - 토스트(`shared/ui/NotificationToast.tsx`)는 `role="status"`로 스크린리더에 알리고 5초 뒤 자동으로 닫힌다. 닫아도 미확인 상태는 남아 종 배지로 이어진다 — 토스트를 놓친 경우와 확인한 경우를 구분하지 않으면 배지가 거의 안 뜬다.
 - **읽음 상태는 클라이언트 세션 한정이다.** 서버 `Notification` 엔티티에 읽음 필드(`readAt`)가 없어서 새로고침하면 배지가 사라진다. 서버 읽음 상태 추가는 이 이슈 범위에 넣지 않았다 — 백엔드 스키마 변경과 API가 함께 필요하다.
 - **알림 타입별 문구/이동 분기는 하지 않았다.** 이슈 요구사항에 "종류에 따라 다른 문구/이동이 필요할 수 있다"고 적혀 있지만, 지금 `PushNotificationService`가 `setNotification(title, body)`만 보내고 `data`에 `type`을 싣지 않아 클라이언트가 타입을 알 방법이 없다. 백엔드가 data payload에 `type`을 추가한 뒤 후속 이슈로 다뤄야 한다.
-- 적용 범위는 웹 + 교사 화면이다. 현재 push 수신 대상이 교사이고 `listenForForegroundMessages`는 웹 전용이다. Android 네이티브는 `@capacitor/push-notifications`가 OS 알림으로 표시하므로 제외했다.
+- **Android도 같은 토스트를 쓴다.** 처음에는 네이티브를 범위에서 빼려 했지만, `@capacitor/push-notifications`가 이미 `pushNotificationReceived` 이벤트를 노출하고 있어 Java 수정 없이 TS만으로 연결된다. `nativeFcm.onForegroundMessage()`를 추가하고 `register()`의 네이티브 분기에서 구독한다. **Android는 앱이 포그라운드일 때 notification 메시지를 트레이에 자동 표시하지 않고 이 이벤트로만 전달하므로**(FCM SDK 동작), 웹처럼 OS 알림을 따로 끌 필요 없이 인앱 토스트와 겹치지 않는다.
+- 웹/Android 양쪽 브리지가 인자 없는 `onForegroundMessage()`/`listenForegroundMessages()`로 통일돼 있고, 실제 `publish` 연결은 합성 지점에서만 일어난다. `createPushNotifications`는 저장소를 모른다.
+- 화면 범위는 교사 화면이다. 학생에게 가는 push가 아직 없어 검증할 대상이 없다.
 
-검증: `npm test -- --run`(신규 11개 포함 전체 167개), `npm run lint`, `npm run build` 통과. 토스트 렌더·종 배지 접근성 이름·배지 해제 흐름은 `TeacherDashboard.test.tsx`에서 실제 DOM으로 확인했다. 실제 FCM push로 뜨는 end-to-end 확인은 로그인 세션과 실서버 push가 필요해 배포 후 진행한다.
+검증: `npm test -- --run`(신규 15개 포함 전체 171개), `npm run lint`, `npm run build` 통과. 토스트 렌더·종 배지 접근성 이름·배지 해제 흐름은 `TeacherDashboard.test.tsx`에서 실제 DOM으로 확인했다. 실제 FCM push로 뜨는 end-to-end 확인은 로그인 세션과 실서버 push가 필요해 배포 후 진행하고, Android는 실기기 확인이 함께 필요하다.
