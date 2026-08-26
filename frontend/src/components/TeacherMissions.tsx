@@ -257,16 +257,18 @@ function MissionStatusScreen({ missionId, onBack, onDeleted }: { missionId: numb
       </li>)}
     </ul>}
 
-    {!mission.completedAt && (confirmingComplete ? <div className="auth-form">
-      <p>미션을 완료 처리할까요? 완료 후에는 학생이 더 이상 제출·응답할 수 없고, 되돌릴 수 없어요.</p>
-      <button onClick={confirmComplete} disabled={completing}>{completing ? '완료 처리하는 중...' : '완료 처리 확정'}</button>
-      <button className="text-button" onClick={() => setConfirmingComplete(false)}>취소</button>
-    </div> : <button onClick={() => setConfirmingComplete(true)}>완료 처리하기</button>)}
+    <div className="mission-status-actions">
+      {!mission.completedAt && (confirmingComplete ? <div className="auth-form">
+        <p>미션을 완료 처리할까요? 완료 후에는 학생이 더 이상 제출·응답할 수 없고, 되돌릴 수 없어요.</p>
+        <button onClick={confirmComplete} disabled={completing}>{completing ? '완료 처리하는 중...' : '완료 처리 확정'}</button>
+        <button className="text-button" onClick={() => setConfirmingComplete(false)}>취소</button>
+      </div> : <button onClick={() => setConfirmingComplete(true)}>완료 처리하기</button>)}
 
-    {confirmingDelete ? <div className="auth-form">
-      <p>미션을 삭제할까요? 삭제하면 되돌릴 수 없습니다.</p>
-      <button className="danger-button" onClick={confirmDelete}>삭제 확정</button>
-      <button className="text-button" onClick={() => setConfirmingDelete(false)}>취소</button>
-    </div> : <button className="danger-button" onClick={() => setConfirmingDelete(true)}>삭제하기</button>}
+      {confirmingDelete ? <div className="auth-form">
+        <p>미션을 삭제할까요? 삭제하면 되돌릴 수 없습니다.</p>
+        <button className="danger-button" onClick={confirmDelete}>삭제 확정</button>
+        <button className="text-button" onClick={() => setConfirmingDelete(false)}>취소</button>
+      </div> : <button className="danger-button" onClick={() => setConfirmingDelete(true)}>삭제하기</button>}
+    </div>
   </section>
 }

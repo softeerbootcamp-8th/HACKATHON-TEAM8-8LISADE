@@ -53,15 +53,18 @@ export default function App() {
 
   const showLogin = () => { setError(''); setScreen('LOGIN') }
   const showSignUp = () => { setError(''); setNotice(''); setScreen('SIGN_UP') }
-  const incrementMissionProgress = () => setStudentTrip((trip) => trip ? { ...trip, missionCompleted: Math.min(trip.missionCompleted + 1, trip.missionTotal) } : trip)
 
-  const loadCurrentMission = async (tripId: number) => {
-    const missions = await missionApi.getCurrentMissions(tripId)
-    const current = missions.map((mission) => ({ ...mission, isResubmission: false }))
+  const loadCurrentMission = useCallback(async (tripId: number) => {
+    const overview = await missionApi.getStudentMissionOverview(tripId)
+    const current = overview.currentMissions.map((mission) => ({ ...mission, isResubmission: false }))
     const next = current[0] ?? null
     setCurrentMission(next)
+    setStudentTrip((trip) => {
+      if (!trip || (trip.missionCompleted === overview.completedCount && trip.missionTotal === overview.totalCount)) return trip
+      return { ...trip, missionCompleted: overview.completedCount, missionTotal: overview.totalCount }
+    })
     return next
-  }
+  }, [])
 
   const enterAuthenticatedUser = useCallback(async (user: CurrentUser) => {
     setCurrentUser(user)
@@ -73,18 +76,18 @@ export default function App() {
     }
 
     const trip = await studentTripApi.getActiveTrip()
+    setStudentTrip(trip)
     const tracking = trip
       ? await locationTrackingAdapter.startTracking()
       : await locationTrackingAdapter.stopTracking()
     if (trip) await loadCurrentMission(trip.id).catch(() => undefined)
-    setStudentTrip(trip)
     setLocationState(tracking)
     setScreen(resolvePostLoginScreen({
       role: user.role,
       hasActiveTrip: Boolean(trip),
       hasLocationPermission: locationReady(tracking),
     }))
-  }, [])
+  }, [loadCurrentMission])
 
   const showLoginForExpiredSession = useCallback(() => {
     void locationTrackingAdapter.expireSession().catch(() => undefined)
@@ -140,9 +143,9 @@ export default function App() {
     if (currentUser?.role !== 'STUDENT' || !studentTrip) return
 
     const tripId = studentTrip.id
-    const interval = window.setInterval(() => { void loadCurrentMission(tripId).catch(() => undefined) }, 20_000)
+    const interval = window.setInterval(() => { void loadCurrentMission(tripId).catch(() => undefined) }, 1_000)
     return () => window.clearInterval(interval)
-  }, [currentUser?.role, studentTrip])
+  }, [currentUser?.role, loadCurrentMission, studentTrip])
 
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); setError('')
@@ -224,7 +227,6 @@ export default function App() {
     if (!currentMission || !studentTrip) throw new Error('현재 미션을 찾을 수 없습니다.')
     await missionApi.submitPhoto(currentMission.id, await photoUriToBlob(capturedPhotoUri))
     await clearPendingMissionPhoto()
-    incrementMissionProgress()
     setMissionNotice(currentMission.isResubmission ? '사진 미션을 재제출했습니다.' : '사진 미션을 제출했습니다.')
     await loadCurrentMission(studentTrip.id)
     setScreen('STUDENT_HOME')
@@ -232,7 +234,6 @@ export default function App() {
   if (screen === 'CHECK_MISSION' && currentMission) return <CheckMissionScreen mission={currentMission} onBack={() => setScreen('STUDENT_HOME')} onCompleted={async (pin) => {
     if (!currentMission || !studentTrip) throw new Error('현재 미션을 찾을 수 없습니다.')
     await missionApi.verifyPin(currentMission.id, pin)
-    incrementMissionProgress()
     setMissionNotice('출석 체크를 완료했습니다.')
     await loadCurrentMission(studentTrip.id)
     setScreen('STUDENT_HOME')

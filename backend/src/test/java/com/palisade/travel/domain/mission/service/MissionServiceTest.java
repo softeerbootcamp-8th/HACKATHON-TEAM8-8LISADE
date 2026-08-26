@@ -474,4 +474,55 @@ class MissionServiceTest {
 
         assertThat(missionService.getCurrentStudentMissions(1L, 10L)).containsExactly(mission);
     }
+
+    @Test
+    void Given_발송된_미션_네개중_완료와_지각_제출이_있을때_When_학생_미션_개요를_조회하면_Then_완료율은_이대사이다() {
+        // given
+        Mission completed = new Mission(1L, 1L, "완료", "", MissionType.CHECK, "1234", null, null, LocalDateTime.now(), null);
+        Mission late = new Mission(2L, 1L, "지각", "", MissionType.ACTIVITY, null, null, null, LocalDateTime.now(), null);
+        Mission rejected = new Mission(3L, 1L, "반려", "", MissionType.ACTIVITY, null, null, null, LocalDateTime.now(), null);
+        Mission waiting = new Mission(4L, 1L, "대기", "", MissionType.ACTIVITY, null, null, null, LocalDateTime.now(), null);
+        MissionSubmission completedSubmission = MissionSubmission.completedCheck(1L, 10L);
+        MissionSubmission lateSubmission = MissionSubmission.photo(2L, 10L, "upload/missions/2/students/10/late.jpg", true);
+        MissionSubmission rejectedSubmission = MissionSubmission.photo(3L, 10L, "upload/missions/3/students/10/rejected.jpg");
+        rejectedSubmission.reject("다시 촬영해 주세요.");
+        when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(true);
+        when(missionRepository.findByTripIdOrderByStartAtAsc(1L)).thenReturn(List.of(completed, late, rejected, waiting));
+        when(submissionRepository.findByMissionIdInAndUserId(List.of(1L, 2L, 3L, 4L), 10L))
+                .thenReturn(List.of(completedSubmission, lateSubmission, rejectedSubmission));
+
+        // when
+        var overview = missionService.getStudentMissionOverview(1L, 10L);
+
+        // then
+        assertThat(overview.completedCount()).isEqualTo(2);
+        assertThat(overview.totalCount()).isEqualTo(4);
+        assertThat(overview.currentMissions()).containsExactly(rejected, waiting);
+    }
+
+    @Test
+    void Given_아직_발송되지_않은_예약_미션이_있을때_When_학생_미션_개요를_조회하면_Then_전체_개수에서_제외한다() {
+        // given
+        Mission current = new Mission(1L, 1L, "현재", "", MissionType.ACTIVITY, null, null, null, LocalDateTime.now(), null);
+        Mission scheduled = new Mission(2L, 1L, "예약", "", MissionType.ACTIVITY, null, LocalDateTime.now().plusHours(1), null, LocalDateTime.now(), null);
+        when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(true);
+        when(missionRepository.findByTripIdOrderByStartAtAsc(1L)).thenReturn(List.of(current, scheduled));
+        when(submissionRepository.findByMissionIdInAndUserId(List.of(1L), 10L)).thenReturn(List.of());
+
+        // when
+        var overview = missionService.getStudentMissionOverview(1L, 10L);
+
+        // then
+        assertThat(overview.totalCount()).isEqualTo(1);
+    }
+
+    @Test
+    void Given_체험학습에_참여하지_않은_학생_When_학생_미션_개요를_조회하면_Then_거부한다() {
+        // given
+        when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(false);
+
+        // when & then
+        assertThatThrownBy(() -> missionService.getStudentMissionOverview(1L, 10L))
+                .isInstanceOf(ApiException.class);
+    }
 }

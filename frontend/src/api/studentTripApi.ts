@@ -46,8 +46,8 @@ function toStudentTrip(trip: ActiveTripResponse): StudentTrip {
     place: trip.place,
     status: trip.status,
     period: '일정 정보 준비 중',
-    missionCompleted: 1,
-    missionTotal: 3,
+    missionCompleted: 0,
+    missionTotal: 0,
     hasSafetyWarning: false,
   }
 }

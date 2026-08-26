@@ -34,7 +34,7 @@ vi.mock('./api/locationTrackingApi', () => ({
 }))
 
 const missionApiMock = vi.hoisted(() => ({
-  getCurrentMissions: vi.fn(),
+  getStudentMissionOverview: vi.fn(),
   submitPhoto: vi.fn(),
   verifyPin: vi.fn(),
 }))
@@ -89,10 +89,14 @@ describe('App', () => {
     locationTrackingMock.openSettings.mockReset().mockResolvedValue(tracking)
     pushNotificationsMock.register.mockReset().mockResolvedValue(undefined)
     pushNotificationsMock.unregister.mockReset().mockResolvedValue(undefined)
-    missionApiMock.getCurrentMissions.mockResolvedValue([
-      { id: 11, tripId: 1, title: '서버 사진 미션', description: '서버에서 가져온 미션입니다.', type: 'ACTIVITY', startAt: null, endAt: null },
-      { id: 12, tripId: 1, title: '경복궁 출석 체크', description: '교사가 공유한 4자리 PIN을 입력해 주세요.', type: 'CHECK', startAt: null, endAt: null },
-    ])
+    missionApiMock.getStudentMissionOverview.mockReset().mockResolvedValue({
+      currentMissions: [
+        { id: 11, tripId: 1, title: '서버 사진 미션', description: '서버에서 가져온 미션입니다.', type: 'ACTIVITY', startAt: null, endAt: null },
+        { id: 12, tripId: 1, title: '경복궁 출석 체크', description: '교사가 공유한 4자리 PIN을 입력해 주세요.', type: 'CHECK', startAt: null, endAt: null },
+      ],
+      completedCount: 1,
+      totalCount: 3,
+    })
     missionApiMock.submitPhoto.mockResolvedValue({ submissionId: 1, status: 'WAITING', imageKey: 'missions/11/students/2/photo.jpg' })
     missionApiMock.verifyPin.mockImplementation(async (_missionId: number, pin: string) => {
       if (pin !== '1234') throw new Error('PIN 번호를 확인해 주세요.')
@@ -463,7 +467,25 @@ describe('App', () => {
 
     // then
     expect(await screen.findByRole('heading', { name: '서버 사진 미션' })).toBeInTheDocument()
-    expect(missionApiMock.getCurrentMissions).toHaveBeenCalledWith(1)
+    expect(missionApiMock.getStudentMissionOverview).toHaveBeenCalledWith(1)
+  })
+
+  it('Given_완료한_미션이_네개인_학생_When_앱을_재실행하면_Then_서버의_실제_진행률을_복구한다', async () => {
+    // given
+    studentTripApiMock.getActiveTrip.mockResolvedValue(activeStudentTrip)
+    missionApiMock.getStudentMissionOverview.mockResolvedValue({ currentMissions: [], completedCount: 4, totalCount: 5 })
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL) => {
+      if (input.toString() === '/api/auth/me') {
+        return apiResponse({ success: true, data: { id: 2, loginId: 'student01', name: '학생', phoneNumber: '01012341234', role: 'STUDENT' } })
+      }
+      throw new Error(`Unexpected request: ${input.toString()}`)
+    })
+
+    // when
+    render(<App />)
+
+    // then
+    expect(await screen.findByText('4 / 5')).toBeInTheDocument()
   })
 
   it('Given_ACTIVE_Trip에_참여한_학생_When_로그인_Then_현재_미션을_불러온다', async () => {
@@ -478,20 +500,27 @@ describe('App', () => {
 
     // then
     expect(await screen.findByRole('heading', { name: '서버 사진 미션' })).toBeInTheDocument()
-    expect(missionApiMock.getCurrentMissions).toHaveBeenCalledWith(1)
+    expect(missionApiMock.getStudentMissionOverview).toHaveBeenCalledWith(1)
   })
 
-  it('Given_학생_홈이_열려_있을_때_When_시간이_지나면_Then_현재_미션을_주기적으로_다시_불러온다', async () => {
+  it('Given_학생_홈이_열려_있을_때_When_일초가_지나면_Then_현재_미션과_진행률을_다시_불러온다', async () => {
     // given
     vi.useFakeTimers({ shouldAdvanceTime: true })
+    missionApiMock.getStudentMissionOverview
+      .mockResolvedValueOnce({ currentMissions: [], completedCount: 1, totalCount: 4 })
+      .mockResolvedValue({
+        currentMissions: [{ id: 13, tripId: 1, title: '새 출석 미션', description: '', type: 'CHECK', startAt: null, endAt: null }],
+        completedCount: 2,
+        totalCount: 4,
+      })
     await openStudentHome()
-    const callsAfterInitialLoad = missionApiMock.getCurrentMissions.mock.calls.length
 
     // when
-    await vi.advanceTimersByTimeAsync(20_000)
+    await vi.advanceTimersByTimeAsync(1_000)
 
     // then
-    expect(missionApiMock.getCurrentMissions.mock.calls.length).toBeGreaterThan(callsAfterInitialLoad)
+    expect(await screen.findByRole('heading', { name: '새 출석 미션' })).toBeInTheDocument()
+    expect(screen.getByText('2 / 4')).toBeInTheDocument()
     vi.useRealTimers()
   })
 
@@ -574,7 +603,7 @@ describe('App', () => {
   it('shows only the current mission and does not expose future missions', async () => {
     await openStudentHome()
 
-    expect(missionApiMock.getCurrentMissions).toHaveBeenCalledWith(1)
+    expect(missionApiMock.getStudentMissionOverview).toHaveBeenCalledWith(1)
     expect(screen.getByRole('heading', { name: '서버 사진 미션' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '현재 미션 수행' })).toBeInTheDocument()
     expect(screen.getByText('미완료 미션을 먼저 진행해 주세요.')).toBeInTheDocument()
@@ -601,9 +630,11 @@ describe('App', () => {
     await completePhotoMission()
 
     // 출석 체크 완료 후에도 남은 미션이 있으면 이어서 바로 뜨는 것을, 백엔드 재조회 결과로 재현한다.
-    missionApiMock.getCurrentMissions.mockResolvedValueOnce([
-      { id: 13, tripId: 1, title: '불국사 앞에서 사진 찍기', description: '', type: 'ACTIVITY', startAt: null, endAt: null },
-    ])
+    missionApiMock.getStudentMissionOverview.mockResolvedValueOnce({
+      currentMissions: [{ id: 13, tripId: 1, title: '불국사 앞에서 사진 찍기', description: '', type: 'ACTIVITY', startAt: null, endAt: null }],
+      completedCount: 3,
+      totalCount: 4,
+    })
 
     fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
     expect(screen.getByLabelText('출석 PIN')).toBeInTheDocument()
@@ -617,11 +648,13 @@ describe('App', () => {
   it('lets a student confirm a captured photo before submitting it', async () => {
     await openStudentHome()
 
-    // 백엔드는 완료된 제출을 /current 응답에서 제외한다 — 제출 직후 재조회 시 사진 미션(11)이
-    // 빠지고 출석 체크(12)만 남는 것을 모킹으로 재현한다.
-    missionApiMock.getCurrentMissions.mockResolvedValueOnce([
-      { id: 12, tripId: 1, title: '경복궁 출석 체크', description: '교사가 공유한 4자리 PIN을 입력해 주세요.', type: 'CHECK', startAt: null, endAt: null },
-    ])
+    // 백엔드는 완료된 제출을 개요의 현재 미션에서 제외한다 — 제출 직후 사진 미션(11)이
+    // 빠지고 출석 체크(12)만 남으며 완료 개수가 2가 되는 것을 모킹으로 재현한다.
+    missionApiMock.getStudentMissionOverview.mockResolvedValueOnce({
+      currentMissions: [{ id: 12, tripId: 1, title: '경복궁 출석 체크', description: '교사가 공유한 4자리 PIN을 입력해 주세요.', type: 'CHECK', startAt: null, endAt: null }],
+      completedCount: 2,
+      totalCount: 3,
+    })
 
     fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
     fireEvent.click(await screen.findByRole('button', { name: '촬영하기' }))
@@ -706,7 +739,7 @@ describe('App', () => {
     fireEvent.click(await screen.findByRole('button', { name: /마감이 5분 남았어요/ }))
 
     expect(await screen.findByRole('heading', { name: '서버 사진 미션' })).toBeInTheDocument()
-    expect(missionApiMock.getCurrentMissions).toHaveBeenCalledWith(1)
+    expect(missionApiMock.getStudentMissionOverview).toHaveBeenCalledWith(1)
   })
 
   it('deep-links a location exit notification back to the student home', async () => {
@@ -771,11 +804,13 @@ async function openStudentHome() {
 }
 
 async function completePhotoMission() {
-  // 백엔드는 완료(COMPLETED) 상태인 제출을 /current 응답에서 제외한다 — 제출 직후 재조회 시
-  // 사진 미션(11)이 빠지고 출석 체크(12)만 남는 것을 모킹으로 재현한다.
-  missionApiMock.getCurrentMissions.mockResolvedValueOnce([
-    { id: 12, tripId: 1, title: '경복궁 출석 체크', description: '교사가 공유한 4자리 PIN을 입력해 주세요.', type: 'CHECK', startAt: null, endAt: null },
-  ])
+  // 백엔드는 완료(COMPLETED) 상태인 제출을 개요의 현재 미션에서 제외한다 — 제출 직후
+  // 사진 미션(11)이 빠지고 출석 체크(12)만 남으며 완료 개수가 2가 되는 것을 재현한다.
+  missionApiMock.getStudentMissionOverview.mockResolvedValueOnce({
+    currentMissions: [{ id: 12, tripId: 1, title: '경복궁 출석 체크', description: '교사가 공유한 4자리 PIN을 입력해 주세요.', type: 'CHECK', startAt: null, endAt: null }],
+    completedCount: 2,
+    totalCount: 3,
+  })
   fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
   fireEvent.click(await screen.findByRole('button', { name: '촬영하기' }))
   fireEvent.click(await screen.findByRole('button', { name: '제출하기' }))
