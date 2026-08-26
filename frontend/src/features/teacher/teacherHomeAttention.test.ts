@@ -44,7 +44,7 @@ describe('buildAttentionList', () => {
     const students = [student({ outside: true })]
 
     expect(buildAttentionList(students, new Set(), now)).toEqual([
-      { participantId: 1, userId: 11, name: '김하늘', reason: 'OUTSIDE' },
+      { participantId: 1, userId: 11, name: '김하늘', reasons: ['OUTSIDE'] },
     ])
   })
 
@@ -52,7 +52,7 @@ describe('buildAttentionList', () => {
     const students = [student({ lastSentAt: null })]
 
     expect(buildAttentionList(students, new Set(), now)).toEqual([
-      { participantId: 1, userId: 11, name: '김하늘', reason: 'CHECK_NEEDED' },
+      { participantId: 1, userId: 11, name: '김하늘', reasons: ['CHECK_NEEDED'] },
     ])
   })
 
@@ -60,7 +60,7 @@ describe('buildAttentionList', () => {
     const students = [student({ outside: false })]
 
     expect(buildAttentionList(students, new Set([11]), now)).toEqual([
-      { participantId: 1, userId: 11, name: '김하늘', reason: 'MISSION_INCOMPLETE' },
+      { participantId: 1, userId: 11, name: '김하늘', reasons: ['MISSION_INCOMPLETE'] },
     ])
   })
 
@@ -70,11 +70,19 @@ describe('buildAttentionList', () => {
     expect(buildAttentionList(students, new Set(), now)).toEqual([])
   })
 
-  it('이탈과 미완료를 동시에 겪으면 위치(OUTSIDE)를 우선한다', () => {
+  it('이탈과 미완료를 동시에 겪으면 위치·미션 사유를 모두 포함한다', () => {
     const students = [student({ outside: true })]
 
     expect(buildAttentionList(students, new Set([11]), now)).toEqual([
-      { participantId: 1, userId: 11, name: '김하늘', reason: 'OUTSIDE' },
+      { participantId: 1, userId: 11, name: '김하늘', reasons: ['OUTSIDE', 'MISSION_INCOMPLETE'] },
+    ])
+  })
+
+  it('위치 확인이 필요하면서 미완료도 있으면 위치·미션 사유를 모두 포함한다', () => {
+    const students = [student({ lastSentAt: null })]
+
+    expect(buildAttentionList(students, new Set([11]), now)).toEqual([
+      { participantId: 1, userId: 11, name: '김하늘', reasons: ['CHECK_NEEDED', 'MISSION_INCOMPLETE'] },
     ])
   })
 

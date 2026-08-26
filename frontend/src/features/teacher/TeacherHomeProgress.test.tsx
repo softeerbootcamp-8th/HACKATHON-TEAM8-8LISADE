@@ -45,6 +45,19 @@ describe('TeacherHomeProgress', () => {
     expect(screen.getByRole('button', { name: /이도윤.*미완료/ })).toBeInTheDocument()
   })
 
+  it('위치·미션 사유를 동시에 가진 학생은 태그 두 개를 함께 보여준다', async () => {
+    vi.mocked(teacherMissionApi.getStatusBoard).mockResolvedValue({
+      mission,
+      totalStudentCount: 3,
+      submitted: [],
+      notSubmitted: [{ studentId: 11, studentName: '김하늘', rejectionReason: null }],
+    })
+
+    render(<TeacherHomeProgress tripId="7" onViewStudents={vi.fn()} onFinished={vi.fn()} />)
+
+    expect(await screen.findByRole('button', { name: /김하늘.*이탈.*미완료/ })).toBeInTheDocument()
+  })
+
   it('확인이 필요한 학생이 없으면 안내 문구를 보여준다', async () => {
     vi.mocked(teacherStudentApi.listStudents).mockResolvedValue([{ ...roster[0], outside: false }])
     vi.mocked(teacherMissionApi.getStatusBoard).mockResolvedValue({ mission, totalStudentCount: 1, submitted: [], notSubmitted: [] })
