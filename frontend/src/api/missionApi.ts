@@ -72,12 +72,19 @@ async function del(path: string): Promise<void> {
   }
 }
 
-async function uploadToStorage(uploadUrl: string, photo: Blob): Promise<void> {
-  // 백엔드가 presigned URL을 항상 Content-Type: image/jpeg로 서명하므로(S3StoragePresigner),
-  // 실제 Blob의 MIME 타입과 무관하게 서명에 쓰인 값과 정확히 맞춰 보내야 SigV4 검증을 통과한다.
+const SUPPORTED_PHOTO_CONTENT_TYPES = new Set(['image/jpeg', 'image/png'])
+
+// 백엔드가 이 값으로 presigned URL을 서명하므로(S3StoragePresigner), 실제 PUT에도
+// 반드시 같은 값을 보내야 SigV4 서명 검증을 통과한다. 지원하지 않는 타입(webp, heic 등)은
+// 백엔드가 400으로 거부하므로 미리 image/jpeg로 정규화한다.
+function resolvePhotoContentType(photo: Blob): string {
+  return SUPPORTED_PHOTO_CONTENT_TYPES.has(photo.type) ? photo.type : 'image/jpeg'
+}
+
+async function uploadToStorage(uploadUrl: string, photo: Blob, contentType: string): Promise<void> {
   const response = await fetch(uploadUrl, {
     method: 'PUT',
-    headers: { 'Content-Type': 'image/jpeg' },
+    headers: { 'Content-Type': contentType },
     body: photo,
   })
 
@@ -92,8 +99,9 @@ export const missionApi = {
   },
 
   async submitPhoto(missionId: number, photo: Blob): Promise<MissionSubmission> {
-    const upload = await post<PresignedUpload>(`/api/missions/${missionId}/photo-upload`)
-    await uploadToStorage(upload.uploadUrl, photo)
+    const contentType = resolvePhotoContentType(photo)
+    const upload = await post<PresignedUpload>(`/api/missions/${missionId}/photo-upload`, { contentType })
+    await uploadToStorage(upload.uploadUrl, photo, contentType)
     return post<MissionSubmission>(`/api/missions/${missionId}/submissions/photo`, { objectKey: upload.objectKey })
   },
 
