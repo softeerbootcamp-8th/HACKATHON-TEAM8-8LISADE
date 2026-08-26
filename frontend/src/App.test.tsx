@@ -582,6 +582,47 @@ describe('App', () => {
     expect(screen.getByText('2 / 3')).toBeInTheDocument()
   })
 
+  it('Given_사진_미션_화면_When_뒤로_가기를_누르면_Then_학생_홈으로_돌아간다', async () => {
+    await openStudentHome()
+
+    fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
+    expect(await screen.findByRole('button', { name: '촬영하기' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '뒤로 가기' }))
+
+    expect(await screen.findByRole('button', { name: '현재 미션 수행' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '촬영하기' })).not.toBeInTheDocument()
+    expect(screen.getByText('1 / 3')).toBeInTheDocument()
+  })
+
+  it('Given_사진_확인_화면_When_뒤로_가기를_누르면_Then_사진_미션_화면으로_돌아간다', async () => {
+    await openStudentHome()
+
+    fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
+    fireEvent.click(await screen.findByRole('button', { name: '촬영하기' }))
+    expect(await screen.findByRole('heading', { name: '사진 확인' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '뒤로 가기' }))
+
+    expect(await screen.findByRole('button', { name: '촬영하기' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '사진 확인' })).not.toBeInTheDocument()
+  })
+
+  it('Given_출석_체크_화면_When_뒤로_가기를_누르면_Then_학생_홈으로_돌아간다', async () => {
+    await openStudentHome()
+
+    await completePhotoMission()
+
+    fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
+    expect(await screen.findByRole('button', { name: '출석 체크' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '뒤로 가기' }))
+
+    expect(await screen.findByRole('button', { name: '현재 미션 수행' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '출석 체크' })).not.toBeInTheDocument()
+    expect(screen.getByText('2 / 3')).toBeInTheDocument()
+  })
+
   it('keeps the next mission hidden while the current mission is not completed', async () => {
     await openStudentHome()
 

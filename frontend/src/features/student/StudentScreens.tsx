@@ -66,10 +66,10 @@ export function StudentHome({ trip, location, notice, currentMission, onCurrentM
   </ScreenCard>
 }
 
-export function ActivityMissionScreen({ mission, onCaptured }: { mission: CurrentMission; onCaptured: (uri: string) => void }) {
+export function ActivityMissionScreen({ mission, onBack, onCaptured }: { mission: CurrentMission; onBack: () => void; onCaptured: (uri: string) => void }) {
   const capture = async () => { const photo = await captureMissionPhoto(mission); onCaptured(photo.uri) }
   return <ScreenCard title={mission.isResubmission ? '사진 미션 재제출' : '사진 미션'}>
-    <BackHeader title={mission.isResubmission ? '반려된 사진 미션' : mission.title} />
+    <BackHeader title={mission.isResubmission ? '반려된 사진 미션' : mission.title} onBack={onBack} />
     <p className="hint screen-pad" style={{ margin: '16px 0' }}>{mission.isResubmission ? '반려 사유를 확인하고 다시 촬영해 주세요.' : mission.description ?? '카메라로 촬영한 사진만 제출할 수 있습니다.'}</p>
     {mission.isResubmission && <p className="error" role="alert">사진이 흐릿합니다. 대상이 잘 보이도록 다시 촬영해 주세요.</p>}
     <div className="viewfinder-wrap"><img src={viewfinder} alt="" /></div>
@@ -85,14 +85,14 @@ export function ActivityConfirmation({ isResubmission, photoUri, onRetake, onSub
     try { await onSubmit() } catch (caught) { setError(caught instanceof Error ? caught.message : '사진 제출에 실패했습니다.'); setSubmitting(false) }
   }
   return <ScreenCard title="사진 확인">
-    <BackHeader title={isResubmission ? '재촬영한 사진' : '촬영한 사진'} />
+    <BackHeader title={isResubmission ? '재촬영한 사진' : '촬영한 사진'} onBack={onRetake} />
     <div className="viewfinder-wrap" style={{ paddingBottom: 24 }}><img src={photoUri} alt="촬영한 사진 미리보기" /></div>
     {error && <p className="error" role="alert">{error}</p>}
     <div className="confirm-actions"><button className="text-button" onClick={onRetake}>재촬영하기</button><button onClick={submit} disabled={submitting}>{submitting ? '제출 중...' : '제출하기'}</button></div>
   </ScreenCard>
 }
 
-export function CheckMissionScreen({ mission, onCompleted }: { mission: CurrentMission; onCompleted: (pin: string) => Promise<void> }) {
+export function CheckMissionScreen({ mission, onBack, onCompleted }: { mission: CurrentMission; onBack: () => void; onCompleted: (pin: string) => Promise<void> }) {
   const [pin, setPin] = useState('')
   const [error, setError] = useState('')
   const [open, setOpen] = useState(false)
@@ -101,7 +101,7 @@ export function CheckMissionScreen({ mission, onCompleted }: { mission: CurrentM
     try { await onCompleted(pin) } catch (caught) { setError(caught instanceof Error ? caught.message : 'PIN 검증에 실패했습니다.') }
   }
   return <ScreenCard title="출석 체크">
-    <BackHeader title={mission.title} />
+    <BackHeader title={mission.title} onBack={onBack} />
     {open ? <>
       <img src={mascotPin} alt="" className="pin-mascot" />
       <p className="pin-copy">선생님이 불러 준<br />숫자를 입력해요</p>
