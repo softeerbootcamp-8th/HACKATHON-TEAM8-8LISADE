@@ -5,6 +5,8 @@ import TeacherStudents from '../../components/TeacherStudents'
 import { Field } from '../../shared/ui/Field'
 import { ScreenCard } from '../../shared/ui/ScreenCard'
 import { AppHeader } from '../../shared/ui/AppHeader'
+import { NotificationToast } from '../../shared/ui/NotificationToast'
+import { useForegroundNotifications } from '../../notifications/foregroundNotifications'
 import { TeacherNotifications } from './TeacherNotifications'
 import type { TeacherNotification } from '../../types/notification'
 import type { CurrentUser } from '../../types/auth'
@@ -52,6 +54,7 @@ export function TeacherDashboard({ user }: { user: CurrentUser }) {
   const [trips, setTrips] = useState<TeacherTrip[] | null>(null)
   const [tripError, setTripError] = useState('')
   const [showNotifications, setShowNotifications] = useState(false)
+  const { toast, hasUnread, dismissToast, markRead } = useForegroundNotifications()
   const trip = teacherTrips.find((candidate) => candidate.id === tripId) ?? teacherTrips[0]
   const activeTripId = trips && trips.length > 0 ? String(trips[0].id) : null
 
@@ -111,7 +114,8 @@ export function TeacherDashboard({ user }: { user: CurrentUser }) {
   </ScreenCard>
 
   return <ScreenCard title="교사 홈">
-    <AppHeader onBellClick={() => setShowNotifications(true)} />
+    <AppHeader hasUnread={hasUnread} onBellClick={() => { markRead(); setShowNotifications(true) }} />
+    <NotificationToast notification={toast} onDismiss={dismissToast} />
     {tab === 'MANAGE'
       ? <ManagementTab
         user={user}

@@ -50,15 +50,20 @@ export async function deleteFcmToken(): Promise<void> {
   await deleteToken(messagingInstance)
 }
 
-export function listenForForegroundMessages(): void {
+/**
+ * 포그라운드 push를 화면으로 넘긴다. OS 알림은 띄우지 않는다 —
+ * 탭을 보고 있는 상태에서는 인앱 토스트와 내용이 겹치기 때문이다(#41).
+ * 백그라운드 알림은 service worker가 그대로 담당한다.
+ */
+export function listenForForegroundMessages(handler: (notification: { title: string; body: string }) => void): void {
   const messagingInstance = getFirebaseMessaging()
   if (!messagingInstance) {
     return
   }
   onMessage(messagingInstance, (payload) => {
     const { title, body } = payload.notification ?? {}
-    if (title && Notification.permission === 'granted') {
-      new Notification(title, { body })
+    if (title) {
+      handler({ title, body: body ?? '' })
     }
   })
 }

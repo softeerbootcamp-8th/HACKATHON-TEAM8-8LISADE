@@ -5,6 +5,7 @@ function createDeps() {
   const native = {
     requestToken: vi.fn().mockResolvedValue('android-token'),
     onTokenRefresh: vi.fn(),
+    onForegroundMessage: vi.fn(),
     deleteToken: vi.fn().mockResolvedValue(undefined),
   }
   const web = {
@@ -41,6 +42,16 @@ describe('push notifications 공용 등록/해제', () => {
     expect(web.requestToken).not.toHaveBeenCalled()
     expect(api.registerDevice).toHaveBeenCalledWith('android-token', 'ANDROID')
     expect(native.onTokenRefresh).toHaveBeenCalled()
+  })
+
+  it('Given Android 환경 When 등록하면 Then 포그라운드 알림도 구독한다', async () => {
+    const { native, web, api } = createDeps()
+    const push = createPushNotifications(true, native, web, api)
+
+    await push.register()
+
+    expect(native.onForegroundMessage).toHaveBeenCalled()
+    expect(web.listenForegroundMessages).not.toHaveBeenCalled()
   })
 
   it('Given 토큰 발급에 실패하면 Then 서버에 등록하지 않는다', async () => {
