@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">8LISADE</string>
-    <string name="title_activity_main">8LISADE</string>
+    <string name="app_name">두리번</string>
+    <string name="title_activity_main">두리번</string>
     <string name="package_name">com.softeerbootcamp.eightlisade</string>
     <string name="custom_url_scheme">com.softeerbootcamp.eightlisade</string>
     <string name="location_notification_channel">위치 수집</string>
