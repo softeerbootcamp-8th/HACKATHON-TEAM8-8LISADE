@@ -48,6 +48,11 @@ public enum MissionErrorCode implements ErrorCode {
             HttpStatus.BAD_REQUEST,
             "MISSION_TYPE_MISMATCH",
             "이 미션 유형에서는 지원하지 않는 기능입니다."
+    ),
+    MISSION_ALREADY_COMPLETED(
+            HttpStatus.BAD_REQUEST,
+            "MISSION_ALREADY_COMPLETED",
+            "이미 완료 처리된 미션입니다."
     );
 
     private final HttpStatus status;

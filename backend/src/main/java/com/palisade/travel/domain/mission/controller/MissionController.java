@@ -44,4 +44,6 @@ public class MissionController {
     public ApiResponse<MissionStatusBoardResponse> statusBoard(@PathVariable Long missionId, @AuthenticationPrincipal UserPrincipal user) { return ApiResponse.success(MissionStatusBoardResponse.from(missionService.getStatusBoard(missionId,user.userId()))); }
     @PostMapping("/teacher/missions/{missionId}/submissions/{studentId}/complete")
     public ApiResponse<Void> completeOnBehalf(@PathVariable Long missionId,@PathVariable Long studentId,@AuthenticationPrincipal UserPrincipal user) { missionService.completeOnBehalf(missionId,user.userId(),studentId); return ApiResponse.success(null); }
+    @PostMapping("/teacher/missions/{missionId}/complete")
+    public ApiResponse<Void> complete(@PathVariable Long missionId,@AuthenticationPrincipal UserPrincipal user) { missionService.complete(missionId,user.userId()); return ApiResponse.success(null); }
 }
