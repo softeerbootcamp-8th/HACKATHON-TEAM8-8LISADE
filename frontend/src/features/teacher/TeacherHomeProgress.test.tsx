@@ -31,17 +31,6 @@ describe('TeacherHomeProgress', () => {
     })
   })
 
-  it('Given 학생 목록 응답이 대기 중일 때 When 홈 현황을 열면 Then 목록 스켈레톤을 보여준다', () => {
-    // given
-    vi.mocked(teacherStudentApi.listStudents).mockReturnValue(new Promise(() => {}))
-
-    // when
-    render(<TeacherHomeProgress tripId="7" onViewStudents={vi.fn()} />)
-
-    // then
-    expect(screen.getByRole('status', { name: '확인이 필요한 학생 목록을 불러오는 중입니다.' })).toHaveClass('list-skeleton')
-  })
-
   it('이탈·미완료 학생을 확인이 필요한 학생 목록으로 보여준다', async () => {
     render(<TeacherHomeProgress tripId="7" onViewStudents={vi.fn()} />)
 

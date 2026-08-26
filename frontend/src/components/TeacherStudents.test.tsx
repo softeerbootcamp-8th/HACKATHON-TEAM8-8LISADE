@@ -41,17 +41,6 @@ function stubRoster(missionsResponse: unknown = [], statusBoards: Record<number,
 describe('TeacherStudents', () => {
   afterEach(() => vi.unstubAllGlobals())
 
-  it('Given 학생 목록 응답이 대기 중일 때 When 학생 탭을 열면 Then 목록 스켈레톤을 보여준다', () => {
-    // given
-    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
-
-    // when
-    render(<TeacherStudents tripId="5" />)
-
-    // then
-    expect(screen.getByRole('status', { name: '학생 목록을 불러오는 중입니다.' })).toHaveClass('list-skeleton')
-  })
-
   it('splits the roster into students needing attention and the full list', async () => {
     stubRoster()
     render(<TeacherStudents tripId="5" />)

@@ -4,7 +4,6 @@ import { teacherMissionApi } from '../api/missionApi'
 import { computeStudentStatus, formatClockTime, formatMinutesAgo, type StudentLocationStatus } from '../features/teacher/studentStatus'
 import { summarizeStudentMissionStatuses, type StudentMissionStatus, type StudentMissionStatusItem } from '../features/teacher/studentMissionSummary'
 import { BackHeader } from '../shared/ui/BackHeader'
-import { ListSkeleton } from '../shared/ui/ListSkeleton'
 import { collectIncompleteStudentIds } from '../features/teacher/teacherHomeAttention'
 
 type View = { name: 'LIST' } | { name: 'DETAIL'; participantId: number }
@@ -59,7 +58,7 @@ function StudentListScreen({ tripId, onSelect }: { tripId: string; onSelect: (pa
   }, [tripId])
 
   if (error) return <p className="error" role="alert">{error}</p>
-  if (!students) return <ListSkeleton label="학생 목록을 불러오는 중입니다." />
+  if (!students) return <p className="hint">불러오는 중...</p>
 
   const withTags = students.map((student) => ({
     ...student,

@@ -179,7 +179,7 @@ export function TeacherLocationMap({ trips }: { trips: TeacherTrip[] }) {
     map.setBounds(bounds, 112, 28, 76, 28)
   }, [autoCenter, context?.geofence, ready])
 
-  return <section className="teacher-location-tab teacher-tab-panel" aria-label="학생 실시간 위치">
+  return <section className="teacher-location-tab" aria-label="학생 실시간 위치">
     <div className="teacher-location-controls">
       <label className="sr-only" htmlFor="teacher-location-trip">기준 Trip</label>
       <select

@@ -5,7 +5,6 @@ import TeacherMissions from '../../components/TeacherMissions'
 import TeacherStudents from '../../components/TeacherStudents'
 import { ScreenCard } from '../../shared/ui/ScreenCard'
 import { AppHeader } from '../../shared/ui/AppHeader'
-import { ListSkeleton } from '../../shared/ui/ListSkeleton'
 import { NotificationToast } from '../../shared/ui/NotificationToast'
 import { useForegroundNotifications } from '../../notifications/foregroundNotifications'
 import { TeacherNotifications } from './TeacherNotifications'
@@ -122,7 +121,6 @@ export function TeacherDashboard({ user, onLogout }: { user: CurrentUser; onLogo
     <NotificationToast notification={toast} onDismiss={dismissToast} />
     {tab === 'MANAGE'
       ? <ManagementTab
-        key={tab}
         user={user}
         trips={trips}
         error={tripError}
@@ -132,15 +130,15 @@ export function TeacherDashboard({ user, onLogout }: { user: CurrentUser; onLogo
       />
       : tab === 'LOCATION'
         ? tripError
-          ? <p className="management-state error teacher-tab-panel" role="alert">{tripError}</p>
+          ? <p className="management-state error" role="alert">{tripError}</p>
           : trips === null
-            ? <ListSkeleton label="체험학습 목록을 불러오는 중입니다." />
-            : <TeacherLocationMap key={tab} trips={trips} />
-      : <div className="teacher-body teacher-tab-panel" key={tab}>
+            ? <p className="management-state" role="status">체험학습 목록을 불러오는 중입니다.</p>
+            : <TeacherLocationMap trips={trips} />
+      : <div className="teacher-body">
         {currentTrip && <div className="teacher-status-row"><h2>{currentTrip.title}</h2><span className={`status-pill ${currentTrip.status === 'ACTIVE' ? 'status-pill--success' : 'status-pill--neutral'}`}>{teacherTripStatusLabels[currentTrip.status]}</span></div>}
         {tab === 'HOME' && notice && <p className="notice" role="status">{notice}</p>}
         {tab === 'HOME' ? (
-          trips === null && !tripError ? <ListSkeleton label="체험학습 목록을 불러오는 중입니다." />
+          trips === null && !tripError ? <p className="hint" role="status">체험학습 목록을 불러오는 중입니다.</p>
           : trips !== null && trips.length === 0 ? <div className="home-empty">
             <img src={mascotLarge} alt="" className="start-mascot" />
             <p className="hint sub-copy" style={{ textAlign: 'center', margin: '16px 0 24px' }}>아직 예정된<br />현장체험학습이 없어요</p>
@@ -169,14 +167,14 @@ export function TeacherDashboard({ user, onLogout }: { user: CurrentUser; onLogo
 }
 
 function ManagementTab({ user, trips, error, notice, onAdd, onSelect }: { user: CurrentUser; trips: TeacherTrip[] | null; error: string; notice: string; onAdd: () => void; onSelect: (tripId: number) => void }) {
-  return <section className="management-tab teacher-tab-panel">
+  return <section className="management-tab">
     <section className="teacher-profile" aria-label="교사 정보"><strong>{user.name} 선생님</strong><span>{formatPhoneNumber(user.phoneNumber)}</span></section>
     <h1>현장체험학습 관리</h1>
     <div className="management-list" aria-live="polite">
       {error
         ? <p className="management-state error" role="alert">{error}</p>
         : trips === null
-          ? <ListSkeleton label="체험학습 목록을 불러오는 중입니다." />
+          ? <p className="management-state" role="status">체험학습 목록을 불러오는 중입니다.</p>
           : trips.length === 0
             ? <p className="management-state">아직 생성한 현장체험학습이 없습니다.</p>
             : trips.map((trip) => <button type="button" className="management-card" key={trip.id} onClick={() => onSelect(trip.id)}>

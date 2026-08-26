@@ -31,7 +31,7 @@
 }
 
 * { box-sizing: border-box; }
-body { background: var(--color-surface); margin: 0; min-width: 320px; min-height: 100vh; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
 button, input, select, textarea { font: inherit; color: inherit; }
 
 .sr-only {
@@ -46,7 +46,7 @@ input { border: 1.5px solid var(--color-border); border-radius: var(--radius-inp
 input::placeholder { color: var(--color-text-muted); }
 input:focus { border-color: var(--color-accent); outline: 3px solid var(--color-accent-soft); }
 
-.app-shell { background: var(--color-surface); display: flex; justify-content: center; min-height: 100vh; min-height: 100dvh; }
+.app-shell { display: flex; justify-content: center; min-height: 100vh; min-height: 100dvh; background: var(--color-bg); }
 .screen { width: 100%; max-width: 440px; min-height: 100vh; min-height: 100dvh; background: var(--color-bg); display: flex; flex-direction: column; padding-bottom: 32px; position: relative; }
 .screen-pad { padding: 0 24px; }
 
@@ -144,18 +144,10 @@ h2 { font-size: 17px; margin: 0; }
 .screen:has(.teacher-tabs) { padding-bottom: 0; }
 .teacher-tabs { align-items: center; background: var(--color-surface); border-top: 1px solid var(--color-border); bottom: 0; display: flex; flex: 0 0 auto; gap: 4px; left: 0; margin-top: auto; min-height: 74px; padding: 8px 10px env(safe-area-inset-bottom); position: sticky; right: 0; width: 100%; }
 .teacher-tabs button { --tab-icon-hole: var(--color-surface); align-items: center; background: transparent; border-radius: 14px; box-shadow: none; color: var(--color-text-muted); display: flex; flex: 1 0 0; flex-direction: column; font-size: 10px; gap: 2px; min-height: auto; padding: 5px; }
-.teacher-tabs button[aria-pressed="true"] { --tab-icon-hole: var(--color-accent); background: var(--color-accent); color: var(--color-text); }
+.teacher-tabs button[aria-pressed="true"] { --tab-icon-hole: var(--color-accent-soft); background: var(--color-accent-soft); color: var(--color-text); }
 .teacher-tabs button svg { display: block; height: 24px; width: 24px; }
 
 .teacher-body { display: grid; gap: 12px; padding: 16px 16px 24px; }
-.teacher-home-progress { display: grid; gap: 12px; }
-.teacher-tab-panel { animation: tab-panel-enter 160ms ease-out; }
-.list-skeleton { display: grid; gap: 12px; width: 100%; }
-.list-skeleton-card { animation: skeleton-pulse 1.2s ease-in-out infinite; background: var(--color-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-card); display: grid; gap: 9px; min-height: 68px; padding: 16px; }
-.list-skeleton-card span { background: var(--color-border); border-radius: 999px; display: block; height: 10px; width: 48%; }
-.list-skeleton-card span:last-child { opacity: .65; width: 72%; }
-@keyframes tab-panel-enter { from { opacity: 0; transform: translateY(4px); } }
-@keyframes skeleton-pulse { 50% { opacity: .55; } }
 .teacher-trip-select { -webkit-appearance: none; appearance: none; background: var(--color-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2327303a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center; border: 0; border-radius: 20px; box-shadow: var(--shadow-card); font-size: 14px; font-weight: 700; min-height: 40px; padding: 8px 40px 8px 14px; width: fit-content; }
 .teacher-status-row { align-items: center; display: flex; gap: 10px; margin: 4px 0; }
 .teacher-status-row h2 { font-size: 18px; }
@@ -266,7 +258,7 @@ h2 { font-size: 17px; margin: 0; }
 
 /* 교사 미션 관리 화면(#19) 전용 — Figma 디자인 미적용, 기존 스타일 유지 */
 .back-button { display: block; font-weight: 700; margin-bottom: 12px; padding: 0; }
-.mission-list { display: grid; gap: 12px; list-style: none; margin: 12px 0 16px; padding: 0; }
+.mission-list { display: grid; gap: 12px; list-style: none; margin: 0 0 16px; padding: 0; }
 .mission-list-card { background: #fff; border: 1px solid #e1e7f0; border-radius: 14px; cursor: pointer; display: grid; gap: 8px; min-height: auto; padding: 14px; text-align: left; width: 100%; }
 .mission-list-card:hover { background: #fff; }
 .mission-list-card-badges { align-items: center; display: flex; gap: 6px; justify-content: space-between; }
@@ -301,7 +293,7 @@ h2 { font-size: 17px; margin: 0; }
 .danger-button:hover { background: #fff0f1; }
 .sr-only { height: 1px; margin: -1px; overflow: hidden; padding: 0; position: absolute; width: 1px; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 .trip-create-shell { background: var(--color-bg); color: #27303a; display: grid; grid-template-rows: 96px 1fr auto; margin: 0 auto; max-width: 440px; min-height: 100dvh; width: 100%; }
-.trip-create-header { align-items: center; border-bottom: 1px solid #efe9da; display: flex; gap: 8px; min-height: 96px; padding: 48px 16px 10px; }
+.trip-create-header { align-items: center; border: 1px solid #efe9da; display: flex; gap: 8px; min-height: 96px; padding: 48px 16px 10px; }
 .trip-create-header button { align-items: center; background: transparent; box-shadow: none; color: #27303a; display: inline-flex; justify-content: center; margin: -3px -12px; min-height: 44px; padding: 12px; width: 44px; }
 .trip-create-header button img { height: 20px; width: 20px; }
 .trip-create-header h1 { font-size: 18px; font-weight: 700; margin: 0; }
@@ -427,7 +419,3 @@ h2 { font-size: 17px; margin: 0; }
 .noti-toast-title { color: var(--color-text); font-size: 14px; font-weight: 700; }
 .noti-toast-message { color: var(--color-text-muted); font-size: 13px; line-height: 1.45; }
 .noti-toast-close { background: transparent; box-shadow: none; color: var(--color-text-muted); font-size: 13px; min-height: auto; padding: 0 2px; }
-
-@media (prefers-reduced-motion: reduce) {
-  .teacher-tab-panel, .list-skeleton-card { animation: none; }
-}

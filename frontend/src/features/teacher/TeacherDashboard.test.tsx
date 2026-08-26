@@ -102,15 +102,11 @@ describe('TeacherDashboard', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('체험학습 목록을 불러오지 못했습니다.')
   })
 
-  it('Given 체험학습 목록 응답이 대기 중일 때 When 홈을 열면 Then 목록 스켈레톤을 보여준다', () => {
-    // given
+  it('shows a loading state on the home tab while the trip list is being fetched', () => {
     vi.mocked(teacherTripApi.getTrips).mockReturnValue(new Promise(() => {}))
-
-    // when
     render(<TeacherDashboard user={user} />)
 
-    // then
-    expect(screen.getByRole('status', { name: '체험학습 목록을 불러오는 중입니다.' })).toHaveClass('list-skeleton')
+    expect(screen.getByRole('status')).toHaveTextContent('체험학습 목록을 불러오는 중입니다.')
   })
 
   it('shows the empty state and lets the teacher start creating a trip when there are none', async () => {
