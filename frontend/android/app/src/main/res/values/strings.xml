@@ -6,7 +6,7 @@
     <string name="custom_url_scheme">com.softeerbootcamp.eightlisade</string>
     <string name="location_notification_channel">위치 수집</string>
     <string name="location_notification_title">위치 수집 중</string>
-    <string name="location_notification_body">8LISADE가 10초마다 위치를 기록하고 있습니다.</string>
+    <string name="location_notification_body">1초마다 위치를 수집하고 10초마다 전송하고 있습니다.</string>
     <string name="location_notification_stop">수집 종료</string>
     <string name="session_notification_channel">세션 알림</string>
     <string name="session_expired_title">로그인이 만료되었습니다</string>
