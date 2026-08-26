@@ -25,6 +25,8 @@ export interface SubmittedStudent {
   studentId: number
   studentName: string
   imageKey: string | null
+  /** 만료형 presigned 조회 URL. 사진이 없는 제출(출석 미션·교사 대리 완료)은 null. */
+  imageUrl: string | null
   submittedAt: string | null
 }
 

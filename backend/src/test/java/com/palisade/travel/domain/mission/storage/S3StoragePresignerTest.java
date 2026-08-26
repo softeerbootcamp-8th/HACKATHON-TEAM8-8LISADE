@@ -36,7 +36,7 @@ class S3StoragePresignerTest {
     }
 
     @Test
-    void createsAFiveMinuteGetUrlForTheConfiguredBucketAndObjectKey() throws Exception {
+    void createsAThirtyMinuteGetUrlForTheConfiguredBucketAndObjectKey() throws Exception {
         S3Presigner client = mock(S3Presigner.class);
         PresignedGetObjectRequest request = mock(PresignedGetObjectRequest.class);
         when(client.presignGetObject(any(GetObjectPresignRequest.class))).thenReturn(request);
@@ -47,7 +47,7 @@ class S3StoragePresignerTest {
 
         ArgumentCaptor<GetObjectPresignRequest> captor = ArgumentCaptor.forClass(GetObjectPresignRequest.class);
         org.mockito.Mockito.verify(client).presignGetObject(captor.capture());
-        assertThat(captor.getValue().signatureDuration()).isEqualTo(java.time.Duration.ofMinutes(5));
+        assertThat(captor.getValue().signatureDuration()).isEqualTo(java.time.Duration.ofMinutes(30));
         assertThat(captor.getValue().getObjectRequest().bucket()).isEqualTo("field-trip-photos");
         assertThat(captor.getValue().getObjectRequest().key()).isEqualTo("upload/missions/12/students/3/photo.jpg");
         assertThat(viewUrl).isEqualTo("https://bucket.s3.amazonaws.com/view.jpg");

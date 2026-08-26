@@ -41,7 +41,7 @@ describe('TeacherMissions', () => {
       'GET /api/auth/csrf': [csrf],
       'GET /api/teacher/trips/1/missions': [{ body: { success: true, data: [activityMission, checkMission] } }],
       'GET /api/teacher/missions/2/pin': [{ body: { success: true, data: '3423' } }],
-      'GET /api/teacher/missions/1/status-board': [{ body: { success: true, data: { mission: activityMission, totalStudentCount: 5, submitted: [{ studentId: 101, studentName: '김학생', imageKey: 'a.jpg', submittedAt: '14:34' }, { studentId: 102, studentName: '이학생', imageKey: 'b.jpg', submittedAt: '14:32' }], notSubmitted: [{ studentId: 103, studentName: '박서준', rejectionReason: null }, { studentId: 104, studentName: '최지우', rejectionReason: null }, { studentId: 105, studentName: '정민준', rejectionReason: null }] } } }],
+      'GET /api/teacher/missions/1/status-board': [{ body: { success: true, data: { mission: activityMission, totalStudentCount: 5, submitted: [{ studentId: 101, studentName: '김학생', imageKey: 'a.jpg', imageUrl: 'https://storage.example/a.jpg', submittedAt: '14:34' }, { studentId: 102, studentName: '이학생', imageKey: 'b.jpg', imageUrl: 'https://storage.example/b.jpg', submittedAt: '14:32' }], notSubmitted: [{ studentId: 103, studentName: '박서준', rejectionReason: null }, { studentId: 104, studentName: '최지우', rejectionReason: null }, { studentId: 105, studentName: '정민준', rejectionReason: null }] } } }],
       'GET /api/teacher/missions/2/status-board': [{ body: { success: true, data: { mission: checkMission, totalStudentCount: 5, submitted: [], notSubmitted: [{ studentId: 101, studentName: '김학생', rejectionReason: null }, { studentId: 102, studentName: '이학생', rejectionReason: null }, { studentId: 103, studentName: '박서준', rejectionReason: null }, { studentId: 104, studentName: '최지우', rejectionReason: null }, { studentId: 105, studentName: '정민준', rejectionReason: null }] } } }],
     }))
 
@@ -79,8 +79,8 @@ describe('TeacherMissions', () => {
   })
 
   it('opens a mission status board from its card and shows submitted photos with a reject action', async () => {
-    const initialBoard = { mission: activityMission, totalStudentCount: 5, submitted: [{ studentId: 101, studentName: '김학생', imageKey: 'a.jpg', submittedAt: '14:34' }, { studentId: 102, studentName: '이학생', imageKey: 'b.jpg', submittedAt: '14:32' }], notSubmitted: [{ studentId: 103, studentName: '박서준', rejectionReason: null }, { studentId: 104, studentName: '최지우', rejectionReason: null }, { studentId: 105, studentName: '정민준', rejectionReason: null }] }
-    const afterRejectBoard = { mission: activityMission, totalStudentCount: 5, submitted: [{ studentId: 102, studentName: '이학생', imageKey: 'b.jpg', submittedAt: '14:32' }], notSubmitted: [{ studentId: 103, studentName: '박서준', rejectionReason: null }, { studentId: 104, studentName: '최지우', rejectionReason: null }, { studentId: 105, studentName: '정민준', rejectionReason: null }, { studentId: 101, studentName: '김학생', rejectionReason: '사진이 흐릿합니다.' }] }
+    const initialBoard = { mission: activityMission, totalStudentCount: 5, submitted: [{ studentId: 101, studentName: '김학생', imageKey: 'a.jpg', imageUrl: 'https://storage.example/a.jpg', submittedAt: '14:34' }, { studentId: 102, studentName: '이학생', imageKey: 'b.jpg', imageUrl: 'https://storage.example/b.jpg', submittedAt: '14:32' }], notSubmitted: [{ studentId: 103, studentName: '박서준', rejectionReason: null }, { studentId: 104, studentName: '최지우', rejectionReason: null }, { studentId: 105, studentName: '정민준', rejectionReason: null }] }
+    const afterRejectBoard = { mission: activityMission, totalStudentCount: 5, submitted: [{ studentId: 102, studentName: '이학생', imageKey: 'b.jpg', imageUrl: 'https://storage.example/b.jpg', submittedAt: '14:32' }], notSubmitted: [{ studentId: 103, studentName: '박서준', rejectionReason: null }, { studentId: 104, studentName: '최지우', rejectionReason: null }, { studentId: 105, studentName: '정민준', rejectionReason: null }, { studentId: 101, studentName: '김학생', rejectionReason: '사진이 흐릿합니다.' }] }
     vi.stubGlobal('fetch', createFetchRouter({
       'GET /api/auth/csrf': [csrf],
       'GET /api/teacher/trips/1/missions': [{ body: { success: true, data: [activityMission] } }],
@@ -104,9 +104,41 @@ describe('TeacherMissions', () => {
     expect(screen.getByText('제출하지 않은 학생 4')).toBeInTheDocument()
   })
 
+  it('renders each submitted photo from its presigned view url', async () => {
+    const board = { mission: activityMission, totalStudentCount: 2, submitted: [{ studentId: 101, studentName: '김학생', imageKey: 'a.jpg', imageUrl: 'https://storage.example/a.jpg', submittedAt: '14:34' }], notSubmitted: [{ studentId: 102, studentName: '이학생', rejectionReason: null }] }
+    vi.stubGlobal('fetch', createFetchRouter({
+      'GET /api/auth/csrf': [csrf],
+      'GET /api/teacher/trips/1/missions': [{ body: { success: true, data: [activityMission] } }],
+      'GET /api/teacher/missions/1/status-board': [{ body: { success: true, data: board } }, { body: { success: true, data: board } }],
+    }))
+
+    render(<TeacherMissions tripId="1" />)
+
+    fireEvent.click(await screen.findByRole('button', { name: /첨성대 앞에서 사진 찍기/ }))
+
+    const photo = await screen.findByRole('img', { name: '김학생 제출 사진' })
+    expect(photo).toHaveAttribute('src', 'https://storage.example/a.jpg')
+  })
+
+  it('keeps the placeholder when a submission has no photo', async () => {
+    const board = { mission: activityMission, totalStudentCount: 1, submitted: [{ studentId: 101, studentName: '김학생', imageKey: null, imageUrl: null, submittedAt: '14:34' }], notSubmitted: [] }
+    vi.stubGlobal('fetch', createFetchRouter({
+      'GET /api/auth/csrf': [csrf],
+      'GET /api/teacher/trips/1/missions': [{ body: { success: true, data: [activityMission] } }],
+      'GET /api/teacher/missions/1/status-board': [{ body: { success: true, data: board } }, { body: { success: true, data: board } }],
+    }))
+
+    render(<TeacherMissions tripId="1" />)
+
+    fireEvent.click(await screen.findByRole('button', { name: /첨성대 앞에서 사진 찍기/ }))
+
+    expect(await screen.findByText('제출한 학생 1')).toBeInTheDocument()
+    expect(screen.queryByRole('img', { name: /제출 사진/ })).not.toBeInTheDocument()
+  })
+
   it('lets the teacher complete an attendance mission on behalf of a student without the app', async () => {
     const initialBoard = { mission: checkMission, totalStudentCount: 5, submitted: [], notSubmitted: [{ studentId: 101, studentName: '김학생', rejectionReason: null }, { studentId: 102, studentName: '이학생', rejectionReason: null }, { studentId: 103, studentName: '박서준', rejectionReason: null }, { studentId: 104, studentName: '최지우', rejectionReason: null }, { studentId: 105, studentName: '정민준', rejectionReason: null }] }
-    const afterCompleteBoard = { mission: checkMission, totalStudentCount: 5, submitted: [{ studentId: 101, studentName: '김학생', imageKey: null, submittedAt: '14:40' }], notSubmitted: [{ studentId: 102, studentName: '이학생', rejectionReason: null }, { studentId: 103, studentName: '박서준', rejectionReason: null }, { studentId: 104, studentName: '최지우', rejectionReason: null }, { studentId: 105, studentName: '정민준', rejectionReason: null }] }
+    const afterCompleteBoard = { mission: checkMission, totalStudentCount: 5, submitted: [{ studentId: 101, studentName: '김학생', imageKey: null, imageUrl: null, submittedAt: '14:40' }], notSubmitted: [{ studentId: 102, studentName: '이학생', rejectionReason: null }, { studentId: 103, studentName: '박서준', rejectionReason: null }, { studentId: 104, studentName: '최지우', rejectionReason: null }, { studentId: 105, studentName: '정민준', rejectionReason: null }] }
     vi.stubGlobal('fetch', createFetchRouter({
       'GET /api/auth/csrf': [csrf],
       'GET /api/teacher/trips/1/missions': [{ body: { success: true, data: [checkMission] } }],

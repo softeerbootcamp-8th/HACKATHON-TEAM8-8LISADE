@@ -17,7 +17,9 @@ import java.time.Duration;
 @Profile("prod")
 public class S3StoragePresigner implements StoragePresigner {
 
-    private static final Duration SIGNATURE_DURATION = Duration.ofMinutes(5);
+    private static final Duration UPLOAD_SIGNATURE_DURATION = Duration.ofMinutes(5);
+    /** 교사가 현황판을 열어둔 채로 URL 이 만료되지 않도록 조회는 더 길게 잡는다. */
+    private static final Duration VIEW_SIGNATURE_DURATION = Duration.ofMinutes(30);
 
     private final S3Presigner s3Presigner;
     private final String bucket;
@@ -35,7 +37,7 @@ public class S3StoragePresigner implements StoragePresigner {
                 .contentType("image/jpeg")
                 .build();
         PresignedPutObjectRequest presignedRequest = s3Presigner.presignPutObject(PutObjectPresignRequest.builder()
-                .signatureDuration(SIGNATURE_DURATION)
+                .signatureDuration(UPLOAD_SIGNATURE_DURATION)
                 .putObjectRequest(putObjectRequest)
                 .build());
         return new PresignedUpload(objectKey, presignedRequest.url().toString());
@@ -48,7 +50,7 @@ public class S3StoragePresigner implements StoragePresigner {
                 .key(objectKey)
                 .build();
         PresignedGetObjectRequest presignedRequest = s3Presigner.presignGetObject(GetObjectPresignRequest.builder()
-                .signatureDuration(SIGNATURE_DURATION)
+                .signatureDuration(VIEW_SIGNATURE_DURATION)
                 .getObjectRequest(getObjectRequest)
                 .build());
         return presignedRequest.url().toString();

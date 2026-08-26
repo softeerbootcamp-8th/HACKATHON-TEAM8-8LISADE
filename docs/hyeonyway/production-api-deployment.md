@@ -58,8 +58,8 @@ EC2 instance profile이 AWS 자격증명을 제공하고, Compose가 버킷 이�
 
 ### 버킷 CORS (#92)
 
-버킷은 비공개를 유지하고, 교사 화면의 제출 사진은 서버가 발급한 5분 만료 presigned
-GET URL로만 조회한다. EC2 instance profile에는 이미 `s3:GetObject`가 포함되어 있어
+버킷은 비공개를 유지하고, 교사 화면의 제출 사진은 서버가 발급한 30분 만료 presigned
+GET URL로만 조회한다(업로드용 PUT은 5분). EC2 instance profile에는 이미 `s3:GetObject`가 포함되어 있어
 서명 발급 자체는 문제가 없다.
 
 다만 **버킷 CORS 규칙에 `PUT`만 등록되어 있어 브라우저에서 조회 URL을 `fetch`/XHR로

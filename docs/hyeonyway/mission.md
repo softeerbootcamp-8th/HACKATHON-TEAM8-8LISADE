@@ -11,7 +11,7 @@
 ## Issue #12 — local mock storage and S3 presigner
 
 - `local`과 `test` 프로필은 `LocalStoragePresigner`가 `PUT /mock-storage/**` URL을 반환하고, local 전용 controller가 204로 응답한다. 따라서 S3 설정 없이도 프론트의 업로드 → objectKey 제출 흐름을 확인할 수 있다.
-- `prod`에서는 5분 유효한 JPEG PUT Presigned URL을 발급한다. AWS SDK 기본 자격 증명 체인이 EC2 IAM Role을 사용하며, 버킷은 `S3_BUCKET`, 리전은 `AWS_REGION`(기본 `ap-northeast-2`)에서 읽는다.
+- `prod`에서는 5분 유효한 JPEG PUT Presigned URL을 발급한다. 조회용 GET Presigned URL은 교사가 현황판을 열어둔 채 만료되지 않도록 30분으로 둔다(#92). AWS SDK 기본 자격 증명 체인이 EC2 IAM Role을 사용하며, 버킷은 `S3_BUCKET`, 리전은 `AWS_REGION`(기본 `ap-northeast-2`)에서 읽는다.
 
 검증: `./gradlew test`, `./gradlew build`
 

@@ -577,10 +577,10 @@ data: {"userId":3,"latitude":35.7901234,"longitude":129.3321234,"outside":true,"
 | `totalStudentCount` | 여행 참가 학생 수 |
 | `submitted[]` | 제출 완료 학생 |
 | `submitted[].imageKey` | S3 object key |
-| `submitted[].imageUrl` | **5분 만료** presigned 조회 URL. 사진이 없는 제출(PIN 미션·교사 대리 완료)은 `null` |
+| `submitted[].imageUrl` | **30분 만료** presigned 조회 URL. 사진이 없는 제출(PIN 미션·교사 대리 완료)은 `null` |
 | `notSubmitted[].rejectionReason` | 반려된 경우 사유, 미제출이면 `null` |
 
-운영 버킷은 비공개다. `imageUrl` 은 담당 교사가 이 API 를 호출한 시점에 발급되며 5분 뒤 만료되므로, 프론트는 URL 을 장기 보관하지 말고 만료되면 현황판을 다시 조회한다.
+운영 버킷은 비공개다. `imageUrl` 은 담당 교사가 이 API 를 호출한 시점에 발급되며 30분 뒤 만료되므로, 프론트는 URL 을 장기 보관하지 말고 만료되면 현황판을 다시 조회한다. 업로드용 PUT URL 은 5분 그대로다.
 
 ---
 
