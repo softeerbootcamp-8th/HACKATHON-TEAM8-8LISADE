@@ -19,7 +19,7 @@ app:
   security:
     cors:
       allowed-origins:
-        - ${CORS_ALLOWED_ORIGIN:https://8lisade.vercel.app}
+        - ${CORS_ALLOWED_ORIGIN:https://8lisade.site}
     csrf-cookie:
       secure: true
       same-site: None

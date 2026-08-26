@@ -1,7 +1,7 @@
 server {
     listen 80;
     listen [::]:80;
-    server_name ec2-3-34-148-229.ap-northeast-2.compute.amazonaws.com;
+    server_name api.8lisade.site;
 
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
@@ -15,10 +15,10 @@ server {
 server {
     listen 443 ssl;
     listen [::]:443 ssl;
-    server_name ec2-3-34-148-229.ap-northeast-2.compute.amazonaws.com;
+    server_name api.8lisade.site;
 
-    ssl_certificate /etc/letsencrypt/live/ec2-3-34-148-229.ap-northeast-2.compute.amazonaws.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/ec2-3-34-148-229.ap-northeast-2.compute.amazonaws.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/api.8lisade.site/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.8lisade.site/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
 
     location / {
