@@ -242,7 +242,7 @@ function MissionStatusScreen({ missionId, onBack, onDeleted }: { missionId: numb
         {submission.imageUrl
           ? <img className="photo-thumbnail" src={submission.imageUrl} alt={`${submission.studentName} 제출 사진`} />
           : <div className="photo-placeholder" aria-hidden="true" />}
-        <p>{submission.studentName} <span className="hint">{formatSubmittedAt(submission.submittedAt)}</span></p>
+        <p>{submission.studentName} <span className="hint">{formatSubmittedAt(submission.submittedAt)}</span>{submission.late && <span className="badge badge-late">지각</span>}</p>
         {!mission.completedAt && (rejectingStudentId === submission.studentId ? <form className="auth-form" onSubmit={submitRejection}>
           <label className="field" htmlFor={`reject-reason-${submission.studentId}`}>반려 사유<input id={`reject-reason-${submission.studentId}`} value={reason} onChange={(event) => setReason(event.target.value)} required /></label>
           <button type="submit">반려 확정</button>

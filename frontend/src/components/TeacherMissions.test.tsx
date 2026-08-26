@@ -120,6 +120,25 @@ describe('TeacherMissions', () => {
     expect(photo).toHaveAttribute('src', 'https://storage.example/a.jpg')
   })
 
+  it('tags a late submission within the submitted list without moving it to not-submitted', async () => {
+    const board = { mission: activityMission, totalStudentCount: 2, submitted: [{ studentId: 101, studentName: '김학생', imageKey: 'a.jpg', imageUrl: 'https://storage.example/a.jpg', submittedAt: '14:34', late: true }, { studentId: 102, studentName: '이학생', imageKey: 'b.jpg', imageUrl: 'https://storage.example/b.jpg', submittedAt: '10:00', late: false }], notSubmitted: [] }
+    vi.stubGlobal('fetch', createFetchRouter({
+      'GET /api/auth/csrf': [csrf],
+      'GET /api/teacher/trips/1/missions': [{ body: { success: true, data: [activityMission] } }],
+      'GET /api/teacher/missions/1/status-board': [{ body: { success: true, data: board } }, { body: { success: true, data: board } }],
+    }))
+
+    render(<TeacherMissions tripId="1" />)
+
+    fireEvent.click(await screen.findByRole('button', { name: /첨성대 앞에서 사진 찍기/ }))
+
+    expect(await screen.findByText('제출한 학생 2')).toBeInTheDocument()
+    const lateTile = screen.getByText('김학생').closest('li')!
+    expect(lateTile).toHaveTextContent('지각')
+    const onTimeTile = screen.getByText('이학생').closest('li')!
+    expect(onTimeTile).not.toHaveTextContent('지각')
+  })
+
   it('keeps the placeholder when a submission has no photo', async () => {
     const board = { mission: activityMission, totalStudentCount: 1, submitted: [{ studentId: 101, studentName: '김학생', imageKey: null, imageUrl: null, submittedAt: '14:34' }], notSubmitted: [] }
     vi.stubGlobal('fetch', createFetchRouter({

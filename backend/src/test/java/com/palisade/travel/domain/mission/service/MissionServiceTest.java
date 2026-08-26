@@ -81,6 +81,26 @@ class MissionServiceTest {
     }
 
     @Test
+    void statusBoardIncludesLateSubmissionsInTheSubmittedBucketFlaggedAsLate() {
+        Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, null);
+        when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
+        when(tripRepository.findById(1L)).thenReturn(Optional.of(trip(100L)));
+        when(participantRepository.findAllByTripIdOrderByCreatedAtAsc(1L)).thenReturn(List.of(
+                TripParticipant.create(1L, 10L), TripParticipant.create(1L, 11L)));
+        MissionSubmission late = MissionSubmission.photo(2L, 10L, "upload/missions/2/students/10/a.jpg", true);
+        MissionSubmission onTime = MissionSubmission.photo(2L, 11L, "upload/missions/2/students/11/b.jpg", false);
+        when(submissionRepository.findByMissionId(2L)).thenReturn(List.of(late, onTime));
+        when(userRepository.findAllById(any())).thenReturn(List.of(user(10L, "김학생"), user(11L, "이학생")));
+
+        var board = missionService.getStatusBoard(2L, 100L);
+
+        assertThat(board.submitted()).hasSize(2);
+        assertThat(board.notSubmitted()).isEmpty();
+        assertThat(board.submitted()).filteredOn(entry -> entry.studentId().equals(10L)).extracting(MissionService.SubmittedEntry::late).containsExactly(true);
+        assertThat(board.submitted()).filteredOn(entry -> entry.studentId().equals(11L)).extracting(MissionService.SubmittedEntry::late).containsExactly(false);
+    }
+
+    @Test
     void statusBoardIssuesAViewUrlForEachSubmittedPhoto() {
         Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, null);
         when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
@@ -302,6 +322,53 @@ class MissionServiceTest {
 
         assertThat(missionService.submitPhoto(2L, 10L, "upload/missions/2/students/10/new.jpg").status())
                 .isEqualTo(SubmissionStatus.COMPLETED);
+    }
+
+    @Test
+    void photoSubmissionAfterTheDeadlineIsAcceptedAndMarkedLate() {
+        Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, LocalDateTime.now().minusMinutes(1));
+        when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
+        when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(true);
+        when(submissionRepository.findByMissionIdAndUserId(2L, 10L)).thenReturn(Optional.empty());
+        when(submissionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertThat(missionService.submitPhoto(2L, 10L, "upload/missions/2/students/10/x.jpg").status())
+                .isEqualTo(SubmissionStatus.LATE);
+    }
+
+    @Test
+    void resubmittedPhotoAfterTheDeadlineIsMarkedLate() {
+        Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, LocalDateTime.now().minusMinutes(1));
+        MissionSubmission rejected = MissionSubmission.photo(2L, 10L, "upload/missions/2/students/10/old.jpg");
+        rejected.reject("사진이 흐릿합니다.");
+        when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
+        when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(true);
+        when(submissionRepository.findByMissionIdAndUserId(2L, 10L)).thenReturn(Optional.of(rejected));
+
+        assertThat(missionService.submitPhoto(2L, 10L, "upload/missions/2/students/10/new.jpg").status())
+                .isEqualTo(SubmissionStatus.LATE);
+    }
+
+    @Test
+    void photoUploadIsAllowedAfterTheDeadline() {
+        Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, LocalDateTime.now().minusMinutes(1));
+        when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
+        when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(true);
+        when(storagePresigner.presignPut(any(), any())).thenReturn(new StoragePresigner.PresignedUpload("upload/missions/2/students/10/photo.jpg", "https://storage.example/upload"));
+
+        missionService.preparePhotoUpload(2L, 10L, "image/jpeg");
+
+        org.mockito.Mockito.verify(storagePresigner).presignPut(org.mockito.ArgumentMatchers.startsWith("upload/missions/2/students/10/"), org.mockito.ArgumentMatchers.eq("image/jpeg"));
+    }
+
+    @Test
+    void checkInIsStillBlockedAfterTheDeadline() {
+        Mission mission = Mission.createCheck(1L, "출석", "", null, LocalDateTime.now().minusMinutes(1), "1234");
+        when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
+        when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(true);
+
+        assertThatThrownBy(() -> missionService.verifyPin(2L, 10L, "1234"))
+                .isInstanceOf(ApiException.class);
     }
 
     @Test

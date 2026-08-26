@@ -2,7 +2,7 @@ import type { MissionCreateInput, MissionStatusBoard, TeacherMission } from '../
 import { apiFetch } from './httpClient'
 
 export type MissionType = 'ACTIVITY' | 'CHECK'
-export type SubmissionStatus = 'WAITING' | 'COMPLETED' | 'REJECTED' | 'EXPIRED'
+export type SubmissionStatus = 'WAITING' | 'COMPLETED' | 'LATE' | 'REJECTED' | 'EXPIRED'
 
 export interface StudentMission {
   id: number
