@@ -588,7 +588,8 @@ describe('App', () => {
     await completePhotoMission()
 
     fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
-    fireEvent.click(screen.getByRole('button', { name: '출석 체크' }))
+    expect(screen.getByLabelText('출석 PIN')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '출석 체크' })).not.toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('출석 PIN'), { target: { value: '0000' } })
     fireEvent.click(screen.getByRole('button', { name: '확인' }))
 
@@ -605,7 +606,7 @@ describe('App', () => {
     ])
 
     fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
-    fireEvent.click(screen.getByRole('button', { name: '출석 체크' }))
+    expect(screen.getByLabelText('출석 PIN')).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('출석 PIN'), { target: { value: '1234' } })
     fireEvent.click(screen.getByRole('button', { name: '확인' }))
 
@@ -667,7 +668,7 @@ describe('App', () => {
     await completePhotoMission()
 
     fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
-    expect(await screen.findByRole('button', { name: '출석 체크' })).toBeInTheDocument()
+    expect(await screen.findByLabelText('출석 PIN')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '뒤로 가기' }))
 

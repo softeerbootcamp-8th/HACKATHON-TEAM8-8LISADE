@@ -97,14 +97,13 @@ export function ActivityConfirmation({ isResubmission, photoUri, onRetake, onSub
 export function CheckMissionScreen({ mission, onBack, onCompleted }: { mission: CurrentMission; onBack: () => void; onCompleted: (pin: string) => Promise<void> }) {
   const [pin, setPin] = useState('')
   const [error, setError] = useState('')
-  const [open, setOpen] = useState(false)
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); setError('')
     try { await onCompleted(pin) } catch (caught) { setError(caught instanceof Error ? caught.message : 'PIN 검증에 실패했습니다.') }
   }
   return <ScreenCard title="출석 체크">
     <BackHeader title={mission.title} onBack={onBack} />
-    {open ? <>
+    <>
       <img src={mascotPin} alt="" className="pin-mascot" />
       <p className="pin-copy">선생님이 불러 준<br />숫자를 입력해요</p>
       <form className="auth-form" onSubmit={submit} style={{ marginTop: 24, alignItems: 'center', justifyItems: 'center' }}>
@@ -112,6 +111,6 @@ export function CheckMissionScreen({ mission, onBack, onCompleted }: { mission: 
         <Field label="출석 PIN" id="attendance-pin"><CodeBoxes id="attendance-pin" length={4} value={pin} onChange={setPin} inputMode="numeric" size="lg" required /></Field>
         <button type="submit">확인</button>
       </form>
-    </> : <p className="hint screen-pad" style={{ margin: '16px 0' }}>{mission.description ?? '교사가 공유한 4자리 PIN을 입력해 주세요.'}<br /><button type="button" onClick={() => setOpen(true)} style={{ marginTop: 16 }}>출석 체크</button></p>}
+    </>
   </ScreenCard>
 }
