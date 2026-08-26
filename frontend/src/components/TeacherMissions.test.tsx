@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import TeacherMissions, { formatCountdown, formatSubmittedAt, missionDispatchStatus } from './TeacherMissions'
 import type { TeacherMission } from '../types/mission'
@@ -34,6 +34,7 @@ const checkMission = { id: 2, tripId: 1, title: '15시 출발 버스 출석체�
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.useRealTimers()
 })
 
 describe('TeacherMissions', () => {
@@ -46,6 +47,52 @@ describe('TeacherMissions', () => {
 
     // then
     expect(screen.getByRole('status', { name: '미션 목록을 불러오는 중입니다.' })).toHaveClass('list-skeleton')
+  })
+
+  it('Given_미완료_미션_When_일초_뒤_학생이_완료하면_Then_목록_진행률을_반영한다', async () => {
+    // given
+    vi.useFakeTimers()
+    const initialBoard = { mission: activityMission, totalStudentCount: 1, submitted: [], notSubmitted: [{ studentId: 101, studentName: '김학생', rejectionReason: null }] }
+    const completedBoard = { mission: activityMission, totalStudentCount: 1, submitted: [{ studentId: 101, studentName: '김학생', imageKey: 'a.jpg', imageUrl: null, submittedAt: '14:34' }], notSubmitted: [] }
+    vi.stubGlobal('fetch', createFetchRouter({
+      'GET /api/teacher/trips/1/missions': [{ body: { success: true, data: [activityMission] } }],
+      'GET /api/teacher/missions/1/status-board': [{ body: { success: true, data: initialBoard } }, { body: { success: true, data: completedBoard } }],
+    }))
+    render(<TeacherMissions tripId="1" />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(screen.getByText('0/1명 완료')).toBeInTheDocument()
+
+    // when
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000) })
+
+    // then
+    expect(screen.getByText('1/1명 완료')).toBeInTheDocument()
+  })
+
+  it('Given_제출이_없는_현황판_When_일초_뒤_학생이_제출하면_Then_제출_목록을_반영한다', async () => {
+    // given
+    vi.useFakeTimers()
+    const initialBoard = { mission: activityMission, totalStudentCount: 1, submitted: [], notSubmitted: [{ studentId: 101, studentName: '김학생', rejectionReason: null }] }
+    const submittedBoard = { mission: activityMission, totalStudentCount: 1, submitted: [{ studentId: 101, studentName: '김학생', imageKey: 'a.jpg', imageUrl: null, submittedAt: '14:34' }], notSubmitted: [] }
+    vi.stubGlobal('fetch', createFetchRouter({
+      'GET /api/teacher/trips/1/missions': [{ body: { success: true, data: [activityMission] } }],
+      'GET /api/teacher/missions/1/status-board': [
+        { body: { success: true, data: initialBoard } },
+        { body: { success: true, data: initialBoard } },
+        { body: { success: true, data: submittedBoard } },
+      ],
+    }))
+    render(<TeacherMissions tripId="1" />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    fireEvent.click(screen.getByRole('button', { name: /첨성대 앞에서 사진 찍기/ }))
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(screen.getByText('제출한 학생 0')).toBeInTheDocument()
+
+    // when
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000) })
+
+    // then
+    expect(screen.getByText('제출한 학생 1')).toBeInTheDocument()
   })
 
   it('lists the seeded missions with type/status badges and progress', async () => {
