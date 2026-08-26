@@ -1,6 +1,6 @@
 export type StudentLocationStatus = 'NORMAL' | 'OUTSIDE' | 'CHECK_NEEDED'
 
-const CHECK_NEEDED_THRESHOLD_MS = 2 * 60 * 1000
+const CHECK_NEEDED_THRESHOLD_MS = 40 * 1000
 
 export function computeStudentStatus(outside: boolean, lastSentAt: string | null, now: Date = new Date()): StudentLocationStatus {
   if (!lastSentAt) return 'CHECK_NEEDED'

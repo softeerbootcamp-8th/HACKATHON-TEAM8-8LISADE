@@ -8,8 +8,8 @@ describe('computeStudentStatus', () => {
     expect(computeStudentStatus(false, null, now)).toBe('CHECK_NEEDED')
   })
 
-  it('returns CHECK_NEEDED when the last location is older than 2 minutes', () => {
-    expect(computeStudentStatus(false, '2026-08-25T14:12:59', now)).toBe('CHECK_NEEDED')
+  it('returns CHECK_NEEDED when the last location is older than 40 seconds', () => {
+    expect(computeStudentStatus(false, '2026-08-25T14:14:19', now)).toBe('CHECK_NEEDED')
   })
 
   it('returns OUTSIDE when recently received but outside the safety zone', () => {
@@ -20,8 +20,8 @@ describe('computeStudentStatus', () => {
     expect(computeStudentStatus(false, '2026-08-25T14:14:30', now)).toBe('NORMAL')
   })
 
-  it('treats exactly 2 minutes as still fresh', () => {
-    expect(computeStudentStatus(false, '2026-08-25T14:13:00', now)).toBe('NORMAL')
+  it('treats exactly 40 seconds as still fresh', () => {
+    expect(computeStudentStatus(false, '2026-08-25T14:14:20', now)).toBe('NORMAL')
   })
 })
 
