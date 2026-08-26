@@ -1,5 +1,8 @@
 {
-  "rewrites": [
-    { "source": "/api/:path*", "destination": "$BACKEND_ORIGIN/api/:path*" }
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "routes": [
+    { "src": "/api/(.*)", "dest": "${BACKEND_ORIGIN}/api/$1", "env": ["BACKEND_ORIGIN"] },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
