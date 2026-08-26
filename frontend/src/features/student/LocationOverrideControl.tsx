@@ -14,16 +14,16 @@ export function LocationOverrideControl({ place }: { place: string }) {
     let active = true
     void locationOverrideApi.get()
       .then((state) => { if (active) setOverride(state) })
-      .catch(() => { if (active) setMessage('위치 조작 상태를 불러오지 못했습니다.') })
+      .catch(() => { if (active) setMessage('시연용 위치 조정 상태를 불러오지 못했습니다.') })
     return () => { active = false }
   }, [])
 
-  return <section className="location-override-control" aria-label="위치 조작">
+  return <section className="location-override-control" aria-label="시연용 위치 조정">
     <div>
-      <strong>GPS 위치 조작</strong>
+      <strong>시연용 위치 조정</strong>
       {override.enabled && <span className="student-tag student-tag--warning">수동 위치 사용 중</span>}
     </div>
-    <button type="button" className="location-override-open" onClick={() => setOpen(true)}>위치 조작 설정</button>
+    <button type="button" className="location-override-open" onClick={() => setOpen(true)}>시연용 위치 조정</button>
     {message && <p className="hint" role="status">{message}</p>}
     {open && <LocationOverrideDialog
       place={place}
@@ -150,8 +150,8 @@ function LocationOverrideDialog({ place, override, onClose, onChange }: {
 
   return <dialog ref={dialogRef} className="location-override-dialog" aria-labelledby="location-override-title" onCancel={onClose}>
     <div className="location-override-header">
-      <div><h2 id="location-override-title">위치 조작 설정</h2><p>수동 위치는 실제 GPS보다 우선해 선생님께 표시됩니다.</p></div>
-      <button type="button" className="text-button" onClick={onClose} aria-label="위치 조작 설정 닫기">닫기</button>
+      <div><h2 id="location-override-title">시연용 위치 조정</h2><p>수동 위치는 실제 GPS보다 우선해 선생님께 표시됩니다.</p></div>
+      <button type="button" className="text-button" onClick={onClose} aria-label="시연용 위치 조정 닫기">닫기</button>
     </div>
     <div className="location-picker-frame">
       <div ref={containerRef} className="location-picker-map" aria-label="수동 위치 선택 지도" />

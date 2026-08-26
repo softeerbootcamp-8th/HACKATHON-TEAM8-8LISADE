@@ -65,7 +65,7 @@ vi.mock('../teacher/kakaoMaps', () => ({ loadKakaoMaps: vi.fn(async () => sdk.ma
 import { LocationOverrideControl } from './LocationOverrideControl'
 import { loadKakaoMaps } from '../teacher/kakaoMaps'
 
-describe('학생 수동 위치 조작', () => {
+describe('학생 시연용 위치 조정', () => {
   beforeEach(() => {
     sdk.mapInstances.length = 0
     sdk.listeners.clear()
@@ -81,7 +81,7 @@ describe('학생 수동 위치 조작', () => {
     // given
     render(<LocationOverrideControl place="경복궁" />)
     await waitFor(() => expect(locationOverrideApi.get).toHaveBeenCalledOnce())
-    fireEvent.click(screen.getByRole('button', { name: '위치 조작 설정' }))
+    fireEvent.click(screen.getByRole('button', { name: '시연용 위치 조정' }))
     await waitFor(() => expect(sdk.mapInstances).toHaveLength(1))
     const map = sdk.mapInstances[0]
 
@@ -94,12 +94,12 @@ describe('학생 수동 위치 조작', () => {
     expect(screen.getByText('수동 위치 사용 중')).toBeInTheDocument()
   })
 
-  it('Given 수동 위치 모드 When 자동 위치로 복귀하면 Then 좌표 조작을 해제한다', async () => {
+  it('Given 수동 위치 모드 When 자동 위치로 복귀하면 Then 시연용 위치 조정을 해제한다', async () => {
     // given
     locationOverrideApi.get.mockResolvedValue({ enabled: true, latitude: 37.501, longitude: 127.001 })
     render(<LocationOverrideControl place="경복궁" />)
     expect(await screen.findByText('수동 위치 사용 중')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '위치 조작 설정' }))
+    fireEvent.click(screen.getByRole('button', { name: '시연용 위치 조정' }))
 
     // when
     fireEvent.click(await screen.findByRole('button', { name: '자동 위치로 복귀' }))
@@ -109,14 +109,14 @@ describe('학생 수동 위치 조작', () => {
     expect(screen.queryByText('수동 위치 사용 중')).not.toBeInTheDocument()
   })
 
-  it('Given 카카오 지도 설정 오류 When 조작 다이얼로그를 열면 Then 오류를 다이얼로그 안에서 안내한다', async () => {
+  it('Given 카카오 지도 설정 오류 When 조정 다이얼로그를 열면 Then 오류를 다이얼로그 안에서 안내한다', async () => {
     // given
     vi.mocked(loadKakaoMaps).mockRejectedValueOnce(new Error('카카오 지도 키가 설정되지 않았습니다.'))
     render(<LocationOverrideControl place="경복궁" />)
     await waitFor(() => expect(locationOverrideApi.get).toHaveBeenCalledOnce())
 
     // when
-    fireEvent.click(screen.getByRole('button', { name: '위치 조작 설정' }))
+    fireEvent.click(screen.getByRole('button', { name: '시연용 위치 조정' }))
 
     // then
     expect(await screen.findByRole('alert')).toHaveTextContent('카카오 지도 키가 설정되지 않았습니다.')
