@@ -27,8 +27,8 @@ describe('teacherStudentApi', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/teacher/trips/5/participants', { credentials: 'include' })
     expect(fetchMock).toHaveBeenCalledWith('/api/teacher/trips/5/locations', { credentials: 'include' })
     expect(roster).toEqual([
-      { participantId: 1, userId: 20, name: '이서연', type: 'APP', outside: true, lastSentAt: '2026-08-25T09:14:00' },
-      { participantId: 2, userId: null, name: '김직접', type: 'MANUAL', outside: false, lastSentAt: null },
+      { participantId: 1, userId: 20, name: '이서연', type: 'APP', outside: true, lastSentAt: '2026-08-25T09:14:00', joinedAt: '2026-08-25T09:04:00' },
+      { participantId: 2, userId: null, name: '김직접', type: 'MANUAL', outside: false, lastSentAt: null, joinedAt: '2026-08-25T09:07:00' },
     ])
   })
 
@@ -42,7 +42,7 @@ describe('teacherStudentApi', () => {
 
     const roster = await teacherStudentApi.listStudents('5')
 
-    expect(roster).toEqual([{ participantId: 3, userId: 21, name: '박서준', type: 'APP', outside: false, lastSentAt: null }])
+    expect(roster).toEqual([{ participantId: 3, userId: 21, name: '박서준', type: 'APP', outside: false, lastSentAt: null, joinedAt: '2026-08-25T09:07:00' }])
   })
 
   it('참여자 조회가 실패하면 오류 메시지를 전달한다', async () => {

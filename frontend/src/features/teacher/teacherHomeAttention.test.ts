@@ -13,6 +13,7 @@ function student(overrides: Partial<StudentRosterEntry>): StudentRosterEntry {
     type: 'APP',
     outside: false,
     lastSentAt: now.toISOString(),
+    joinedAt: now.toISOString(),
     ...overrides,
   }
 }

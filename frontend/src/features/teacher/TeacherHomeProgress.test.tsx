@@ -16,9 +16,9 @@ vi.mock('../../api/teacherTripApi', () => ({
 }))
 
 const roster = [
-  { participantId: 1, userId: 11, name: '김하늘', type: 'APP' as const, outside: true, lastSentAt: new Date().toISOString() },
-  { participantId: 2, userId: 12, name: '박서준', type: 'APP' as const, outside: false, lastSentAt: new Date().toISOString() },
-  { participantId: 3, userId: 13, name: '이도윤', type: 'APP' as const, outside: false, lastSentAt: new Date().toISOString() },
+  { participantId: 1, userId: 11, name: '김하늘', type: 'APP' as const, outside: true, lastSentAt: new Date().toISOString(), joinedAt: new Date().toISOString() },
+  { participantId: 2, userId: 12, name: '박서준', type: 'APP' as const, outside: false, lastSentAt: new Date().toISOString(), joinedAt: new Date().toISOString() },
+  { participantId: 3, userId: 13, name: '이도윤', type: 'APP' as const, outside: false, lastSentAt: new Date().toISOString(), joinedAt: new Date().toISOString() },
 ]
 
 const mission = { id: 1, tripId: '7', title: '사진 미션', description: '', type: 'ACTIVITY' as const, startAt: null, endAt: null, pin: null }
