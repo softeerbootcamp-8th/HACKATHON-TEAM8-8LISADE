@@ -141,14 +141,13 @@ export function TeacherDashboard({ user, onLogout }: { user: CurrentUser; onLogo
           trips === null && !tripError ? <p className="hint" role="status">체험학습 목록을 불러오는 중입니다.</p>
           : trips !== null && trips.length === 0 ? <div className="home-empty">
             <img src={mascotLarge} alt="" className="start-mascot" />
-            <p className="hint" style={{ textAlign: 'center', margin: '16px 0 24px' }}>아직 예정된<br />현장체험학습이 없어요</p>
+            <p className="hint sub-copy" style={{ textAlign: 'center', margin: '16px 0 24px' }}>아직 예정된<br />현장체험학습이 없어요</p>
             <button type="button" className="add-trip-button" onClick={() => setManageView({ name: 'CREATE' })}>+ 현장체험학습 생성하기</button>
           </div>
           : currentTrip ? <TeacherHomeProgress
             key={currentTrip.id}
             tripId={String(currentTrip.id)}
             onViewStudents={() => setTab('STUDENTS')}
-            onFinished={async () => { await refreshTrips(); setNotice('현장체험학습을 종료했습니다.') }}
           />
           : upcomingTrips.length > 0 ? <UpcomingTrips
             trips={upcomingTrips}

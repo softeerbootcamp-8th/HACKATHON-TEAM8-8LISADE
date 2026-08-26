@@ -13,8 +13,7 @@ type StudentLocationView = {
   statusSince: number | null
 }
 
-const GPS_INTERVAL_MS = 10_000
-const UNAVAILABLE_AFTER_MS = GPS_INTERVAL_MS * 1.5
+const UNAVAILABLE_AFTER_MS = 30 * 1000
 const DEFAULT_CENTER = { latitude: 37.5238506, longitude: 126.9804702 }
 const statusLabels: Record<LocationStatus, string> = {
   NORMAL: '정상',

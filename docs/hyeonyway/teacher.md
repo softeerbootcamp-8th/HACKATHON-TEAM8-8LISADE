@@ -39,3 +39,12 @@
 - "중앙으로 복귀" 버튼과 드래그 시 자동 이동 정지 UX는 그대로 유지, 복귀 시에도 지오펜스 기준으로 돌아간다.
 
 검증: `npx vitest run`(36 files, 213 passed), `npm run lint`, `npm run build` 통과.
+
+## 위치 미수신 상태 임계값 조정 (#190)
+
+- `TeacherLocationMap.tsx`의 지도 마커 `확인불가`는 마지막 위치 수신 후 30초부터 표시한다.
+- `studentStatus.ts`의 학생 목록·홈 `위치 확인 필요`는 마지막 위치 수신 후 40초를 초과하면 표시한다. 정확히 40초인 위치는 정상 상태로 둔다.
+- 서버 `UnreachableAlertService`는 스케줄 횟수 카운터 대신 마지막 위치 수신 `Instant`를 저장하고, 50초 이상 경과 시 교사에게 `UNREACHABLE` 알림을 한 번 발송한다. 위치가 다시 수신되면 발송 상태를 해제한다.
+- `UnreachableAlertScheduler`의 기본 주기는 10초라 실제 알림 판단은 50초 경과 뒤 최대 10초 내 수행된다.
+
+검증: `npm test`(41 files, 277 passed), `npm run lint`, `npm run build`, `./gradlew test` 통과.

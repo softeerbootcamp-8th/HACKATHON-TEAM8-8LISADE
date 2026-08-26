@@ -10,8 +10,8 @@ vi.mock('../../api/teacherTripApi', () => ({
 }))
 
 vi.mock('./TeacherHomeProgress', () => ({
-  TeacherHomeProgress: ({ tripId, onViewStudents, onFinished }: { tripId: string; onViewStudents: () => void; onFinished: () => void }) =>
-    <div>진행 현황(Trip {tripId})<button type="button" onClick={onViewStudents}>학생 탭으로</button><button type="button" onClick={onFinished}>테스트 종료 완료</button></div>,
+  TeacherHomeProgress: ({ tripId, onViewStudents }: { tripId: string; onViewStudents: () => void }) =>
+    <div>진행 현황(Trip {tripId})<button type="button" onClick={onViewStudents}>학생 탭으로</button></div>,
 }))
 
 vi.mock('./TripCreationFlow', () => ({
@@ -158,18 +158,6 @@ describe('TeacherDashboard', () => {
     fireEvent.click(screen.getByRole('button', { name: '학생 탭으로' }))
 
     expect(screen.getByRole('button', { name: '학생' })).toHaveAttribute('aria-pressed', 'true')
-  })
-
-  it('체험학습 종료가 완료되면 안내 문구와 갱신된 목록을 반영한다', async () => {
-    vi.mocked(teacherTripApi.getTrips)
-      .mockResolvedValueOnce([기존체험학습])
-      .mockResolvedValueOnce([])
-    render(<TeacherDashboard user={user} />)
-    await screen.findByText('진행 현황(Trip 1)')
-
-    fireEvent.click(screen.getByRole('button', { name: '테스트 종료 완료' }))
-
-    expect(await screen.findByText('현장체험학습을 종료했습니다.')).toBeInTheDocument()
   })
 
   describe('예정(READY) 체험학습 홈 카드', () => {

@@ -8,7 +8,7 @@ export function StartScreen({ onShowLogin, onShowSignUp }: { onShowLogin: () => 
     <div className="start-body">
       <img src={mascotLarge} alt="" className="start-mascot" />
       <h1 className="start-title">두리번</h1>
-      <p className="hint">선생님 대신 두리번거릴게요</p>
+      <p className="hint sub-copy">선생님 대신 두리번거릴게요</p>
     </div>
     <div className="auth-form">
       <button type="button" onClick={onShowLogin}>로그인</button>

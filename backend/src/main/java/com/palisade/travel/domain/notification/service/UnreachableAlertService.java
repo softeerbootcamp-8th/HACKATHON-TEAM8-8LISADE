@@ -12,14 +12,16 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * 위치 확인 불가(§6.1) 감지·발송. 이탈 판정과 동일한 "카운터 임계값" 방식이되, "위치 미수신"은
- * 이벤트가 없으므로 스케줄러 tick 기준으로 센다: 보고가 오면 {@link #markReported}로 리셋,
- * tick마다 보고가 없으면 miss 카운트를 올려 임계값 도달 시 담당 교사에게 1회 발송한다.
+ * 위치 확인 불가(§6.1) 감지·발송. 위치 수신 시각을 기준으로 50초 동안 보고가 없으면
+ * 담당 교사에게 한 번 알린다.
  *
  * <p>이탈 카운터와 마찬가지로 단일 인스턴스 인메모리 상태다. 다중 인스턴스 운영 시 공유 저장소로 교체한다.
  */
@@ -27,40 +29,33 @@ import java.util.concurrent.ConcurrentMap;
 @RequiredArgsConstructor
 public class UnreachableAlertService {
 
-    /** miss tick 임계값. 스케줄러 주기(기본 60초) × 이 값 ≈ 미수신 지속 시간(≈3분). */
-    static final int UNREACHABLE_THRESHOLD = 3;
+    static final Duration UNREACHABLE_AFTER = Duration.ofSeconds(50);
 
     private final TripRepository tripRepository;
     private final UserRepository userRepository;
     private final NotificationRepository notificationRepository;
     private final PushNotificationService pushNotificationService;
+    private final Clock clock;
 
     private final ConcurrentMap<Long, State> states = new ConcurrentHashMap<>();
 
-    /** 학생 위치 보고 수신 시 호출 — 미수신 카운터와 알림 상태를 리셋한다. */
+    /** 학생 위치 보고 수신 시 호출 — 미수신 시각과 알림 상태를 리셋한다. */
     public void markReported(Long userId, Long tripId) {
         states.compute(userId, (ignored, state) -> {
             State next = state != null ? state : new State();
             next.tripId = tripId;
-            next.reportedSinceLastSweep = true;
-            next.missCount = 0;
+            next.lastReportedAt = clock.instant();
             next.alerted = false;
             return next;
         });
     }
 
-    /** 스케줄러 tick마다 호출 — 보고 없는 학생의 miss를 올리고 임계 도달 시 발송한다. */
+    /** 스케줄러 tick마다 호출 — 마지막 수신 후 50초 경과한 학생에게 알림을 발송한다. */
     @Transactional
     public void sweep() {
+        Instant now = clock.instant();
         states.forEach((userId, state) -> {
-            if (state.reportedSinceLastSweep) {
-                state.reportedSinceLastSweep = false;
-                state.missCount = 0;
-                state.alerted = false;
-                return;
-            }
-            state.missCount++;
-            if (state.missCount >= UNREACHABLE_THRESHOLD && !state.alerted) {
+            if (!state.alerted && !now.isBefore(state.lastReportedAt.plus(UNREACHABLE_AFTER))) {
                 if (sendUnreachable(userId, state.tripId)) {
                     state.alerted = true;
                 } else {
@@ -80,7 +75,7 @@ public class UnreachableAlertService {
                 .map(User::getName)
                 .orElse("학생");
         String title = "위치 확인 불가 알림";
-        String body = "%s의 위치를 3분 이상 확인하지 못했어요.".formatted(studentLabel);
+        String body = "%s의 위치를 50초 이상 확인하지 못했어요.".formatted(studentLabel);
         notificationRepository.save(Notification.create(
                 trip.getTeacherId(),
                 trip.getId(),
@@ -100,8 +95,7 @@ public class UnreachableAlertService {
 
     static final class State {
         private Long tripId;
-        private boolean reportedSinceLastSweep;
-        private int missCount;
+        private Instant lastReportedAt;
         private boolean alerted;
     }
 }

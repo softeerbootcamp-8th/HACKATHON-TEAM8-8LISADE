@@ -1,4 +1,6 @@
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css');
+@import url('https://cdn.jsdelivr.net/gh/fonts-archive/KCCGanpan/subsets/KCC-Ganpan-dynamic-subset.css');
+@import url('https://cdn.jsdelivr.net/gh/fonts-archive/GangwonEduSaeeum/subsets/GangwonEduSaeeum-dynamic-subset.css');
 
 :root {
   --color-bg: #fffdf6;
@@ -20,14 +22,17 @@
   --radius-lg: 20px;
   --radius-md: 16px;
   --radius-input: 14px;
-  font-family: 'PretendardVariable', Pretendard, Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-default: 'PretendardVariable', Pretendard, Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-brand: 'KCC Ganpan', var(--font-default);
+  --font-sub: 'GangwonEdu Saeeum', var(--font-default);
+  font-family: var(--font-default);
   color: var(--color-text);
   background: var(--color-bg);
 }
 
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; min-height: 100vh; }
-button, input { font: inherit; color: inherit; }
+button, input, select, textarea { font: inherit; color: inherit; }
 
 .sr-only {
   border: 0; clip: rect(0 0 0 0); clip-path: inset(50%); height: 1px; margin: -1px;
@@ -74,12 +79,13 @@ h2 { font-size: 17px; margin: 0; }
 .error { background: var(--color-danger-soft); color: var(--color-danger); }
 .notice { background: var(--color-success-soft); color: var(--color-success); }
 .hint { color: var(--color-text-muted); font-size: 13px; margin: 0; }
+.sub-copy { font-family: var(--font-sub); font-weight: 400; }
 
 /* Header with logo (student/teacher app shell) */
 .app-header { align-items: center; background: var(--color-bg); border-bottom: 1px solid var(--color-border); display: flex; height: 96px; justify-content: space-between; padding: 48px 16px 10px; }
 .app-header-brand { align-items: center; display: flex; gap: 6px; }
 .app-header-brand img { display: block; height: 26px; width: 30px; }
-.app-header-brand span { font-size: 19px; font-weight: 700; }
+.app-header-brand span { font-family: var(--font-brand); font-size: 19px; font-weight: 400; }
 .app-header-actions { align-items: center; display: flex; gap: 12px; }
 .app-header-actions img { display: block; height: 22px; width: 22px; }
 .avatar-chip { align-items: center; background: var(--color-accent-soft); border-radius: 15px; display: flex; font-size: 11px; font-weight: 700; height: 30px; justify-content: center; width: 30px; }
@@ -147,6 +153,7 @@ h2 { font-size: 17px; margin: 0; }
 .teacher-status-row h2 { font-size: 18px; }
 .teacher-section-title { font-size: 16px; font-weight: 700; margin: 8px 0 0; }
 .student-row { align-items: center; background: var(--color-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-card); display: flex; justify-content: space-between; min-height: 68px; padding: 12px 12px 12px 14px; }
+.teacher-home-attention-row { width: 100%; }
 .student-row .student-name { align-items: center; display: flex; font-size: 15px; font-weight: 700; gap: 6px; }
 .student-tag { border-radius: 8px; font-size: 11px; font-weight: 700; padding: 3px 8px; }
 .student-tag--danger { background: var(--color-danger-soft); color: var(--color-danger); }
@@ -243,7 +250,7 @@ h2 { font-size: 17px; margin: 0; }
 .start-screen { justify-content: space-between; min-height: 100vh; padding: 64px 0 32px; }
 .start-body { display: grid; gap: 16px; justify-items: center; margin-top: 120px; text-align: center; }
 .start-mascot { height: 96px; width: 110px; }
-.start-title { font-size: 34px; margin: 0; }
+.start-title { font-family: var(--font-brand); font-size: 34px; font-weight: 400; margin: 0; }
 .start-screen .auth-form { gap: 16px; }
 .start-secondary { background: var(--color-surface); border: 1.5px solid var(--color-border); box-shadow: none; }
 

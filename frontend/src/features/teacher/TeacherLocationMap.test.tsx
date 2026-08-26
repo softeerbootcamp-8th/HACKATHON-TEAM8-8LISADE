@@ -318,7 +318,7 @@ function context(overrides: Partial<TeacherLocationContext> = {}): TeacherLocati
   return {
     participants,
     locations: [
-      location(7, 11, 37.501, 127.001, false, 1),
+      location(7, 11, 37.501, 127.001, false, 20),
       location(7, 12, 37.502, 127.002, true, 1, 60),
       location(7, 13, 37.503, 127.003, true, 30, 60),
     ],

@@ -12,12 +12,15 @@ import com.palisade.travel.domain.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,14 +47,14 @@ class UnreachableAlertServiceTest {
     @Mock
     private PushNotificationService pushNotificationService;
 
-    @InjectMocks
     private UnreachableAlertService service;
 
-    /** markReported 직후엔 첫 sweep이 리셋을 소비하므로, 임계 도달까지 필요한 sweep 횟수. */
-    private void sweepUntilAlert() {
-        for (int i = 0; i <= UnreachableAlertService.UNREACHABLE_THRESHOLD; i++) {
-            service.sweep();
-        }
+    private final MutableClock clock = new MutableClock(Instant.parse("2026-08-25T09:00:00Z"));
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        service = new UnreachableAlertService(
+                tripRepository, userRepository, notificationRepository, pushNotificationService, clock);
     }
 
     @Test
@@ -62,8 +65,10 @@ class UnreachableAlertServiceTest {
         service.markReported(STUDENT_ID, TRIP_ID);
         ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
 
-        // when — 보고 없이 여러 tick 경과 후에도 추가 tick
-        sweepUntilAlert();
+        // when — 50초 전에는 발송하지 않고, 정확히 50초에 발송한다.
+        clock.advanceSeconds(49);
+        service.sweep();
+        clock.advanceSeconds(1);
         service.sweep();
         service.sweep();
 
@@ -72,15 +77,16 @@ class UnreachableAlertServiceTest {
         Notification saved = captor.getValue();
         assertThat(saved.getUserId()).isEqualTo(TEACHER_ID);
         assertThat(saved.getType()).isEqualTo(NotificationType.UNREACHABLE);
-        assertThat(saved.getMessage()).contains("박서준");
+        assertThat(saved.getMessage()).contains("박서준").contains("50초");
         then(pushNotificationService).should(times(1)).sendToUser(eq(TEACHER_ID), any(), any());
     }
 
     @Test
     void 보고가_계속_들어오면_확인불가_알림을_발송하지_않는다() {
         // given / when — 매 tick 전에 보고가 들어옴
-        for (int i = 0; i <= UnreachableAlertService.UNREACHABLE_THRESHOLD + 2; i++) {
+        for (int i = 0; i < 5; i++) {
             service.markReported(STUDENT_ID, TRIP_ID);
+            clock.advanceSeconds(49);
             service.sweep();
         }
 
@@ -97,11 +103,13 @@ class UnreachableAlertServiceTest {
 
         // when — 1차 미수신 알림
         service.markReported(STUDENT_ID, TRIP_ID);
-        sweepUntilAlert();
+        clock.advanceSeconds(50);
+        service.sweep();
         // 보고 재개 → 리셋
         service.markReported(STUDENT_ID, TRIP_ID);
         // 2차 미수신 알림
-        sweepUntilAlert();
+        clock.advanceSeconds(50);
+        service.sweep();
 
         // then — 2회 발송
         then(notificationRepository).should(times(2)).save(any());
@@ -115,8 +123,7 @@ class UnreachableAlertServiceTest {
         service.markReported(STUDENT_ID, TRIP_ID);
 
         // when
-        sweepUntilAlert();
-        service.sweep();
+        clock.advanceSeconds(50);
         service.sweep();
 
         // then — 발송 없음, 추적 상태 제거
@@ -140,5 +147,32 @@ class UnreachableAlertServiceTest {
 
     private User student(String name) {
         return new User(STUDENT_ID, "student01", "hash", null, name, UserRole.STUDENT, null, null, null, true, LocalDateTime.now());
+    }
+
+    private static final class MutableClock extends Clock {
+        private Instant current;
+
+        private MutableClock(Instant current) {
+            this.current = current;
+        }
+
+        void advanceSeconds(long seconds) {
+            current = current.plusSeconds(seconds);
+        }
+
+        @Override
+        public ZoneId getZone() {
+            return ZoneOffset.UTC;
+        }
+
+        @Override
+        public Clock withZone(ZoneId zone) {
+            return this;
+        }
+
+        @Override
+        public Instant instant() {
+            return current;
+        }
     }
 }

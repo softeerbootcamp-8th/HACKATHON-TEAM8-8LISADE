@@ -25,7 +25,7 @@ export function InviteCodeScreen({ onSubmit, onLogout }: { onSubmit: (code: stri
     <AppHeader showAvatar onLogout={onLogout} />
     <p className="greeting">반에 입장해 주세요</p>
     <img src={mascotInvite} alt="" className="pin-mascot" style={{ margin: '0 auto 24px' }} />
-    <p className="hint" style={{ textAlign: 'center', margin: '0 0 16px' }}>교사가 공유한 6자리 초대 코드를 입력해 주세요.</p>
+    <p className="hint sub-copy" style={{ textAlign: 'center', margin: '0 0 16px' }}>교사가 공유한 6자리 초대 코드를 입력해 주세요.</p>
     {error && <p className="error" role="alert">{error}</p>}
     <form className="auth-form" onSubmit={submit}>
       <Field label="초대 코드" id="invite-code"><CodeBoxes id="invite-code" length={6} value={code} onChange={(value) => setCode(value.toUpperCase())} required /></Field>
@@ -59,7 +59,7 @@ export function StudentHome({ trip, location, notice, currentMission, onCurrentM
       <span className={`status-pill status-pill--${status.tone}`}>{status.label}{location.lastSentAt && <span className="hint"> · {location.lastSentAt}</span>}</span>
     </div>
     <div className="screen-pad" style={{ marginBottom: 16 }}><LocationOverrideControl place={trip.place} /></div>
-    {notice && <p className="notice" role="status">{notice}</p>}
+    {notice && <p className="notice sub-copy" role="status">{notice}</p>}
     <div className="home-body">
       {currentMission ? <><section className="mission-card"><p className="mission-eyebrow">새 미션이 도착했어요!</p><h2>{currentMission.title}</h2><p>{currentMission.description ?? (currentMission.type === 'CHECK' ? '교사가 공유한 4자리 PIN을 입력해 주세요.' : '카메라로 촬영한 사진만 제출할 수 있습니다.')}</p><button onClick={onCurrentMission}>현재 미션 수행</button></section><section className="locked-mission"><p>미완료 미션을 먼저 진행해 주세요.</p></section></> : <section className="locked-mission"><p className="hint">현재 진행할 미션이 없습니다.</p></section>}
       <dl className="trip-summary"><div><dt>미션 진행률</dt><dd>{trip.missionCompleted} / {trip.missionTotal}</dd></div></dl>
@@ -97,14 +97,13 @@ export function ActivityConfirmation({ isResubmission, photoUri, onRetake, onSub
 export function CheckMissionScreen({ mission, onBack, onCompleted }: { mission: CurrentMission; onBack: () => void; onCompleted: (pin: string) => Promise<void> }) {
   const [pin, setPin] = useState('')
   const [error, setError] = useState('')
-  const [open, setOpen] = useState(false)
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); setError('')
     try { await onCompleted(pin) } catch (caught) { setError(caught instanceof Error ? caught.message : 'PIN 검증에 실패했습니다.') }
   }
   return <ScreenCard title="출석 체크">
     <BackHeader title={mission.title} onBack={onBack} />
-    {open ? <>
+    <>
       <img src={mascotPin} alt="" className="pin-mascot" />
       <p className="pin-copy">선생님이 불러 준<br />숫자를 입력해요</p>
       <form className="auth-form" onSubmit={submit} style={{ marginTop: 24, alignItems: 'center', justifyItems: 'center' }}>
@@ -112,6 +111,6 @@ export function CheckMissionScreen({ mission, onBack, onCompleted }: { mission: 
         <Field label="출석 PIN" id="attendance-pin"><CodeBoxes id="attendance-pin" length={4} value={pin} onChange={setPin} inputMode="numeric" size="lg" required /></Field>
         <button type="submit">확인</button>
       </form>
-    </> : <p className="hint screen-pad" style={{ margin: '16px 0' }}>{mission.description ?? '교사가 공유한 4자리 PIN을 입력해 주세요.'}<br /><button type="button" onClick={() => setOpen(true)} style={{ marginTop: 16 }}>출석 체크</button></p>}
+    </>
   </ScreenCard>
 }
