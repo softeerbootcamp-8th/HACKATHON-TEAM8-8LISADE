@@ -36,7 +36,6 @@ export default function App() {
   const [capturedPhotoUri, setCapturedPhotoUri] = useState('')
   const [missionNotice, setMissionNotice] = useState('')
   const [currentMission, setCurrentMission] = useState<CurrentMission | null>(null)
-  const [availableMissions, setAvailableMissions] = useState<CurrentMission[]>([])
 
   useEffect(() => {
     let disposed = false
@@ -59,7 +58,6 @@ export default function App() {
   const loadCurrentMission = async (tripId: number) => {
     const missions = await missionApi.getCurrentMissions(tripId)
     const current = missions.map((mission) => ({ ...mission, isResubmission: false }))
-    setAvailableMissions(current)
     const next = current[0] ?? null
     setCurrentMission(next)
     return next
@@ -94,7 +92,6 @@ export default function App() {
     setStudentTrip(null)
     setLocationState(null)
     setCurrentMission(null)
-    setAvailableMissions([])
     setScreen('LOGIN')
   }, [])
 
@@ -176,7 +173,6 @@ export default function App() {
     setStudentTrip(null)
     setLocationState(null)
     setCurrentMission(null)
-    setAvailableMissions([])
     setCapturedPhotoUri('')
     setMissionNotice('')
     setError('')
@@ -225,20 +221,20 @@ export default function App() {
   if (screen === 'STUDENT_NOTIFICATIONS') return <StudentNotifications onBack={() => setScreen('STUDENT_HOME')} onSelect={openStudentNotification} />
   if (screen === 'ACTIVITY_MISSION' && currentMission) return <ActivityMissionScreen mission={currentMission} onBack={() => setScreen('STUDENT_HOME')} onCaptured={(uri) => { setCapturedPhotoUri(uri); setScreen('ACTIVITY_CONFIRMATION') }} />
   if (screen === 'ACTIVITY_CONFIRMATION') return <ActivityConfirmation isResubmission={currentMission?.isResubmission ?? false} photoUri={capturedPhotoUri} onRetake={() => setScreen('ACTIVITY_MISSION')} onSubmit={async () => {
-    if (!currentMission) throw new Error('현재 미션을 찾을 수 없습니다.')
+    if (!currentMission || !studentTrip) throw new Error('현재 미션을 찾을 수 없습니다.')
     await missionApi.submitPhoto(currentMission.id, await photoUriToBlob(capturedPhotoUri))
     await clearPendingMissionPhoto()
     incrementMissionProgress()
-    setCurrentMission(availableMissions.find((mission) => mission.id !== currentMission.id) ?? null)
     setMissionNotice(currentMission.isResubmission ? '사진 미션을 재제출했습니다.' : '사진 미션을 제출했습니다.')
+    await loadCurrentMission(studentTrip.id)
     setScreen('STUDENT_HOME')
   }} />
   if (screen === 'CHECK_MISSION' && currentMission) return <CheckMissionScreen mission={currentMission} onBack={() => setScreen('STUDENT_HOME')} onCompleted={async (pin) => {
-    if (!currentMission) throw new Error('현재 미션을 찾을 수 없습니다.')
+    if (!currentMission || !studentTrip) throw new Error('현재 미션을 찾을 수 없습니다.')
     await missionApi.verifyPin(currentMission.id, pin)
     incrementMissionProgress()
-    setCurrentMission(null)
     setMissionNotice('출석 체크를 완료했습니다.')
+    await loadCurrentMission(studentTrip.id)
     setScreen('STUDENT_HOME')
   }} />
   if (screen === 'TEACHER_HOME' && currentUser) return <TeacherDashboard user={currentUser} onLogout={() => { void handleLogout() }} />
