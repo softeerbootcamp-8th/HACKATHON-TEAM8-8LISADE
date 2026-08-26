@@ -36,6 +36,10 @@ beforeEach(() => {
       return jsonResponse({ success: true, data: null })
     }
 
+    if (/^\/api\/teacher\/trips\/\d+\/(participants|locations|missions)$/.test(path)) {
+      return jsonResponse({ success: true, data: [] })
+    }
+
     throw new Error(`Unexpected API request: ${path}`)
   })
 })

@@ -9,3 +9,14 @@
 검증: `npm test` (2 test files, 14 passed), `npm run lint`, `npm run build` 통과.
 
 `@capacitor/core`는 develop에 이미 선언돼 있으며, 새 의존성 추가가 아니라 로컬 `npm install`로 설치 상태를 동기화해 백그라운드 위치 모듈의 build 문제를 해소했다.
+
+## 홈 탭 진행 현황 실 API 연동 (#115)
+
+- #17에서 mock으로 남겨뒀던 홈 탭 "진행 중" 통계 카드(참여 학생/정상 위치/미션 완료율)를 실제 API 기반 "확인이 필요한 학생" 리스트(Figma T-02)로 교체했다.
+- `teacherHomeAttention.ts`: `collectIncompleteStudentIds(boards)`가 여러 미션의 `notSubmitted[].studentId`를 합집합으로 모으고, `buildAttentionList(students, incompleteUserIds)`가 위치 이탈(`computeStudentStatus` 재사용, `MANUAL` 참가자는 제외)과 미션 미완료를 합쳐 "확인이 필요한 학생" 목록을 만든다. 이탈이 미완료보다 우선한다.
+- `TeacherHomeProgress.tsx`: `teacherStudentApi.listStudents` + `teacherMissionApi.listMissions`→`getStatusBoard` 병렬 조회로 목록을 그리고, "현장체험학습 종료"는 `TripDetail`과 동일한 2단계 확인 후 `teacherTripApi.end`를 호출한다.
+- `TeacherDashboard.tsx`의 "기준 Trip" mock select와 `teacherTrips` 배열을 제거하고, 실제 `trips`에서 `status === 'ACTIVE'`인 Trip을 헤더·홈 탭 기준으로 사용한다. `ACTIVE` Trip이 없을 때(전부 `READY`)는 안내 문구만 표시한다 — T-02 "홈 예정" 전체 화면은 후속 이슈로 미룬다.
+- 리스트 항목 클릭은 "학생" 탭으로 전환만 한다. `TeacherStudents`의 상세 화면 상태가 컴포넌트 내부에 있어 특정 학생으로 바로 딥링크하려면 상태를 끌어올리는 별도 리팩터링이 필요해 이번 스코프에서는 제외했다.
+- 파일명 함정: 같은 디렉터리에 `teacherHomeProgress.ts`(순수 함수, 소문자 시작)와 `TeacherHomeProgress.tsx`(컴포넌트)를 두자 vitest에서 `vi.mock`이 다른 모듈을 하나라도 mocking하는 순간 컴포넌트 import가 조용히 다른 파일로 뒤바뀌어 `undefined`가 되는 문제가 있었다 — 케이스만 다른 동명 파일은 같은 디렉터리에 두지 않는다(`teacherHomeAttention.ts`로 개명해 해결).
+
+검증: `npx vitest run`(33 files, 198 passed), `npm run lint`, `npm run build` 통과. 실제 배포 백엔드 연동 확인(로그인 → 교사 홈 탭 실제 화면)은 이번 세션에 로컬 백엔드가 없어 수행하지 못했다 — RTL 테스트로만 검증했다.

@@ -39,8 +39,14 @@ const missionApiMock = vi.hoisted(() => ({
   verifyPin: vi.fn(),
 }))
 
+const teacherMissionApiMock = vi.hoisted(() => ({
+  listMissions: vi.fn(),
+  getStatusBoard: vi.fn(),
+}))
+
 vi.mock('./api/missionApi', () => ({
   missionApi: missionApiMock,
+  teacherMissionApi: teacherMissionApiMock,
 }))
 
 const pushNotificationsMock = vi.hoisted(() => ({
@@ -86,6 +92,8 @@ describe('App', () => {
       if (pin !== '1234') throw new Error('PIN 번호를 확인해 주세요.')
       return { submissionId: 2, status: 'COMPLETED', imageKey: '' }
     })
+    teacherMissionApiMock.listMissions.mockReset().mockResolvedValue([])
+    teacherMissionApiMock.getStatusBoard.mockReset()
     missionPhotoRecoveryMock.captureMissionPhoto.mockResolvedValue({ uri: 'mock://mission-photo.jpg' })
     missionPhotoRecoveryMock.clearPendingMissionPhoto.mockResolvedValue(undefined)
     missionPhotoRecoveryMock.listenForRestoredMissionPhoto.mockResolvedValue({ remove: vi.fn() })
@@ -208,25 +216,20 @@ describe('App', () => {
     expect(pushNotificationsMock.register).not.toHaveBeenCalled()
   })
 
-  it('changes the teacher dashboard and shared tab context when the Trip is selected', async () => {
+  it('shows the active trip progress on the teacher home tab', async () => {
     renderApp()
 
     fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
     fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
     fireEvent.click(screen.getByRole('button', { name: '로그인' }))
 
-    expect(await screen.findByLabelText('기준 Trip')).toHaveValue('trip-1')
-    expect(await screen.findByText('참여 학생 24명')).toBeInTheDocument()
-    expect(screen.getByText('마지막 갱신: 방금 전')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '26년 5학년 2반' })).toBeInTheDocument()
+    expect(screen.getByText('진행 중')).toBeInTheDocument()
+    expect(await screen.findByText('확인이 필요한 학생이 없습니다.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '학생' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '미션' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '위치' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '관리' })).toBeInTheDocument()
-
-    fireEvent.change(screen.getByLabelText('기준 Trip'), { target: { value: 'trip-2' } })
-
-    expect(screen.getByText('서울 역사 탐방')).toBeInTheDocument()
-    expect(screen.getByText('참여 학생 18명')).toBeInTheDocument()
   })
 
   it('관리 탭의 현장체험학습 생성 버튼에서 등록 화면으로 이동한다', async () => {
