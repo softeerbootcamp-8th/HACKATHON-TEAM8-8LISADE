@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { teacherTripApi } from '../../api/teacherTripApi'
 import TeacherMissions from '../../components/TeacherMissions'
+import TeacherStudents from '../../components/TeacherStudents'
 import { Field } from '../../shared/ui/Field'
 import { ScreenCard } from '../../shared/ui/ScreenCard'
 import { AppHeader } from '../../shared/ui/AppHeader'
@@ -48,7 +49,7 @@ export function TeacherDashboard({ user }: { user: CurrentUser }) {
   const [tripError, setTripError] = useState('')
   const [showNotifications, setShowNotifications] = useState(false)
   const trip = teacherTrips.find((candidate) => candidate.id === tripId) ?? teacherTrips[0]
-  const missionTripId = trips && trips.length > 0 ? String(trips[0].id) : null
+  const activeTripId = trips && trips.length > 0 ? String(trips[0].id) : null
 
   useEffect(() => {
     let active = true
@@ -92,8 +93,10 @@ export function TeacherDashboard({ user }: { user: CurrentUser }) {
             <div className="stat-card"><p>미션 완료율 {trip.missionRate}%</p><p>미확인 제출 {trip.pendingSubmissions}건</p></div>
           </div>
           <p className="hint">마지막 갱신: {trip.updatedAt}</p>
-        </> : tab === 'MISSIONS'
-          ? (missionTripId ? <TeacherMissions key={missionTripId} tripId={missionTripId} /> : <section className="stat-card"><p className="hint">체험학습을 먼저 만들어 주세요.</p></section>)
+        </> : tab === 'STUDENTS'
+          ? (activeTripId ? <TeacherStudents key={activeTripId} tripId={activeTripId} /> : <section className="stat-card"><p className="hint">체험학습을 먼저 만들어 주세요.</p></section>)
+          : tab === 'MISSIONS'
+          ? (activeTripId ? <TeacherMissions key={activeTripId} tripId={activeTripId} /> : <section className="stat-card"><p className="hint">체험학습을 먼저 만들어 주세요.</p></section>)
           : <section className="stat-card"><p className="hint">{tabs.find((item) => item.id === tab)?.label}</p><p>{trip.title} 기준 화면입니다.</p></section>}
       </div>}
     <nav aria-label="교사 하단 탭" className="teacher-tabs">{tabs.map((item) => <button key={item.id} onClick={() => setTab(item.id)} aria-pressed={tab === item.id}><img src={item.icon} alt="" />{item.label}</button>)}</nav>
