@@ -657,9 +657,11 @@ describe('App', () => {
     })
 
     fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
+    expect(await screen.findByRole('heading', { name: '사진 가져오기' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '카메라로 촬영' }))
 
     expect(await screen.findByRole('heading', { name: '사진 확인' })).toBeInTheDocument()
-    expect(missionPhotoRecoveryMock.captureMissionPhoto).toHaveBeenCalledWith(expect.objectContaining({ id: 11 }))
+    expect(missionPhotoRecoveryMock.captureMissionPhoto).toHaveBeenCalledWith(expect.objectContaining({ id: 11 }), 'camera')
     expect(screen.getByRole('button', { name: '재촬영하기' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '제출하기' })).toBeInTheDocument()
 
@@ -669,11 +671,37 @@ describe('App', () => {
     expect(screen.getByText('2 / 3')).toBeInTheDocument()
   })
 
+  it('Given_카메라를_쓸_수_없는_환경_When_갤러리에서_선택하면_Then_사진을_그대로_제출할_수_있다', async () => {
+    await openStudentHome()
+    missionPhotoRecoveryMock.captureMissionPhoto.mockResolvedValueOnce({ uri: 'mock://gallery-photo.jpg' })
+
+    fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
+    fireEvent.click(await screen.findByRole('button', { name: '갤러리에서 선택' }))
+
+    expect(await screen.findByRole('img', { name: '촬영한 사진 미리보기' })).toHaveAttribute('src', 'mock://gallery-photo.jpg')
+    expect(missionPhotoRecoveryMock.captureMissionPhoto).toHaveBeenCalledWith(expect.objectContaining({ id: 11 }), 'gallery')
+
+    fireEvent.click(screen.getByRole('button', { name: '제출하기' }))
+    expect(await screen.findByText('사진 미션을 제출했습니다.')).toBeInTheDocument()
+  })
+
+  it('Given_사진_소스_선택_다이얼로그_When_취소를_누르면_Then_촬영_없이_학생_홈에_머문다', async () => {
+    await openStudentHome()
+
+    fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
+    fireEvent.click(await screen.findByRole('button', { name: '취소' }))
+
+    expect(screen.queryByRole('heading', { name: '사진 가져오기' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '학생 홈' })).toBeInTheDocument()
+    expect(missionPhotoRecoveryMock.captureMissionPhoto).not.toHaveBeenCalled()
+  })
+
   it('Given_사진_미션_촬영이_실패하면_Then_학생_홈에_머물며_오류를_보여준다', async () => {
     await openStudentHome()
     missionPhotoRecoveryMock.captureMissionPhoto.mockRejectedValueOnce(new Error('촬영이 취소되었습니다.'))
 
     fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
+    fireEvent.click(await screen.findByRole('button', { name: '카메라로 촬영' }))
 
     expect(await screen.findByText('촬영이 취소되었습니다.')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '학생 홈' })).toBeInTheDocument()
@@ -681,16 +709,19 @@ describe('App', () => {
     expect(screen.getByText('1 / 3')).toBeInTheDocument()
   })
 
-  it('Given_사진_확인_화면_When_재촬영하기를_누르면_Then_중간_화면_없이_카메라를_다시_연다', async () => {
+  it('Given_사진_확인_화면_When_재촬영하기를_누르면_Then_사진_소스를_다시_고르게_한다', async () => {
     await openStudentHome()
 
     fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
+    fireEvent.click(await screen.findByRole('button', { name: '카메라로 촬영' }))
     expect(await screen.findByRole('heading', { name: '사진 확인' })).toBeInTheDocument()
 
     missionPhotoRecoveryMock.captureMissionPhoto.mockResolvedValueOnce({ uri: 'mock://retake-photo.jpg' })
     fireEvent.click(screen.getByRole('button', { name: '재촬영하기' }))
+    fireEvent.click(await screen.findByRole('button', { name: '갤러리에서 선택' }))
 
     expect(await screen.findByRole('img', { name: '촬영한 사진 미리보기' })).toHaveAttribute('src', 'mock://retake-photo.jpg')
+    expect(missionPhotoRecoveryMock.captureMissionPhoto).toHaveBeenNthCalledWith(2, expect.objectContaining({ id: 11 }), 'gallery')
     expect(missionPhotoRecoveryMock.captureMissionPhoto).toHaveBeenCalledTimes(2)
     expect(screen.getByRole('heading', { name: '사진 확인' })).toBeInTheDocument()
   })
@@ -729,7 +760,7 @@ describe('App', () => {
     expect(screen.getByText('새 미션')).toBeInTheDocument()
   })
 
-  it('deep-links a mission notification directly into the camera capture for an activity mission', async () => {
+  it('deep-links a mission notification into the photo source picker for an activity mission', async () => {
     studentNotificationApiMock.list.mockResolvedValue([
       { id: 1, type: 'DEADLINE_IMMINENT', title: '마감 임박 알림', message: "'서버 사진 미션' 마감이 5분 남았어요.", createdAt: new Date().toISOString() },
     ])
@@ -737,9 +768,10 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: '알림' }))
 
     fireEvent.click(await screen.findByRole('button', { name: /마감이 5분 남았어요/ }))
+    fireEvent.click(await screen.findByRole('button', { name: '카메라로 촬영' }))
 
     expect(await screen.findByRole('heading', { name: '사진 확인' })).toBeInTheDocument()
-    expect(missionPhotoRecoveryMock.captureMissionPhoto).toHaveBeenCalledWith(expect.objectContaining({ id: 11, title: '서버 사진 미션' }))
+    expect(missionPhotoRecoveryMock.captureMissionPhoto).toHaveBeenCalledWith(expect.objectContaining({ id: 11, title: '서버 사진 미션' }), 'camera')
     expect(missionApiMock.getStudentMissionOverview).toHaveBeenCalledWith(1)
   })
 
@@ -813,6 +845,7 @@ async function completePhotoMission() {
     totalCount: 3,
   })
   fireEvent.click(screen.getByRole('button', { name: '현재 미션 수행' }))
+  fireEvent.click(await screen.findByRole('button', { name: '카메라로 촬영' }))
   fireEvent.click(await screen.findByRole('button', { name: '제출하기' }))
   await screen.findByText('사진 미션을 제출했습니다.')
 }

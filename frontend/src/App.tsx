@@ -9,9 +9,10 @@ import { LoginScreen, SignUpScreen, StartScreen } from './features/auth/AuthScre
 import { logout } from './features/auth/logout'
 import { ActivityConfirmation, CheckMissionScreen, InviteCodeScreen, LocationBlockedScreen, StudentHome, type CurrentMission } from './features/student/StudentScreens'
 import { StudentNotifications } from './features/student/StudentNotifications'
+import { PhotoSourceDialog } from './features/student/PhotoSourceDialog'
 import { TeacherDashboard } from './features/teacher/TeacherDashboard'
 import { pushNotifications } from './notifications/pushNotifications'
-import { captureMissionPhoto, clearPendingMissionPhoto, listenForRestoredMissionPhoto } from './native/missionPhotoRecovery'
+import { captureMissionPhoto, clearPendingMissionPhoto, listenForRestoredMissionPhoto, type PhotoSource } from './native/missionPhotoRecovery'
 import type { CurrentUser, SignUpInput } from './types/auth'
 import type { StudentNotification } from './types/notification'
 import type { LocationTrackingState, StudentTrip } from './types/studentTrip'
@@ -36,6 +37,7 @@ export default function App() {
   const [capturedPhotoUri, setCapturedPhotoUri] = useState('')
   const [missionNotice, setMissionNotice] = useState('')
   const [currentMission, setCurrentMission] = useState<CurrentMission | null>(null)
+  const [photoSourceMission, setPhotoSourceMission] = useState<CurrentMission | null>(null)
 
   useEffect(() => {
     let disposed = false
@@ -203,11 +205,17 @@ export default function App() {
   }
 
   // Figma S-04-1: 활동(사진) 미션은 중간 확인 화면 없이 바로 카메라(또는 웹 파일 선택기)를 연다.
+  // 단, 카메라를 쓸 수 없는 환경(예: 시연 장소)도 있어 촬영 직전에 카메라/갤러리 중 하나를
+  // 고르는 다이얼로그만 끼워 넣는다(#235) — 고른 뒤부터는 원래 흐름과 동일하다.
   // 성공하면 사진 확인 화면으로, 취소/실패하면 학생 홈에 머문 채 안내만 보여준다(재촬영도 같은 함수를 그대로 재사용한다).
-  const captureActivityMission = async (mission: CurrentMission) => {
+  const captureActivityMission = (mission: CurrentMission) => {
     setMissionNotice('')
+    setPhotoSourceMission(mission)
+  }
+
+  const captureWithSource = async (mission: CurrentMission, source: PhotoSource) => {
     try {
-      const photo = await captureMissionPhoto(mission)
+      const photo = await captureMissionPhoto(mission, source)
       setCapturedPhotoUri(photo.uri)
       setScreen('ACTIVITY_CONFIRMATION')
     } catch (caughtError) {
@@ -235,20 +243,32 @@ export default function App() {
 
   if (screen === 'STUDENT_INVITE') return <InviteCodeScreen onSubmit={joinTrip} onLogout={() => { void handleLogout() }} />
   if (screen === 'STUDENT_PERMISSION_BLOCKED') return <LocationBlockedScreen onOpenSettings={retryLocationPermission} />
-  if (screen === 'STUDENT_HOME' && studentTrip && locationState) return <StudentHome trip={studentTrip} location={locationState} notice={missionNotice} currentMission={currentMission} onCurrentMission={() => {
-    if (!currentMission) return
-    if (currentMission.type === 'CHECK') { setScreen('CHECK_MISSION'); return }
-    void captureActivityMission(currentMission)
-  }} onBellClick={() => setScreen('STUDENT_NOTIFICATIONS')} onLogout={() => { void handleLogout() }} />
+  if (screen === 'STUDENT_HOME' && studentTrip && locationState) return <>
+    <StudentHome trip={studentTrip} location={locationState} notice={missionNotice} currentMission={currentMission} onCurrentMission={() => {
+      if (!currentMission) return
+      if (currentMission.type === 'CHECK') { setScreen('CHECK_MISSION'); return }
+      captureActivityMission(currentMission)
+    }} onBellClick={() => setScreen('STUDENT_NOTIFICATIONS')} onLogout={() => { void handleLogout() }} />
+    {photoSourceMission && <PhotoSourceDialog
+      onChoose={(source) => { const mission = photoSourceMission; setPhotoSourceMission(null); void captureWithSource(mission, source) }}
+      onClose={() => setPhotoSourceMission(null)}
+    />}
+  </>
   if (screen === 'STUDENT_NOTIFICATIONS') return <StudentNotifications onBack={() => setScreen('STUDENT_HOME')} onSelect={openStudentNotification} />
-  if (screen === 'ACTIVITY_CONFIRMATION') return <ActivityConfirmation isResubmission={currentMission?.isResubmission ?? false} photoUri={capturedPhotoUri} onRetake={() => { if (currentMission) void captureActivityMission(currentMission) }} onSubmit={async () => {
-    if (!currentMission || !studentTrip) throw new Error('현재 미션을 찾을 수 없습니다.')
-    await missionApi.submitPhoto(currentMission.id, await photoUriToBlob(capturedPhotoUri))
-    await clearPendingMissionPhoto()
-    setMissionNotice(currentMission.isResubmission ? '사진 미션을 재제출했습니다.' : '사진 미션을 제출했습니다.')
-    await loadCurrentMission(studentTrip.id)
-    setScreen('STUDENT_HOME')
-  }} />
+  if (screen === 'ACTIVITY_CONFIRMATION') return <>
+    <ActivityConfirmation isResubmission={currentMission?.isResubmission ?? false} photoUri={capturedPhotoUri} onRetake={() => { if (currentMission) captureActivityMission(currentMission) }} onSubmit={async () => {
+      if (!currentMission || !studentTrip) throw new Error('현재 미션을 찾을 수 없습니다.')
+      await missionApi.submitPhoto(currentMission.id, await photoUriToBlob(capturedPhotoUri))
+      await clearPendingMissionPhoto()
+      setMissionNotice(currentMission.isResubmission ? '사진 미션을 재제출했습니다.' : '사진 미션을 제출했습니다.')
+      await loadCurrentMission(studentTrip.id)
+      setScreen('STUDENT_HOME')
+    }} />
+    {photoSourceMission && <PhotoSourceDialog
+      onChoose={(source) => { const mission = photoSourceMission; setPhotoSourceMission(null); void captureWithSource(mission, source) }}
+      onClose={() => setPhotoSourceMission(null)}
+    />}
+  </>
   if (screen === 'CHECK_MISSION' && currentMission) return <CheckMissionScreen mission={currentMission} onBack={() => setScreen('STUDENT_HOME')} onCompleted={async (pin) => {
     if (!currentMission || !studentTrip) throw new Error('현재 미션을 찾을 수 없습니다.')
     await missionApi.verifyPin(currentMission.id, pin)
