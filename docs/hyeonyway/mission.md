@@ -96,3 +96,11 @@
 - `MANUAL` 참가자는 `userId`가 없어 status-board와 연결할 수 없으므로 위치 미추적 안내만 보여 주고 미션 목록은 생략한다.
 
 검증: 프런트 `npm test`(41파일 259개), `npm run build` 통과.
+
+## 미션 종류 태그 색깔 미반영 수정 (#204)
+
+- `TeacherMissions.tsx`의 미션 리스트 카드가 `mission.type` 값과 무관하게 항상 `badge badge-type` 하나만 렌더링해, "활동"과 "출석 체크" 태그가 항상 같은 회색(`#eef1f7`/`#556`)으로 보이던 버그를 고쳤다.
+- `missionStatusBadgeClass`와 같은 패턴으로 `missionTypeBadgeClass(type)`를 추가해 `ACTIVITY` → `badge-type--activity`, `CHECK` → `badge-type--check` 클래스를 부여한다.
+- 이번 세션에는 Figma MCP 연결이 끊겨 있어 시안의 실제 색상 값을 조회하지 못했다. 대신 `index.css`에 이미 있는 두 가지 톤을 재사용했다: `badge-type--activity`는 `.upcoming-trip-badge`와 같은 계열의 앰버(연한 배경 `var(--color-accent-soft)` + 텍스트 `#a16207`), `badge-type--check`는 이 앱에 아직 없던 청색 계열(연한 배경 `rgb(59 130 246 / 12%)` + 텍스트 `#3b5bdb`)을 새로 추가했다. 둘 다 옆의 상태 배지(`badge-status-active`의 초록, `noti-badge`류의 빨강/주황)와 색이 겹치지 않도록 골랐다. 실제 Figma 값과 다를 수 있으므로 디자인 확인 시 재조정이 필요하다.
+
+검증: 프런트 `npx vitest run`(42파일 279개), `npm run lint`, `npm run build` 모두 통과.
