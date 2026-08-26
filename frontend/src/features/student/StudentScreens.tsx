@@ -34,14 +34,6 @@ export function InviteCodeScreen({ onSubmit }: { onSubmit: (code: string) => Pro
   </ScreenCard>
 }
 
-export function LocationPermissionScreen({ onAllow, onDeny }: { onAllow: () => Promise<void>; onDeny: () => void }) {
-  return <main className="app-shell"><section className="screen">
-    <h1 className="page-title">위치 권한</h1>
-    <p className="hint screen-pad" style={{ marginBottom: 24 }}>안전 확인을 위해 백그라운드 위치 권한이 필요합니다.</p>
-    <div className="auth-form"><button onClick={onAllow}>위치 권한 허용</button><button className="text-button" onClick={onDeny}>지금은 허용하지 않기</button></div>
-  </section></main>
-}
-
 export function LocationBlockedScreen({ onOpenSettings }: { onOpenSettings: () => Promise<void> }) {
   return <main className="app-shell"><section className="screen">
     <h1 className="page-title">위치 권한 필요</h1>

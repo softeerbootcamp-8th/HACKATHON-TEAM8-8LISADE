@@ -2,6 +2,7 @@ import type { CurrentUser, LoginInput, SignUpInput } from '../types/auth'
 import { csrfJsonHeaders, request } from './httpClient'
 
 export interface AuthApi {
+  me(): Promise<CurrentUser>
   login(input: LoginInput): Promise<CurrentUser>
   signUp(input: SignUpInput): Promise<void>
   logout(): Promise<void>
@@ -17,6 +18,9 @@ async function post<T>(path: string, payload?: unknown): Promise<T> {
 }
 
 export const authApi: AuthApi = {
+  me() {
+    return request<CurrentUser>('/api/auth/me')
+  },
   login(input) {
     return post<CurrentUser>('/api/auth/login', input)
   },
