@@ -1,5 +1,5 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "http://3.34.148.229:8080/api/:path*" }
+    { "source": "/api/:path*", "destination": "$BACKEND_ORIGIN/api/:path*" }
   ]
 }
