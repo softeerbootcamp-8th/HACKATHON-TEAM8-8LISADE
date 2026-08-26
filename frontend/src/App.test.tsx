@@ -21,10 +21,29 @@ vi.mock('./api/missionApi', () => ({
   missionApi: missionApiMock,
 }))
 
+const pushNotificationsMock = vi.hoisted(() => ({
+  register: vi.fn(),
+  unregister: vi.fn(),
+}))
+
+vi.mock('./notifications/pushNotifications', () => ({
+  pushNotifications: pushNotificationsMock,
+}))
+
+const missionPhotoRecoveryMock = vi.hoisted(() => ({
+  captureMissionPhoto: vi.fn(),
+  clearPendingMissionPhoto: vi.fn(),
+  listenForRestoredMissionPhoto: vi.fn(),
+}))
+
+vi.mock('./native/missionPhotoRecovery', () => missionPhotoRecoveryMock)
+
 import App from './App'
 
 describe('App', () => {
   beforeEach(() => {
+    pushNotificationsMock.register.mockReset().mockResolvedValue(undefined)
+    pushNotificationsMock.unregister.mockReset().mockResolvedValue(undefined)
     missionApiMock.getCurrentMissions.mockResolvedValue([
       { id: 11, tripId: 1, title: '서버 사진 미션', description: '서버에서 가져온 미션입니다.', type: 'ACTIVITY', startAt: null, endAt: null },
       { id: 12, tripId: 1, title: '경복궁 출석 체크', description: '교사가 공유한 4자리 PIN을 입력해 주세요.', type: 'CHECK', startAt: null, endAt: null },
@@ -34,6 +53,9 @@ describe('App', () => {
       if (pin !== '1234') throw new Error('PIN 번호를 확인해 주세요.')
       return { submissionId: 2, status: 'COMPLETED', imageKey: '' }
     })
+    missionPhotoRecoveryMock.captureMissionPhoto.mockResolvedValue({ uri: 'mock://mission-photo.jpg' })
+    missionPhotoRecoveryMock.clearPendingMissionPhoto.mockResolvedValue(undefined)
+    missionPhotoRecoveryMock.listenForRestoredMissionPhoto.mockResolvedValue({ remove: vi.fn() })
   })
 
   it('shows the start screen before a session is established', () => {
@@ -119,6 +141,40 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: '교사 홈' })).toBeInTheDocument()
   })
 
+  it('로그인에 성공하면 이 기기의 push 등록을 시도한다', async () => {
+    renderApp()
+
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+
+    await screen.findByRole('heading', { name: '교사 홈' })
+    expect(pushNotificationsMock.register).toHaveBeenCalled()
+  })
+
+  it('알림 권한을 거부해 push 등록이 실패해도 로그인 흐름을 막지 않는다', async () => {
+    pushNotificationsMock.register.mockRejectedValue(new Error('알림 권한이 거부되었습니다.'))
+    renderApp()
+
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+
+    expect(await screen.findByRole('heading', { name: '교사 홈' })).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('로그인하지 않으면 push를 등록하지 않는다', async () => {
+    renderApp()
+
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'wrong-password' } })
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+
+    await screen.findByRole('alert')
+    expect(pushNotificationsMock.register).not.toHaveBeenCalled()
+  })
+
   it('changes the teacher dashboard and shared tab context when the Trip is selected', async () => {
     renderApp()
 
@@ -127,7 +183,7 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: '로그인' }))
 
     expect(await screen.findByLabelText('기준 Trip')).toHaveValue('trip-1')
-    expect(screen.getByText('참여 학생 24명')).toBeInTheDocument()
+    expect(await screen.findByText('참여 학생 24명')).toBeInTheDocument()
     expect(screen.getByText('마지막 갱신: 방금 전')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '학생' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '미션' })).toBeInTheDocument()
@@ -138,6 +194,113 @@ describe('App', () => {
 
     expect(screen.getByText('서울 역사 탐방')).toBeInTheDocument()
     expect(screen.getByText('참여 학생 18명')).toBeInTheDocument()
+  })
+
+  it('관리 탭의 현장체험학습 생성 버튼에서 등록 화면으로 이동한다', async () => {
+    // given
+    renderApp()
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+    await screen.findByRole('heading', { name: '교사 홈' })
+
+    // when
+    fireEvent.click(screen.getByRole('button', { name: '관리' }))
+    fireEvent.click(await screen.findByRole('button', { name: '현장체험학습 추가하기' }))
+
+    // then
+    expect(screen.getByRole('heading', { name: '현장체험학습 등록' })).toBeInTheDocument()
+    expect(screen.getByLabelText('제목')).toBeInTheDocument()
+    expect(screen.getByLabelText('일자')).toHaveAttribute('type', 'date')
+    expect(screen.getByLabelText('장소')).toBeInTheDocument()
+  })
+
+  it('교사가_관리_탭을_열면_자신의_정보와_체험학습_목록을_본다', async () => {
+    // given
+    renderApp()
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+
+    // when
+    fireEvent.click(await screen.findByRole('button', { name: '관리' }))
+
+    // then
+    expect(await screen.findByRole('heading', { name: '현장체험학습 관리' })).toBeInTheDocument()
+    expect(screen.getByText('고심 선생님')).toBeInTheDocument()
+    expect(screen.getByText('010-1234-1234')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '26년 5학년 2반' })).toBeInTheDocument()
+    expect(screen.getByText('2026. 09. 12 · 국립중앙박물관')).toBeInTheDocument()
+    expect(screen.getByText('진행 중')).toBeInTheDocument()
+    expect(screen.getByText('대기')).toBeInTheDocument()
+    expect(screen.getByText('완료')).toBeInTheDocument()
+  })
+
+  it('관리_화면은_공통_상단바를_렌더링한다', async () => {
+    // given
+    renderApp()
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+
+    // when
+    fireEvent.click(await screen.findByRole('button', { name: '관리' }))
+
+    // then
+    expect(await screen.findByRole('heading', { name: '현장체험학습 관리' })).toBeInTheDocument()
+    expect(screen.getByRole('banner')).toHaveTextContent('두리번')
+  })
+
+  it('관리_화면은_공통_하단탭을_렌더링한다', async () => {
+    // given
+    renderApp()
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+
+    // when
+    fireEvent.click(await screen.findByRole('button', { name: '관리' }))
+
+    // then
+    expect(await screen.findByRole('heading', { name: '현장체험학습 관리' })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: '교사 하단 탭' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '관리' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('교사_체험학습_목록_조회가_실패하면_오류를_안내한다', async () => {
+    // given
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = input.toString()
+      if (path === '/api/auth/csrf') return apiResponse({ success: true, data: { token: 'csrf', headerName: 'X-CSRF-TOKEN' } })
+      if (path === '/api/auth/login') return apiResponse({ success: true, data: { id: 1, loginId: 'teacher01', name: '고심', phoneNumber: '01012341234', role: 'TEACHER' } })
+      if (path === '/api/teacher/trips') return apiResponse({ success: false, message: '체험학습 목록을 불러오지 못했습니다.' }, 500)
+      throw new Error(`Unexpected request: ${path} ${init?.method ?? 'GET'}`)
+    })
+    renderApp()
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+
+    // when
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+    fireEvent.click(await screen.findByRole('button', { name: '관리' }))
+
+    // then
+    expect(await screen.findByRole('alert')).toHaveTextContent('체험학습 목록을 불러오지 못했습니다.')
+  })
+
+  it('생성한_체험학습이_없으면_빈_목록을_안내한다', async () => {
+    // given
+    vi.stubGlobal('fetch', teacherFetch({ success: true, data: [] }))
+    renderApp()
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'teacher01' } })
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'password1234' } })
+
+    // when
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }))
+    fireEvent.click(await screen.findByRole('button', { name: '관리' }))
+
+    // then
+    expect(await screen.findByText('아직 생성한 현장체험학습이 없습니다.')).toBeInTheDocument()
   })
 
   it('takes a student without a Trip to the invite code screen after login', async () => {
@@ -252,4 +415,18 @@ async function completePhotoMission() {
   fireEvent.click(await screen.findByRole('button', { name: '촬영하기' }))
   fireEvent.click(await screen.findByRole('button', { name: '제출하기' }))
   await screen.findByText('사진 미션을 제출했습니다.')
+}
+
+function apiResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+}
+
+function teacherFetch(tripsResponse: unknown) {
+  return async (input: RequestInfo | URL) => {
+    const path = input.toString()
+    if (path === '/api/auth/csrf') return apiResponse({ success: true, data: { token: 'csrf', headerName: 'X-CSRF-TOKEN' } })
+    if (path === '/api/auth/login') return apiResponse({ success: true, data: { id: 1, loginId: 'teacher01', name: '고심', phoneNumber: '01012341234', role: 'TEACHER' } })
+    if (path === '/api/teacher/trips') return apiResponse(tripsResponse)
+    throw new Error(`Unexpected request: ${path}`)
+  }
 }

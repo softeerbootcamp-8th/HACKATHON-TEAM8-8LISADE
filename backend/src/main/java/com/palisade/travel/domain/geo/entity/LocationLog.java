@@ -6,7 +6,10 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -14,6 +17,8 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @Table(name = "location_log")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class LocationLog {
 
     @Id
@@ -35,19 +40,6 @@ public class LocationLog {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
-    protected LocationLog() {
-    }
-
-    public LocationLog(Long id, Long tripId, Long userId, BigDecimal latitude, BigDecimal longitude,
-                       LocalDateTime createdAt) {
-        this.id = id;
-        this.tripId = tripId;
-        this.userId = userId;
-        this.latitude = latitude;
-        this.longitude = longitude;
-        this.createdAt = createdAt;
-    }
 
     public static LocationLog create(Long tripId, Long userId, BigDecimal latitude, BigDecimal longitude,
                                      LocalDateTime createdAt) {

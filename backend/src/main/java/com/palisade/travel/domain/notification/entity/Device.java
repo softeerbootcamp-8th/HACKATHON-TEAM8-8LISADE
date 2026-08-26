@@ -8,13 +8,18 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @Table(name = "device")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class Device {
 
     @Id
@@ -34,17 +39,6 @@ public class Device {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
-
-    protected Device() {
-    }
-
-    public Device(Long id, Long userId, String fcmToken, DevicePlatform platform, LocalDateTime updatedAt) {
-        this.id = id;
-        this.userId = userId;
-        this.fcmToken = fcmToken;
-        this.platform = platform;
-        this.updatedAt = updatedAt;
-    }
 
     public static Device create(Long userId, String fcmToken, DevicePlatform platform) {
         return new Device(null, userId, fcmToken, platform, LocalDateTime.now());

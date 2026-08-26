@@ -6,7 +6,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -14,6 +16,7 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @Table(name = "current_location")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CurrentLocation {
 
     @Id
@@ -39,8 +42,8 @@ public class CurrentLocation {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    protected CurrentLocation() {
-    }
+    @Column(name = "outside_since")
+    private LocalDateTime outsideSince;
 
     public CurrentLocation(Long id, Long userId, Long tripId, BigDecimal latitude, BigDecimal longitude,
                            boolean isOutside, LocalDateTime updatedAt) {
@@ -51,6 +54,7 @@ public class CurrentLocation {
         this.longitude = longitude;
         this.isOutside = isOutside;
         this.updatedAt = updatedAt;
+        this.outsideSince = isOutside ? updatedAt : null;
     }
 
     public static CurrentLocation create(Long userId, Long tripId, BigDecimal latitude, BigDecimal longitude,
@@ -61,6 +65,11 @@ public class CurrentLocation {
     public void update(BigDecimal latitude, BigDecimal longitude, boolean isOutside, LocalDateTime updatedAt) {
         this.latitude = latitude;
         this.longitude = longitude;
+        if (isOutside && (!this.isOutside || this.outsideSince == null)) {
+            this.outsideSince = updatedAt;
+        } else if (!isOutside) {
+            this.outsideSince = null;
+        }
         this.isOutside = isOutside;
         this.updatedAt = updatedAt;
     }

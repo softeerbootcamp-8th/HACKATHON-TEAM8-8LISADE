@@ -6,13 +6,18 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
 @Entity
 @Getter
 @Table(name = "geofence_point")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class GeofencePoint {
 
     @Id
@@ -31,17 +36,6 @@ public class GeofencePoint {
 
     @Column(name = "longitude", nullable = false, precision = 10, scale = 7)
     private BigDecimal longitude;
-
-    protected GeofencePoint() {
-    }
-
-    public GeofencePoint(Long id, Long geofenceId, Integer sequence, BigDecimal latitude, BigDecimal longitude) {
-        this.id = id;
-        this.geofenceId = geofenceId;
-        this.sequence = sequence;
-        this.latitude = latitude;
-        this.longitude = longitude;
-    }
 
     public static GeofencePoint create(Long geofenceId, Integer sequence, BigDecimal latitude, BigDecimal longitude) {
         return new GeofencePoint(null, geofenceId, sequence, latitude, longitude);

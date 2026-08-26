@@ -29,3 +29,16 @@
 - Firebase 콘솔에 Android 앱(`com.softeerbootcamp.eightlisade`) 등록, `google-services.json` 추가 완료(`.gitignore` 처리). 실기기 push 수신 검증은 로그인 연동 완료 후 진행한다.
 
 검증: `npx tsc -b`, `npm run lint`, `npx vitest run`(신규 테스트 포함 전체 22개), `npm run build` 통과. Android debug build는 로컬에 Android SDK가 없어 CI로 확인.
+
+## 로그인/로그아웃 push 연동 (#40)
+
+#36과 #29에서 "실제 로그인/로그아웃 플로우가 붙는 시점에 연결해야 한다"고 남겨둔 호출부를 실제로 연결했다. 화면(#21)은 이 이슈 범위가 아니다.
+
+- `api/httpClient.ts`를 새로 만들어 `authApi`에만 있던 CSRF 토큰 조회(`/api/auth/csrf`)와 `ApiResponse` 언래핑을 공용화했다. `notificationApi`가 이걸 재사용하면서 기기 등록/해제에도 CSRF 헤더가 붙는다 — 기존에는 `credentials: 'include'`만 있어서 실제 세션이 붙는 순간 403이 날 코드였다.
+- `DeviceController`가 204 No Content로 응답하므로 `httpClient.sendJson()`은 성공 본문을 파싱하지 않는다. `request()`(=`ApiResponse` 언래핑)를 그대로 쓰면 빈 본문 때문에 항상 실패로 판정된다. 실패 시에만 본문에서 `message`를 꺼낸다.
+- `notificationApi`가 이제 실패 시 예외를 던진다(기존에는 응답을 통째로 무시). 이 때문에 Android 토큰 갱신 콜백의 재등록 호출(`await` 안 됨)이 unhandled rejection이 될 수 있어 콜백 안에서 잡아준다.
+- **로그아웃 시 지울 토큰은 저장소에 남기지 않고 "메모리 기억 + 없으면 FCM 재조회"로 처리한다.** `backgroundLocation`이 세션/추적 상태를 저장하지 않고 네이티브에 `getStatus()`로 되묻는 것과 같은 방침이다(repo 전체에 `localStorage` 사용처 0건). 백그라운드 위치 전송(#1) 중 Android 프로세스가 죽었다 살아나는 사이 FCM이 토큰을 갱신하면 저장해 둔 값은 stale이 되고, 그 상태로 로그아웃하면 엉뚱한 토큰을 지우고 진짜 토큰은 서버에 남아 **로그아웃한 기기에 push가 계속 간다**. 재조회는 항상 현재 토큰을 준다.
+- `features/auth/logout.ts`의 `createLogout(push, api)`가 `push.unregister()` → `authApi.logout()` 순서를 강제한다. 서버 토큰 삭제에 세션 쿠키가 필요하므로 순서가 뒤집히면 안 된다. push 해제 실패는 삼키고 로그아웃은 진행한다. #21이 여기에 `backgroundLocation.stopTracking()`만 추가하면 되도록 조합 함수로 분리했다 — 위치 중지는 #21 범위라 넣지 않았다.
+- 로그인 성공 시 push 등록은 `await`하지 않는다. 알림 권한 프롬프트가 홈 진입을 막지 않고, FCM 장애가 로그인 실패로 번지지 않는다.
+
+검증: `npm test`(신규 13개 포함 전체 84개), `npm run build`, `npm run lint` 통과. `App.tsx`에 firebase/Capacitor 의존이 import 그래프로 새로 들어와서 dev server를 띄워 시작→로그인 화면 진입까지 확인했고 콘솔 에러 0건이었다. 실제 push 등록/해제 end-to-end(실기기·실브라우저)는 로그아웃 화면(#21)이 나온 뒤 진행한다.

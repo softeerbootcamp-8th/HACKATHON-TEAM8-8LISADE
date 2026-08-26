@@ -74,3 +74,22 @@ PR #38(#13)에서 `LocationService`에 TODO로 남겨 두었던 이탈 알림 �
 - `./gradlew build` — BUILD SUCCESSFUL, 백엔드 전체 테스트 통과.
 - `LocationServiceTest`에 추가한 시나리오: 12회 도달 시 교사 대상 1회 발송
   (본문에 학생 이름 포함), 11회까지 미발송, 15회까지 반복해도 1회만 발송.
+
+## Issue #51: 이탈 알림 발행 시 Notification 이력 저장
+
+#45는 push 발행만 했고 DB 기록을 남기지 않아, 교사가 이후 알림 이력을 다시
+볼 수 없었다. `Notification` 엔티티/`NotificationType.RANGE_EXIT`는 있었지만
+쓰는 코드가 없었으므로, 이탈 push 발행과 함께 알림 레코드를 저장하도록 보강했다.
+
+### 구현 구조
+
+- `NotificationRepository`(JpaRepository) 신규 추가.
+- `LocationService.sendDepartureAlert()`에서 push 발행과 동일 내용으로
+  `Notification.create(teacherId, tripId, null, RANGE_EXIT, title, body)` 저장.
+  push 수신자와 저장 대상(`userId`)은 모두 담당 교사로 일치시켰다.
+
+### 검증
+
+- `./gradlew build` — BUILD SUCCESSFUL, 백엔드 전체 테스트 통과.
+- `LocationServiceTest`: 12회 도달 시 교사 대상 Notification 1건 저장(userId/
+  tripId/type/message 검증), 11회까지 미저장, 15회까지 반복해도 1건만 저장.

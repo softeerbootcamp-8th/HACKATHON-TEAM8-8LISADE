@@ -9,3 +9,13 @@ server:
       timeout: 30m
       cookie:
         http-only: true
+
+app:
+  security:
+    cors:
+      allowed-origins:
+        - http://localhost:5173
+        - http://localhost:5174
+    csrf-cookie:
+      secure: false
+      same-site: Lax

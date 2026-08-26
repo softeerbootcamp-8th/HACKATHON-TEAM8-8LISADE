@@ -6,22 +6,19 @@ import com.palisade.travel.domain.user.entity.UserRole;
 import com.palisade.travel.domain.user.exception.UserErrorCode;
 import com.palisade.travel.domain.user.repository.UserRepository;
 import com.palisade.travel.global.error.ApiException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class UserSignUpService {
 
     private static final java.util.regex.Pattern KOREAN_MOBILE_NUMBER = java.util.regex.Pattern.compile("^01[016789]\\d{7,8}$");
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-
-    public UserSignUpService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
 
     @Transactional
     public void signUp(SignUpRequest request) {

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { authApi } from './api/authApi'
 import { mockLocationTrackingAdapter } from './api/locationTrackingApi'
 import { missionApi } from './api/missionApi'
@@ -7,18 +7,23 @@ import { resolvePostLoginScreen, type Screen } from './features/app/appFlow'
 import { LoginScreen, SignUpScreen, StartScreen } from './features/auth/AuthScreens'
 import { ActivityConfirmation, ActivityMissionScreen, CheckMissionScreen, InviteCodeScreen, LocationBlockedScreen, LocationPermissionScreen, StudentHome, type CurrentMission } from './features/student/StudentScreens'
 import { TeacherDashboard } from './features/teacher/TeacherDashboard'
-import type { SignUpInput } from './types/auth'
+import { pushNotifications } from './notifications/pushNotifications'
+import { clearPendingMissionPhoto, listenForRestoredMissionPhoto } from './native/missionPhotoRecovery'
+import type { CurrentUser, SignUpInput } from './types/auth'
 import type { LocationTrackingState, StudentTrip } from './types/studentTrip'
 
 const initialSignUpInput: SignUpInput = { role: 'STUDENT', name: '', loginId: '', password: '', passwordConfirmation: '', phoneNumber: '', parentNumber: '', guardianConsent: false }
 const koreanMobileNumber = /^01[016789]\d{7,8}$/
 const normalizePhoneNumber = (value?: string) => value?.replace(/[-\s]/g, '') ?? ''
+// 알림 권한 프롬프트와 FCM 장애가 로그인 진행을 막지 않도록 기다리지 않고 던져둔다.
+const registerPushNotifications = () => { void pushNotifications.register().catch(() => undefined) }
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('START')
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
   const [signUpInput, setSignUpInput] = useState<SignUpInput>(initialSignUpInput)
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [studentTrip, setStudentTrip] = useState<StudentTrip | null>(null)
@@ -28,6 +33,20 @@ export default function App() {
   const [currentMission, setCurrentMission] = useState<CurrentMission | null>(null)
   const [availableMissions, setAvailableMissions] = useState<CurrentMission[]>([])
 
+  useEffect(() => {
+    let disposed = false
+    let removeListener: (() => Promise<void>) | undefined
+    void listenForRestoredMissionPhoto(({ mission, uri }) => {
+      setCurrentMission(mission)
+      setCapturedPhotoUri(uri)
+      setScreen('ACTIVITY_CONFIRMATION')
+    }).then((listener) => {
+      if (disposed) void listener.remove()
+      else removeListener = listener.remove
+    })
+    return () => { disposed = true; if (removeListener) void removeListener() }
+  }, [])
+
   const showLogin = () => { setError(''); setScreen('LOGIN') }
   const showSignUp = () => { setError(''); setNotice(''); setScreen('SIGN_UP') }
   const incrementMissionProgress = () => setStudentTrip((trip) => trip ? { ...trip, missionCompleted: Math.min(trip.missionCompleted + 1, trip.missionTotal) } : trip)
@@ -36,6 +55,8 @@ export default function App() {
     event.preventDefault(); setError('')
     try {
       const user = await authApi.login({ loginId, password })
+      setCurrentUser(user)
+      registerPushNotifications()
       if (user.role === 'TEACHER') { setScreen(resolvePostLoginScreen({ role: user.role })); return }
       const [trip, tracking] = await Promise.all([studentTripApi.getActiveTrip(), mockLocationTrackingAdapter.getState()])
       setStudentTrip(trip); setLocationState(tracking)
@@ -80,6 +101,7 @@ export default function App() {
   if (screen === 'ACTIVITY_CONFIRMATION') return <ActivityConfirmation isResubmission={currentMission?.isResubmission ?? false} photoUri={capturedPhotoUri} onRetake={() => setScreen('ACTIVITY_MISSION')} onSubmit={async () => {
     if (!currentMission) throw new Error('현재 미션을 찾을 수 없습니다.')
     await missionApi.submitPhoto(currentMission.id, await photoUriToBlob(capturedPhotoUri))
+    await clearPendingMissionPhoto()
     incrementMissionProgress()
     setCurrentMission(availableMissions.find((mission) => mission.id !== currentMission.id) ?? null)
     setMissionNotice(currentMission.isResubmission ? '사진 미션을 재제출했습니다.' : '사진 미션을 제출했습니다.')
@@ -93,7 +115,7 @@ export default function App() {
     setMissionNotice('출석 체크를 완료했습니다.')
     setScreen('STUDENT_HOME')
   }} />
-  if (screen === 'TEACHER_HOME') return <TeacherDashboard />
+  if (screen === 'TEACHER_HOME' && currentUser) return <TeacherDashboard user={currentUser} />
   if (screen === 'SIGN_UP') return <SignUpScreen input={signUpInput} error={error} onChange={setSignUpInput} onSubmit={handleSignUp} onCancel={showLogin} />
   if (screen === 'LOGIN') return <LoginScreen loginId={loginId} password={password} notice={notice} error={error} onLoginIdChange={setLoginId} onPasswordChange={setPassword} onSubmit={handleLogin} onShowSignUp={showSignUp} />
   return <StartScreen onShowLogin={showLogin} onShowSignUp={showSignUp} />

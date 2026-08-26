@@ -8,13 +8,18 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @Table(name = "trip")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class Trip {
 
     @Id
@@ -31,11 +36,11 @@ public class Trip {
     @Column(name = "title", nullable = false)
     private String title;
 
-    @Column(name = "description", columnDefinition = "TEXT")
-    private String description;
-
     @Column(name = "place", nullable = false, length = 200)
     private String place;
+
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
 
     @Column(name = "start_at")
     private LocalDateTime startAt;
@@ -50,26 +55,13 @@ public class Trip {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    protected Trip() {
-    }
-
-    public Trip(Long id, Long teacherId, Long geofenceId, String title, String place, String description,
-                LocalDateTime startAt, LocalDateTime endAt, TripStatus status, LocalDateTime createdAt) {
-        this.id = id;
-        this.teacherId = teacherId;
-        this.geofenceId = geofenceId;
-        this.title = title;
-        this.place = place;
-        this.description = description;
-        this.startAt = startAt;
-        this.endAt = endAt;
-        this.status = status;
-        this.createdAt = createdAt;
-    }
-
     public static Trip create(Long teacherId, Long geofenceId, String title, String place, String description,
                               LocalDateTime startAt, LocalDateTime endAt, TripStatus status) {
         return new Trip(null, teacherId, geofenceId, title, place, description, startAt, endAt, status, LocalDateTime.now());
+    }
+
+    public void finish() {
+        this.status = TripStatus.FINISHED;
     }
 
 }

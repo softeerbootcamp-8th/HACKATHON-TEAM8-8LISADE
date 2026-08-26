@@ -10,6 +10,9 @@ import com.palisade.travel.domain.geo.exception.LocationException;
 import com.palisade.travel.domain.geo.repository.CurrentLocationRepository;
 import com.palisade.travel.domain.geo.repository.GeofencePointRepository;
 import com.palisade.travel.domain.geo.repository.LocationLogRepository;
+import com.palisade.travel.domain.notification.entity.Notification;
+import com.palisade.travel.domain.notification.entity.NotificationType;
+import com.palisade.travel.domain.notification.repository.NotificationRepository;
 import com.palisade.travel.domain.notification.service.PushNotificationService;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
@@ -77,6 +80,9 @@ class LocationServiceTest {
     @Mock
     private PushNotificationService pushNotificationService;
 
+    @Mock
+    private NotificationRepository notificationRepository;
+
     private LocationService locationService;
 
     @BeforeEach
@@ -89,7 +95,8 @@ class LocationServiceTest {
                 locationLogRepository,
                 sseConnectionService,
                 userRepository,
-                pushNotificationService
+                pushNotificationService,
+                notificationRepository
         );
     }
 
@@ -125,24 +132,26 @@ class LocationServiceTest {
     }
 
     @Test
-    void 위치_갱신은_담당_교사에게_LOCATION_UPDATED_이벤트를_전송한다() {
+    void 안전구역_안의_위치도_담당_교사에게_LOCATION_UPDATED_이벤트로_전송한다() {
         // given
         givenActiveTrip(USER_ID);
         ArgumentCaptor<StudentLocationResponse> payloadCaptor =
                 ArgumentCaptor.forClass(StudentLocationResponse.class);
 
         // when
-        locationService.update(USER_ID, outsideRequest());
+        locationService.update(USER_ID, request());
 
         // then
         then(sseConnectionService).should()
                 .send(eq(99L), eq(SseEventType.LOCATION_UPDATED), payloadCaptor.capture());
         StudentLocationResponse payload = payloadCaptor.getValue();
+        assertThat(payload.tripId()).isEqualTo(TRIP_ID);
         assertThat(payload.userId()).isEqualTo(USER_ID);
-        assertThat(payload.latitude()).isEqualByComparingTo("37.0200000");
+        assertThat(payload.latitude()).isEqualByComparingTo("37.0050000");
         assertThat(payload.longitude()).isEqualByComparingTo("127.0050000");
-        assertThat(payload.outside()).isTrue();
-        assertThat(payload.updatedAt()).isEqualTo(LocalDateTime.of(2026, 8, 25, 8, 55, 30));
+        assertThat(payload.outside()).isFalse();
+        assertThat(payload.outsideSince()).isNull();
+        assertThat(payload.updatedAt()).isEqualTo(Instant.parse("2026-08-25T08:55:30Z"));
     }
 
     @Test
@@ -263,6 +272,29 @@ class LocationServiceTest {
 
         // then
         then(pushNotificationService).should(never()).sendToUser(any(), any(), any());
+        then(notificationRepository).should(never()).save(any());
+    }
+
+    @Test
+    void 연속_외부_12회에_도달하면_담당_교사_이탈_알림을_저장한다() {
+        // given
+        givenActiveTrip(USER_ID);
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(student("김철수")));
+        ArgumentCaptor<Notification> notificationCaptor = ArgumentCaptor.forClass(Notification.class);
+
+        // when
+        for (int count = 0; count < 12; count++) {
+            locationService.update(USER_ID, outsideRequest());
+        }
+
+        // then
+        then(notificationRepository).should(times(1)).save(notificationCaptor.capture());
+        Notification saved = notificationCaptor.getValue();
+        assertThat(saved.getUserId()).isEqualTo(TEACHER_ID);
+        assertThat(saved.getTripId()).isEqualTo(TRIP_ID);
+        assertThat(saved.getMissionId()).isNull();
+        assertThat(saved.getType()).isEqualTo(NotificationType.RANGE_EXIT);
+        assertThat(saved.getMessage()).contains("김철수");
     }
 
     @Test
@@ -278,6 +310,7 @@ class LocationServiceTest {
 
         // then
         then(pushNotificationService).should(times(1)).sendToUser(eq(TEACHER_ID), any(), any());
+        then(notificationRepository).should(times(1)).save(any());
     }
 
     @Test

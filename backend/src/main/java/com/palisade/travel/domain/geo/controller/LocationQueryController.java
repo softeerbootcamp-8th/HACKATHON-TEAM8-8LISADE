@@ -1,9 +1,11 @@
 package com.palisade.travel.domain.geo.controller;
 
+import com.palisade.travel.domain.geo.dto.GeofencePointResponse;
 import com.palisade.travel.domain.geo.dto.StudentLocationResponse;
 import com.palisade.travel.domain.geo.service.LocationQueryService;
 import com.palisade.travel.global.api.ApiResponse;
 import com.palisade.travel.global.security.UserPrincipal;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,19 +15,23 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/teacher/trips/{tripId}/locations")
+@RequestMapping("/api/teacher/trips/{tripId}")
+@RequiredArgsConstructor
 public class LocationQueryController {
 
     private final LocationQueryService locationQueryService;
 
-    public LocationQueryController(LocationQueryService locationQueryService) {
-        this.locationQueryService = locationQueryService;
-    }
-
-    @GetMapping
+    @GetMapping("/locations")
     public ApiResponse<List<StudentLocationResponse>> snapshot(Authentication authentication,
                                                                @PathVariable Long tripId) {
         UserPrincipal user = (UserPrincipal) authentication.getPrincipal();
         return ApiResponse.success(locationQueryService.snapshot(user.userId(), tripId));
+    }
+
+    @GetMapping("/geofence")
+    public ApiResponse<List<GeofencePointResponse>> geofence(Authentication authentication,
+                                                              @PathVariable Long tripId) {
+        UserPrincipal user = (UserPrincipal) authentication.getPrincipal();
+        return ApiResponse.success(locationQueryService.geofence(user.userId(), tripId));
     }
 }

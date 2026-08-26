@@ -1,13 +1,16 @@
 package com.palisade.travel.domain.mission.entity;
 
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @Table(name = "mission_submission", uniqueConstraints = @UniqueConstraint(columnNames = {"mission_id", "user_id"}))
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class MissionSubmission {
 
     @Id
@@ -35,9 +38,6 @@ public class MissionSubmission {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-
-    protected MissionSubmission() {
-    }
 
     private MissionSubmission(Long missionId, Long userId, String imageKey, SubmissionStatus status) {
         this.missionId = missionId; this.userId = userId; this.imageKey = imageKey; this.status = status;

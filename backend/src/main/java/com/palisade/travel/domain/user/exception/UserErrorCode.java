@@ -1,8 +1,10 @@
 package com.palisade.travel.domain.user.exception;
 
 import com.palisade.travel.global.error.ErrorCode;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
+@RequiredArgsConstructor
 public enum UserErrorCode implements ErrorCode {
     DUPLICATE_LOGIN_ID(HttpStatus.BAD_REQUEST, "DUPLICATE_LOGIN_ID", "Login ID is already in use."),
     ROLE_PROFILE_REQUIRED(HttpStatus.BAD_REQUEST, "ROLE_PROFILE_REQUIRED", "Required profile information is missing."),
@@ -13,12 +15,6 @@ public enum UserErrorCode implements ErrorCode {
     private final HttpStatus status;
     private final String code;
     private final String message;
-
-    UserErrorCode(HttpStatus status, String code, String message) {
-        this.status = status;
-        this.code = code;
-        this.message = message;
-    }
 
     @Override
     public HttpStatus status() {

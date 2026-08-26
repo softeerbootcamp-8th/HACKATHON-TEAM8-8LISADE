@@ -12,6 +12,9 @@ import com.palisade.travel.domain.geo.repository.CurrentLocationRepository;
 import com.palisade.travel.domain.geo.repository.GeofencePointRepository;
 import com.palisade.travel.domain.geo.repository.LocationLogRepository;
 import com.palisade.travel.domain.geo.util.GeofenceUtils;
+import com.palisade.travel.domain.notification.entity.Notification;
+import com.palisade.travel.domain.notification.entity.NotificationType;
+import com.palisade.travel.domain.notification.repository.NotificationRepository;
 import com.palisade.travel.domain.notification.service.PushNotificationService;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
@@ -22,6 +25,7 @@ import com.palisade.travel.domain.user.entity.User;
 import com.palisade.travel.domain.user.repository.UserRepository;
 import com.palisade.travel.global.sse.SseConnectionService;
 import com.palisade.travel.global.sse.SseEventType;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +37,7 @@ import java.util.concurrent.ConcurrentMap;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class LocationService {
 
     // 요구사항: 연속 외부 판정이 정확히 이 횟수에 도달하는 순간 담당 교사에게 이탈 알림을 1회 발행한다.
@@ -46,27 +51,10 @@ public class LocationService {
     private final SseConnectionService sseConnectionService;
     private final UserRepository userRepository;
     private final PushNotificationService pushNotificationService;
+    private final NotificationRepository notificationRepository;
 
     // ponytail: 요구사항의 단일 인스턴스 인메모리 카운터다. 다중 인스턴스가 필요해지면 Redis 원자 연산으로 교체한다.
     private final ConcurrentMap<Long, Integer> consecutiveOutsideCounts = new ConcurrentHashMap<>();
-
-    public LocationService(TripParticipantRepository tripParticipantRepository,
-                           TripRepository tripRepository,
-                           GeofencePointRepository geofencePointRepository,
-                           CurrentLocationRepository currentLocationRepository,
-                           LocationLogRepository locationLogRepository,
-                           SseConnectionService sseConnectionService,
-                           UserRepository userRepository,
-                           PushNotificationService pushNotificationService) {
-        this.tripParticipantRepository = tripParticipantRepository;
-        this.tripRepository = tripRepository;
-        this.geofencePointRepository = geofencePointRepository;
-        this.currentLocationRepository = currentLocationRepository;
-        this.locationLogRepository = locationLogRepository;
-        this.sseConnectionService = sseConnectionService;
-        this.userRepository = userRepository;
-        this.pushNotificationService = pushNotificationService;
-    }
 
     @Transactional
     public LocationUpdateResponse update(Long userId, LocationUpdateRequest request) {
@@ -133,6 +121,15 @@ public class LocationService {
                 .orElse("학생");
         String title = "안전 구역 이탈 알림";
         String body = "%s이 안전 구역을 벗어났습니다.".formatted(studentLabel);
+
+        notificationRepository.save(Notification.create(
+                trip.getTeacherId(),
+                trip.getId(),
+                null,
+                NotificationType.RANGE_EXIT,
+                title,
+                body
+        ));
         pushNotificationService.sendToUser(trip.getTeacherId(), title, body);
     }
 

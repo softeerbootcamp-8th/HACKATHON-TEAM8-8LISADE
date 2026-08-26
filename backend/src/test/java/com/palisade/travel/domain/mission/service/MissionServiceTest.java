@@ -57,7 +57,7 @@ class MissionServiceTest {
         when(tripRepository.findById(1L)).thenReturn(Optional.of(trip(100L)));
         when(participantRepository.findAllByTripIdOrderByCreatedAtAsc(1L)).thenReturn(List.of(
                 TripParticipant.create(1L, 10L), TripParticipant.create(1L, 11L)));
-        MissionSubmission completed = MissionSubmission.photo(2L, 10L, "missions/2/students/10/a.jpg");
+        MissionSubmission completed = MissionSubmission.photo(2L, 10L, "upload/missions/2/students/10/a.jpg");
         when(submissionRepository.findByMissionId(2L)).thenReturn(List.of(completed));
         when(userRepository.findAllById(any())).thenReturn(List.of(user(10L, "김학생"), user(11L, "이학생")));
 
@@ -76,7 +76,7 @@ class MissionServiceTest {
         when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
         when(tripRepository.findById(1L)).thenReturn(Optional.of(trip(100L)));
         when(participantRepository.findAllByTripIdOrderByCreatedAtAsc(1L)).thenReturn(List.of(TripParticipant.create(1L, 11L)));
-        MissionSubmission rejected = MissionSubmission.photo(2L, 11L, "missions/2/students/11/a.jpg");
+        MissionSubmission rejected = MissionSubmission.photo(2L, 11L, "upload/missions/2/students/11/a.jpg");
         rejected.reject("사진이 흐릿합니다.");
         when(submissionRepository.findByMissionId(2L)).thenReturn(List.of(rejected));
         when(userRepository.findAllById(any())).thenReturn(List.of(user(11L, "이학생")));
@@ -116,7 +116,7 @@ class MissionServiceTest {
     @Test
     void rejectingASubmissionStoresTheReason() {
         Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, null);
-        MissionSubmission submission = MissionSubmission.photo(2L, 10L, "missions/2/students/10/a.jpg");
+        MissionSubmission submission = MissionSubmission.photo(2L, 10L, "upload/missions/2/students/10/a.jpg");
         when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
         when(tripRepository.findById(1L)).thenReturn(Optional.of(trip(100L)));
         when(submissionRepository.findByMissionIdAndUserId(2L, 10L)).thenReturn(Optional.of(submission));
@@ -154,7 +154,7 @@ class MissionServiceTest {
         when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
         when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(true);
 
-        assertThatThrownBy(() -> missionService.submitPhoto(2L, 10L, "missions/2/students/11/x.jpg"))
+        assertThatThrownBy(() -> missionService.submitPhoto(2L, 10L, "upload/missions/2/students/11/x.jpg"))
                 .isInstanceOf(ApiException.class);
     }
 
@@ -166,20 +166,32 @@ class MissionServiceTest {
         when(submissionRepository.findByMissionIdAndUserId(2L, 10L)).thenReturn(Optional.empty());
         when(submissionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertThat(missionService.submitPhoto(2L, 10L, "missions/2/students/10/x.jpg").status())
+        assertThat(missionService.submitPhoto(2L, 10L, "upload/missions/2/students/10/x.jpg").status())
                 .isEqualTo(SubmissionStatus.COMPLETED);
     }
 
     @Test
     void resubmittedPhotoCompletesImmediatelyAfterRejection() {
         Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, null);
-        MissionSubmission rejected = MissionSubmission.photo(2L, 10L, "missions/2/students/10/old.jpg");
+        MissionSubmission rejected = MissionSubmission.photo(2L, 10L, "upload/missions/2/students/10/old.jpg");
         rejected.reject("사진이 흐릿합니다.");
         when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
         when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(true);
         when(submissionRepository.findByMissionIdAndUserId(2L, 10L)).thenReturn(Optional.of(rejected));
 
-        assertThat(missionService.submitPhoto(2L, 10L, "missions/2/students/10/new.jpg").status())
+        assertThat(missionService.submitPhoto(2L, 10L, "upload/missions/2/students/10/new.jpg").status())
                 .isEqualTo(SubmissionStatus.COMPLETED);
+    }
+
+    @Test
+    void photoUploadUsesTheUploadPrefixAllowedByTheEc2Role() {
+        Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, null);
+        when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
+        when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(true);
+        when(storagePresigner.presignPut(any())).thenReturn(new StoragePresigner.PresignedUpload("upload/missions/2/students/10/photo.jpg", "https://storage.example/upload"));
+
+        missionService.preparePhotoUpload(2L, 10L);
+
+        org.mockito.Mockito.verify(storagePresigner).presignPut(org.mockito.ArgumentMatchers.startsWith("upload/missions/2/students/10/"));
     }
 }

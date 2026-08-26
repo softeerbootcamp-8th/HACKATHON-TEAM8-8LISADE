@@ -12,6 +12,7 @@ import com.palisade.travel.domain.user.entity.User;
 import com.palisade.travel.domain.user.repository.UserRepository;
 import com.palisade.travel.global.error.ApiException;
 import com.palisade.travel.global.error.CommonErrorCode;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class MissionService {
     private final MissionRepository missionRepository;
     private final MissionSubmissionRepository submissionRepository;
@@ -31,7 +33,6 @@ public class MissionService {
     private final TripParticipantRepository participantRepository;
     private final UserRepository userRepository;
     private final StoragePresigner storagePresigner;
-    public MissionService(MissionRepository missionRepository, MissionSubmissionRepository submissionRepository, TripRepository tripRepository, TripParticipantRepository participantRepository, UserRepository userRepository, StoragePresigner storagePresigner) { this.missionRepository=missionRepository; this.submissionRepository=submissionRepository; this.tripRepository=tripRepository; this.participantRepository=participantRepository; this.userRepository=userRepository; this.storagePresigner=storagePresigner; }
 
     @Transactional
     public Mission create(Long tripId, Long teacherId, String title, String description, MissionType type, LocalDateTime startAt, LocalDateTime endAt) {
@@ -59,12 +60,12 @@ public class MissionService {
     @Transactional
     public SubmissionResult submitPhoto(Long missionId, Long studentId, String imageKey) {
         Mission mission=getStudentMission(missionId, studentId);
-        String requiredPrefix = "missions/" + missionId + "/students/" + studentId + "/";
+        String requiredPrefix = "upload/missions/" + missionId + "/students/" + studentId + "/";
         if (mission.getType()!=MissionType.ACTIVITY || mission.isExpiredAt(LocalDateTime.now()) || imageKey==null || !imageKey.startsWith(requiredPrefix)) throw new ApiException(CommonErrorCode.INVALID_REQUEST);
         MissionSubmission submission=submissionRepository.findByMissionIdAndUserId(missionId, studentId).map(s -> { if (s.getStatus()!=SubmissionStatus.REJECTED) throw new ApiException(CommonErrorCode.INVALID_REQUEST); s.resubmit(imageKey); return s; }).orElseGet(() -> submissionRepository.save(MissionSubmission.photo(missionId,studentId,imageKey)));
         return SubmissionResult.from(submission, mission);
     }
-    public StoragePresigner.PresignedUpload preparePhotoUpload(Long missionId, Long studentId) { Mission mission=getStudentMission(missionId,studentId); if (mission.getType()!=MissionType.ACTIVITY || mission.isExpiredAt(LocalDateTime.now())) throw new ApiException(CommonErrorCode.INVALID_REQUEST); return storagePresigner.presignPut("missions/"+missionId+"/students/"+studentId+"/"+java.util.UUID.randomUUID()+".jpg"); }
+    public StoragePresigner.PresignedUpload preparePhotoUpload(Long missionId, Long studentId) { Mission mission=getStudentMission(missionId,studentId); if (mission.getType()!=MissionType.ACTIVITY || mission.isExpiredAt(LocalDateTime.now())) throw new ApiException(CommonErrorCode.INVALID_REQUEST); return storagePresigner.presignPut("upload/missions/"+missionId+"/students/"+studentId+"/"+java.util.UUID.randomUUID()+".jpg"); }
     @Transactional
     public void reject(Long missionId, Long studentId, Long teacherId, String reason) { Mission mission=findMission(missionId); requireTeacher(mission.getTripId(),teacherId); MissionSubmission submission=submissionRepository.findByMissionIdAndUserId(missionId,studentId).orElseThrow(() -> new ApiException(CommonErrorCode.INVALID_REQUEST)); submission.reject(reason); }
     @Transactional

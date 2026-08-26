@@ -66,3 +66,24 @@
 
 - `./gradlew build --rerun-tasks`: 8개 task 전체 실행, 통과
 - `git diff --check origin/develop...HEAD`: 통과
+
+## Issue #67: 교사용 실시간 위치 지도
+
+- `CurrentLocation`은 최초 이탈 시각을 `outsideSince`에 저장하고 정상 복귀 때
+  비운다. 위치 응답과 `LOCATION_UPDATED` SSE payload는 `tripId`, UTC 수신 시각,
+  최초 이탈 시각을 함께 제공한다.
+- 교사용 위치 조회는 Trip 소유권을 확인한 뒤 최신 위치와 순서가 보장된 지오펜스
+  좌표를 반환한다. APP 참가자 이름은 `users`에서 일괄 조회해 명단 응답에 결합한다.
+- `teacherLocationApi`는 참가자·최신 위치·지오펜스를 병렬 조회하고 EventSource의
+  정상 위치와 이탈 위치를 모두 전달한다.
+- `TeacherLocationMap`은 15초 수신 지연을 확인 불가로 분류하고, 상태 필터·학생
+  callout·Trip 전환·SSE 위치 반영·자동 범위 조정·드래그 중단·중앙 복귀를 처리한다.
+- `TeacherDashboard`는 하단 탭 전환과 체험학습 생성 완료 시 Trip 목록을 다시
+  조회해 관리 목록과 위치 선택기에 최신 데이터를 반영한다.
+
+### 검증
+
+- `./gradlew build`: 통과
+- `npm test`: 19개 파일, 105개 테스트 통과
+- `npm run lint`: 통과
+- `npm run build`: 통과
