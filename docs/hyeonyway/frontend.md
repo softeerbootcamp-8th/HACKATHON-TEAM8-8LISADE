@@ -28,3 +28,10 @@
 - UTC 입력과 오프셋 포함 입력을 대상으로 한 회귀 테스트를 추가했다.
 
 검증: `npm test`(42파일 280개), `npm run build`, `npm run lint` 통과.
+
+## uuid 버퍼 바운드 체크 취약점(GHSA-w5hq-g745-h8pq) 제거 (#220)
+
+- `npm audit`가 moderate로 잡던 `uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided`은 devDependency `@capacitor/cli@8.5.0` → `xcode` → `uuid<11.1.1` 경로였다. `npm audit fix --force`로 `@capacitor/cli`를 8.4.2로 내려 `uuid`를 11.1.1 이상으로 올렸다(`xcode`도 함께 안전 버전으로 갱신).
+- 이 저장소는 `ios/` 플랫폼이 없어(Android만 사용) 취약한 코드 경로 자체가 원래도 실행되지 않았지만, breaking 다운그레이드가 실제로 android 빌드 파이프라인에 영향 없는지 `npx cap sync android`로 직접 확인했다(정상 동작).
+
+검증: `npm audit` 0 vulnerabilities, `npx vitest run`(42파일 286개), `npm run lint`, `npm run build`, `npx cap sync android` 모두 통과.
