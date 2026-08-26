@@ -19,6 +19,7 @@
     "@capacitor/core": "^8.5.0",
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/push-notifications": "^8.1.2",
+    "@ionic/pwa-elements": "^3.4.0",
     "@phosphor-icons/react": "^2.1.10",
     "@turf/buffer": "^7.4.0",
     "@turf/helpers": "^7.4.0",
