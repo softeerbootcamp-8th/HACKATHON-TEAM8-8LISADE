@@ -1,8 +1,6 @@
 import type { MissionCreateInput, MissionStatusBoard, TeacherMission } from '../types/mission'
 import { apiFetch } from './httpClient'
 
-export interface MissionApi { verifyAttendancePin(pin: string): Promise<void>; uploadPhoto(uri: string): Promise<void> }
-
 export type MissionType = 'ACTIVITY' | 'CHECK'
 export type SubmissionStatus = 'WAITING' | 'COMPLETED' | 'REJECTED' | 'EXPIRED'
 
