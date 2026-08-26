@@ -62,7 +62,7 @@
 | `TripStatus` | `READY`, `ACTIVE`, `FINISHED` |
 | `TripParticipantType` | `APP`, `MANUAL` |
 | `MissionType` | `ACTIVITY`, `CHECK` |
-| `SubmissionStatus` | `WAITING`, `COMPLETED`, `REJECTED`, `EXPIRED` |
+| `SubmissionStatus` | `WAITING`, `COMPLETED`, `LATE`, `REJECTED`, `EXPIRED` |
 | `DevicePlatform` | `WEB`, `ANDROID`, `IOS` |
 | `NotificationType` | `RANGE_EXIT`, `MISSION_CREATED`, `MISSION_INCOMPLETED`, `UNREACHABLE`, `DEADLINE_IMMINENT`, `MISSION_REJECTED` |
 | `SseEventType` | `CONNECTED`, `HEARTBEAT`, `LOCATION_UPDATED` |
@@ -98,16 +98,17 @@
 | 23 | POST | `/api/teacher/missions/{missionId}/submissions/{studentId}/reject` | TEACHER | 제출 반려 |
 | 24 | POST | `/api/teacher/missions/{missionId}/submissions/{studentId}/complete` | TEACHER | 대리 완료 처리 |
 | 25 | GET | `/api/trips/{tripId}/missions/current` | 인증 | 현재 진행 미션 |
-| 26 | GET | `/api/missions/{missionId}` | 인증 | 미션 상세 |
-| 27 | POST | `/api/missions/{missionId}/photo-upload` | 인증 | 사진 업로드 URL 발급 |
-| 28 | POST | `/api/missions/{missionId}/submissions/photo` | 인증 | 사진 미션 제출 |
-| 29 | POST | `/api/missions/{missionId}/submissions/pin` | 인증 | PIN 미션 제출 |
-| 30 | GET | `/api/missions/{missionId}/submission` | 인증 | 내 제출 조회 |
-| 31 | POST | `/api/notifications/devices` | 인증 | 기기 토큰 등록 |
-| 32 | DELETE | `/api/notifications/devices` | 인증 | 기기 토큰 해제 |
-| 33 | GET | `/api/teacher/notifications` | TEACHER | 교사 수신 알림 목록 조회 |
-| 34 | GET | `/api/student/notifications` | STUDENT | 학생 수신 알림 목록 조회 |
-| 35 | PUT | `/mock-storage/{objectKey}` | 공개 (local/test) | 로컬 목 스토리지 업로드 |
+| 26 | GET | `/api/trips/{tripId}/missions/overview` | 인증 | 학생 미션 개요 |
+| 27 | GET | `/api/missions/{missionId}` | 인증 | 미션 상세 |
+| 28 | POST | `/api/missions/{missionId}/photo-upload` | 인증 | 사진 업로드 URL 발급 |
+| 29 | POST | `/api/missions/{missionId}/submissions/photo` | 인증 | 사진 미션 제출 |
+| 30 | POST | `/api/missions/{missionId}/submissions/pin` | 인증 | PIN 미션 제출 |
+| 31 | GET | `/api/missions/{missionId}/submission` | 인증 | 내 제출 조회 |
+| 32 | POST | `/api/notifications/devices` | 인증 | 기기 토큰 등록 |
+| 33 | DELETE | `/api/notifications/devices` | 인증 | 기기 토큰 해제 |
+| 34 | GET | `/api/teacher/notifications` | TEACHER | 교사 수신 알림 목록 조회 |
+| 35 | GET | `/api/student/notifications` | STUDENT | 학생 수신 알림 목록 조회 |
+| 36 | PUT | `/mock-storage/{objectKey}` | 공개 (local/test) | 로컬 목 스토리지 업로드 |
 
 ---
 
@@ -619,7 +620,7 @@ data: {"userId":3,"latitude":35.7901234,"longitude":129.3321234,"outside":true,"
 
 ### 10.1 GET `/api/trips/{tripId}/missions/current` — 현재 진행 미션 목록
 
-시작 시각이 지났고 아직 만료되지 않은 미션만 반환한다. 해당 여행 참가자만 조회 가능.
+시작 시각이 지났고 교사가 완료하지 않았으며, 학생이 완료·지각 제출하지 않은 미션만 반환한다. 해당 여행 참가자만 조회 가능.
 
 **Response `200 OK`** — `MissionResponse` 배열 (`startAt` 오름차순)
 
@@ -627,7 +628,28 @@ data: {"userId":3,"latitude":35.7901234,"longitude":129.3321234,"outside":true,"
 
 ---
 
-### 10.2 GET `/api/missions/{missionId}` — 미션 상세
+### 10.2 GET `/api/trips/{tripId}/missions/overview` — 학생 미션 개요
+
+현재 진행 미션과 학생별 진행률을 함께 반환한다. `totalCount`는 시작 시각이 지난 미션 수이며, `completedCount`는 그중 학생 제출 상태가 `COMPLETED` 또는 `LATE`인 미션 수다.
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "data": {
+    "currentMissions": [],
+    "completedCount": 4,
+    "totalCount": 5
+  }
+}
+```
+
+**에러**: `FORBIDDEN` (403, 참가자 아님)
+
+---
+
+### 10.3 GET `/api/missions/{missionId}` — 미션 상세
 
 **Response `200 OK`** — `MissionResponse`
 
@@ -635,7 +657,7 @@ data: {"userId":3,"latitude":35.7901234,"longitude":129.3321234,"outside":true,"
 
 ---
 
-### 10.3 POST `/api/missions/{missionId}/photo-upload` — 사진 업로드 URL 발급
+### 10.4 POST `/api/missions/{missionId}/photo-upload` — 사진 업로드 URL 발급
 
 `ACTIVITY` 타입 미션에서만 사용. 발급된 `uploadUrl` 에 `PUT` 으로 이미지를 직접 올린 뒤, `objectKey` 를 제출 API 에 넘긴다.
 
@@ -655,7 +677,7 @@ data: {"userId":3,"latitude":35.7901234,"longitude":129.3321234,"outside":true,"
 
 ---
 
-### 10.4 POST `/api/missions/{missionId}/submissions/photo` — 사진 미션 제출
+### 10.5 POST `/api/missions/{missionId}/submissions/photo` — 사진 미션 제출
 
 **Request Body**
 
@@ -680,7 +702,7 @@ data: {"userId":3,"latitude":35.7901234,"longitude":129.3321234,"outside":true,"
 
 ---
 
-### 10.5 POST `/api/missions/{missionId}/submissions/pin` — PIN 미션 제출
+### 10.6 POST `/api/missions/{missionId}/submissions/pin` — PIN 미션 제출
 
 **Request Body**
 
@@ -701,7 +723,7 @@ data: {"userId":3,"latitude":35.7901234,"longitude":129.3321234,"outside":true,"
 
 ---
 
-### 10.6 GET `/api/missions/{missionId}/submission` — 내 제출 조회
+### 10.7 GET `/api/missions/{missionId}/submission` — 내 제출 조회
 
 **Response `200 OK`** — `SubmissionResponse`
 

@@ -164,3 +164,13 @@
 - `npm run lint`, `npm run build`: 통과
 - `./gradlew test`: 백엔드 전체 테스트 통과
 - `git diff --check`: 통과
+
+## Issue #205: Android 위치 수집 알림 문구 단순화
+
+- Android 포그라운드 위치 알림 본문을 내부 주기 설명 대신 `위치를 수집하고 있어요`로 변경했다.
+- `BackgroundLocationService`의 1초 수집·10초 전송 주기와 알림 제목·종료 동작은 변경하지 않았다.
+
+### 검증
+
+- `./gradlew testDebugUnitTest assembleDebug`: Android 단위 테스트와 debug APK 조립 통과
+- `git diff --check`: 통과

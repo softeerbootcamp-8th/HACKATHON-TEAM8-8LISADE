@@ -103,6 +103,31 @@ jobs:
           target: '~/app'
           strip_components: 1
 
+      # FIREBASE_SERVICE_ACCOUNT_BASE64는 Firebase Admin SDK 서비스 계정 JSON이다(발송용).
+      # google-services.json(안드로이드 수신용, android-cd.yml에서 복원)과는 다른 파일이다.
+      # 값을 checkout에 넣지 않고 EC2에만 복원한다 — 저장소·이미지·로그에 노출되면 안 된다 (#199).
+      - name: Restore Firebase service account credentials
+        uses: appleboy/ssh-action@v1.2.2
+        env:
+          FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: FIREBASE_SERVICE_ACCOUNT_BASE64
+          script: |
+            set -euo pipefail
+            cd ~/app
+            echo "$FIREBASE_SERVICE_ACCOUNT_BASE64" | base64 -d > firebase-service-account.json
+            chmod 600 firebase-service-account.json
+            test -s firebase-service-account.json
+            PROJECT_ID=$(python3 -c "import json; print(json.load(open('firebase-service-account.json'))['project_id'])")
+            if [ "$PROJECT_ID" != "hackathon-team8-8lisade" ]; then
+              echo "firebase-service-account.json의 project_id가 '$PROJECT_ID'다. hackathon-team8-8lisade여야 한다."
+              exit 1
+            fi
+            echo "Firebase 서비스 계정 복원 확인됨 ($PROJECT_ID)."
+
       - name: Deploy on server
         uses: appleboy/ssh-action@v1.2.2
         env:
@@ -131,3 +156,31 @@ jobs:
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d
+
+      # FirebaseConfig는 자격증명이 없거나 잘못돼도 warn만 남기고 앱은 정상 기동한다 — 배포가
+      # 초록불이어도 push가 조용히 안 나갈 수 있다는 뜻이라 별도로 확인한다 (#199).
+      - name: Verify Firebase Admin initialized
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd ~/app
+            for i in $(seq 1 15); do
+              LOGS=$(docker compose -f docker-compose.prod.yml logs backend 2>&1)
+              if echo "$LOGS" | grep -q "Firebase Admin initialized"; then
+                echo "Firebase Admin 초기화 확인됨."
+                exit 0
+              fi
+              if echo "$LOGS" | grep -qE "firebase.credentials-path is not set|Failed to initialize Firebase"; then
+                echo "Firebase Admin이 초기화되지 않았다 — 자격증명 mount를 확인하라."
+                echo "$LOGS" | grep -i firebase
+                exit 1
+              fi
+              sleep 2
+            done
+            echo "15회 시도 후에도 Firebase 초기화 로그를 찾지 못했다."
+            echo "$LOGS" | tail -n 50
+            exit 1

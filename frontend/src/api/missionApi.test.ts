@@ -12,6 +12,26 @@ afterEach(() => {
 })
 
 describe('missionApi', () => {
+  it('Given_학생별_완료_현황이_있을때_When_미션_개요를_조회하면_Then_현재_미션과_실제_개수를_반환한다', async () => {
+    // given
+    const fetchMock = vi.fn().mockResolvedValue(apiResponse({
+      success: true,
+      data: {
+        currentMissions: [{ id: 11, tripId: 1, title: '전통 문화 사진 미션', description: '', type: 'ACTIVITY', startAt: null, endAt: null }],
+        completedCount: 4,
+        totalCount: 5,
+      },
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    // when
+    const overview = await missionApi.getStudentMissionOverview(1)
+
+    // then
+    expect(overview).toMatchObject({ completedCount: 4, totalCount: 5, currentMissions: [{ id: 11 }] })
+    expect(fetchMock).toHaveBeenCalledWith('/api/trips/1/missions/overview', { credentials: 'include' })
+  })
+
   it('loads the current missions for the active Trip with the session cookie', async () => {
     const fetchMock = vi.fn().mockResolvedValue(apiResponse({ success: true, data: [{ id: 11, tripId: 1, title: '전통 문화 사진 미션', description: '사진을 촬영해 제출해 주세요.', type: 'ACTIVITY', startAt: null, endAt: null }] }))
     vi.stubGlobal('fetch', fetchMock)
