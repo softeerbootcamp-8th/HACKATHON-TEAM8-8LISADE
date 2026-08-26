@@ -122,6 +122,7 @@ export function TeacherDashboard({ user, onLogout }: { user: CurrentUser; onLogo
     <NotificationToast notification={toast} onDismiss={dismissToast} />
     {tab === 'MANAGE'
       ? <ManagementTab
+        key={tab}
         user={user}
         trips={trips}
         error={tripError}
@@ -131,11 +132,11 @@ export function TeacherDashboard({ user, onLogout }: { user: CurrentUser; onLogo
       />
       : tab === 'LOCATION'
         ? tripError
-          ? <p className="management-state error" role="alert">{tripError}</p>
+          ? <p className="management-state error teacher-tab-panel" role="alert">{tripError}</p>
           : trips === null
             ? <ListSkeleton label="체험학습 목록을 불러오는 중입니다." />
-            : <TeacherLocationMap trips={trips} />
-      : <div className="teacher-body">
+            : <TeacherLocationMap key={tab} trips={trips} />
+      : <div className="teacher-body teacher-tab-panel" key={tab}>
         {currentTrip && <div className="teacher-status-row"><h2>{currentTrip.title}</h2><span className={`status-pill ${currentTrip.status === 'ACTIVE' ? 'status-pill--success' : 'status-pill--neutral'}`}>{teacherTripStatusLabels[currentTrip.status]}</span></div>}
         {tab === 'HOME' && notice && <p className="notice" role="status">{notice}</p>}
         {tab === 'HOME' ? (
@@ -168,7 +169,7 @@ export function TeacherDashboard({ user, onLogout }: { user: CurrentUser; onLogo
 }
 
 function ManagementTab({ user, trips, error, notice, onAdd, onSelect }: { user: CurrentUser; trips: TeacherTrip[] | null; error: string; notice: string; onAdd: () => void; onSelect: (tripId: number) => void }) {
-  return <section className="management-tab">
+  return <section className="management-tab teacher-tab-panel">
     <section className="teacher-profile" aria-label="교사 정보"><strong>{user.name} 선생님</strong><span>{formatPhoneNumber(user.phoneNumber)}</span></section>
     <h1>현장체험학습 관리</h1>
     <div className="management-list" aria-live="polite">
