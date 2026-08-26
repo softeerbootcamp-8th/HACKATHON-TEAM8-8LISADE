@@ -30,18 +30,25 @@ public class InviteCode {
     @Column(name = "code", nullable = false, unique = true, length = 6)
     private String code;
 
+    /**
+     * DB 컬럼이 NOT NULL이라 값은 계속 채우지만, 더 이상 만료 판정에 쓰지 않는다
+     * (초대 코드는 Trip 종료로만 무효화된다 — {@link #isUsableAt}). 마이그레이션 도구가
+     * 없어 컬럼 자체는 남겨둔다.
+     */
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
 
     @Column(name = "revoked_at")
     private LocalDateTime revokedAt;
 
-    public static InviteCode create(Long tripId, String code, LocalDateTime expiresAt) {
-        return new InviteCode(null, tripId, code, expiresAt, null);
+    private static final LocalDateTime UNUSED_EXPIRES_AT = LocalDateTime.of(2999, 1, 1, 0, 0);
+
+    public static InviteCode create(Long tripId, String code) {
+        return new InviteCode(null, tripId, code, UNUSED_EXPIRES_AT, null);
     }
 
-    public boolean isUsableAt(LocalDateTime now) {
-        return revokedAt == null && expiresAt.isAfter(now);
+    public boolean isUsable() {
+        return revokedAt == null;
     }
 
     public void revoke(LocalDateTime now) {

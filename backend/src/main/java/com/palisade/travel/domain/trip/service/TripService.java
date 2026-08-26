@@ -35,8 +35,6 @@ import java.util.Map;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class TripService {
-    private static final long INVITE_CODE_EXPIRES_MINUTES = 5;
-
     private final TripRepository tripRepository;
     private final InviteCodeRepository inviteCodeRepository;
     private final TripParticipantRepository participantRepository;
@@ -93,17 +91,9 @@ public class TripService {
     }
 
     @Transactional
-    public InviteCodeResponse reissueInviteCode(Long teacherId, Long tripId) {
-        Trip trip = findOwnedTrip(teacherId, tripId);
-        inviteCodeRepository.findByTripIdAndRevokedAtIsNull(trip.getId())
-                .ifPresent(code -> code.revoke(now()));
-        return InviteCodeResponse.from(issueCode(trip.getId()));
-    }
-
-    @Transactional
     public JoinTripResponse join(Long studentId, String inputCode) {
         InviteCode inviteCode = inviteCodeRepository.findByCode(inputCode.toUpperCase(Locale.ROOT))
-                .filter(code -> code.isUsableAt(now()))
+                .filter(InviteCode::isUsable)
                 .orElseThrow(() -> new TripException(TripErrorCode.INVALID_INVITE_CODE));
         Trip trip = tripRepository.findById(inviteCode.getTripId())
                 .filter(found -> found.getStatus() == TripStatus.ACTIVE)
@@ -155,7 +145,7 @@ public class TripService {
     public InviteCodeResponse getCurrentInviteCode(Long teacherId, Long tripId) {
         findOwnedTrip(teacherId, tripId);
         return inviteCodeRepository.findByTripIdAndRevokedAtIsNull(tripId)
-                .filter(code -> code.isUsableAt(now()))
+                .filter(InviteCode::isUsable)
                 .map(InviteCodeResponse::from)
                 .orElse(null);
     }
@@ -174,7 +164,7 @@ public class TripService {
 
     private InviteCode issueCode(Long tripId) {
         String code = nextUnusedCode();
-        InviteCode inviteCode = InviteCode.create(tripId, code, now().plusMinutes(INVITE_CODE_EXPIRES_MINUTES));
+        InviteCode inviteCode = InviteCode.create(tripId, code);
         return inviteCodeRepository.save(inviteCode);
     }
 

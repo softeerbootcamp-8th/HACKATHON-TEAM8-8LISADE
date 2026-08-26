@@ -43,12 +43,6 @@ public class TeacherTripController {
         return ApiResponse.success(tripService.getTrips(teacher.userId()));
     }
 
-    @PostMapping("/{tripId}/invite-code")
-    public ApiResponse<InviteCodeResponse> reissueInviteCode(@AuthenticationPrincipal UserPrincipal teacher,
-                                                              @PathVariable Long tripId) {
-        return ApiResponse.success(tripService.reissueInviteCode(teacher.userId(), tripId));
-    }
-
     @GetMapping("/{tripId}/participants")
     public ApiResponse<List<TripParticipantResponse>> getParticipants(@AuthenticationPrincipal UserPrincipal teacher,
                                                                        @PathVariable Long tripId) {
