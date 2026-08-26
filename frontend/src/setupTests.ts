@@ -10,6 +10,10 @@ beforeEach(() => {
       return jsonResponse({ success: true, data: { token: 'test-csrf-token', headerName: 'X-CSRF-TOKEN' } })
     }
 
+    if (path === '/api/auth/me') {
+      return jsonResponse({ success: false, message: '인증이 필요합니다.' }, 401)
+    }
+
     if (path === '/api/auth/login') {
       const { loginId, password } = JSON.parse(String(init?.body)) as { loginId: string; password: string }
       if (password !== 'password1234') {
