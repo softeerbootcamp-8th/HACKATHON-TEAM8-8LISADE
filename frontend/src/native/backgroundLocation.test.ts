@@ -5,6 +5,8 @@ const nativeStatus: TrackingStatus = {
   supported: true,
   tracking: false,
   sessionAvailable: true,
+  permission: 'GRANTED',
+  locationEnabled: true,
 }
 
 function createPlugin() {
@@ -14,6 +16,7 @@ function createPlugin() {
     startTracking: vi.fn().mockResolvedValue(nativeStatus),
     stopTracking: vi.fn().mockResolvedValue(nativeStatus),
     getStatus: vi.fn().mockResolvedValue(nativeStatus),
+    openSettings: vi.fn().mockResolvedValue(nativeStatus),
   }
 }
 
@@ -26,6 +29,8 @@ describe('백그라운드 위치 브리지', () => {
       supported: false,
       tracking: false,
       sessionAvailable: false,
+      permission: 'PENDING',
+      locationEnabled: false,
       reason: 'UNAVAILABLE',
     })
     expect(plugin.startTracking).not.toHaveBeenCalled()

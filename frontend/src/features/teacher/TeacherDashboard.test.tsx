@@ -1,11 +1,17 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { teacherTripApi } from '../../api/teacherTripApi'
 import type { TeacherTrip } from '../../types/teacherTrip'
 import { TeacherDashboard } from './TeacherDashboard'
+import { foregroundNotifications } from '../../notifications/foregroundNotifications'
 
 vi.mock('../../api/teacherTripApi', () => ({
   teacherTripApi: { getTrips: vi.fn() },
+}))
+
+vi.mock('./TeacherHomeProgress', () => ({
+  TeacherHomeProgress: ({ tripId, onViewStudents, onFinished }: { tripId: string; onViewStudents: () => void; onFinished: () => void }) =>
+    <div>진행 현황(Trip {tripId})<button type="button" onClick={onViewStudents}>학생 탭으로</button><button type="button" onClick={onFinished}>테스트 종료 완료</button></div>,
 }))
 
 vi.mock('./TripCreationFlow', () => ({
@@ -19,6 +25,11 @@ vi.mock('./TeacherLocationMap', () => ({
 }))
 
 vi.mock('../../components/TeacherMissions', () => ({ default: () => <div>미션</div> }))
+
+vi.mock('./TeacherNotifications', () => ({
+  TeacherNotifications: ({ onBack }: { onBack: () => void }) =>
+    <div>알림 목록<button type="button" onClick={onBack}>알림 목록 닫기</button></div>,
+}))
 
 const user = { id: 1, loginId: 'teacher01', name: '고심', phoneNumber: '01012341234', role: 'TEACHER' as const }
 const 기존체험학습 = trip(1, '기존 체험학습')
@@ -103,12 +114,59 @@ describe('TeacherDashboard', () => {
     expect(screen.getByRole('button', { name: '+ 현장체험학습 생성하기' })).toBeInTheDocument()
   })
 
-  it('shows the existing home tab stats once a trip exists', async () => {
+  it('Given 교사 화면일 때 When 포그라운드 알림이 도착하면 Then 토스트와 종 배지를 표시한다', async () => {
+    vi.mocked(teacherTripApi.getTrips).mockResolvedValue([기존체험학습])
+    render(<TeacherDashboard user={user} />)
+    await screen.findByText('진행 현황(Trip 1)')
+
+    act(() => foregroundNotifications.publish({ title: '안전 구역 이탈', body: '김학생이 안전 구역을 벗어났습니다.' }))
+
+    expect(screen.getByRole('status')).toHaveTextContent('안전 구역 이탈')
+    expect(screen.getByRole('button', { name: '알림 (새 알림 있음)' })).toBeInTheDocument()
+  })
+
+  it('Given 미확인 알림이 있을 때 When 종을 눌러 알림 목록을 열면 Then 배지가 해제된다', async () => {
+    vi.mocked(teacherTripApi.getTrips).mockResolvedValue([기존체험학습])
+    render(<TeacherDashboard user={user} />)
+    await screen.findByText('진행 현황(Trip 1)')
+    act(() => foregroundNotifications.publish({ title: '새 미션', body: '미션이 등록되었습니다.' }))
+
+    fireEvent.click(screen.getByRole('button', { name: '알림 (새 알림 있음)' }))
+
+    expect(screen.getByText('알림 목록')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '알림 목록 닫기' }))
+    expect(screen.getByRole('button', { name: '알림' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '알림 (새 알림 있음)' })).not.toBeInTheDocument()
+  })
+
+  it('shows the real trip progress once an active trip exists', async () => {
     vi.mocked(teacherTripApi.getTrips).mockResolvedValue([기존체험학습])
     render(<TeacherDashboard user={user} />)
 
-    expect(await screen.findByText('참여 학생 24명')).toBeInTheDocument()
+    expect(await screen.findByText('진행 현황(Trip 1)')).toBeInTheDocument()
     expect(screen.queryByText(/아직 예정된/)).not.toBeInTheDocument()
+  })
+
+  it('학생 탭 이동 버튼을 누르면 학생 탭으로 전환한다', async () => {
+    vi.mocked(teacherTripApi.getTrips).mockResolvedValue([기존체험학습])
+    render(<TeacherDashboard user={user} />)
+    await screen.findByText('진행 현황(Trip 1)')
+
+    fireEvent.click(screen.getByRole('button', { name: '학생 탭으로' }))
+
+    expect(screen.getByRole('button', { name: '학생' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('체험학습 종료가 완료되면 안내 문구와 갱신된 목록을 반영한다', async () => {
+    vi.mocked(teacherTripApi.getTrips)
+      .mockResolvedValueOnce([기존체험학습])
+      .mockResolvedValueOnce([])
+    render(<TeacherDashboard user={user} />)
+    await screen.findByText('진행 현황(Trip 1)')
+
+    fireEvent.click(screen.getByRole('button', { name: '테스트 종료 완료' }))
+
+    expect(await screen.findByText('현장체험학습을 종료했습니다.')).toBeInTheDocument()
   })
 })
 

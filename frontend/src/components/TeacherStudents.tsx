@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react'
 import { teacherStudentApi, type StudentParticipantType, type StudentRosterEntry } from '../api/teacherStudentApi'
+import { teacherMissionApi } from '../api/missionApi'
 import { computeStudentStatus, formatClockTime, formatMinutesAgo, type StudentLocationStatus } from '../features/teacher/studentStatus'
+import { summarizeMissionCompletion, type MissionCompletionSummary } from '../features/teacher/studentMissionSummary'
+
+function formatJoinedAt(joinedAt: string): string {
+  const date = new Date(joinedAt)
+  const formattedDate = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date).replace(/\.$/, '')
+  return `${formattedDate} ${formatClockTime(joinedAt)} 참여`
+}
 
 type View = { name: 'LIST' } | { name: 'DETAIL'; participantId: number }
 type DisplayStatus = StudentLocationStatus | 'MANUAL'
@@ -57,6 +65,7 @@ function StudentRow({ student, onSelect }: { student: StudentRosterEntry & { sta
 
 function StudentDetailScreen({ tripId, participantId, onBack }: { tripId: string; participantId: number; onBack: () => void }) {
   const [student, setStudent] = useState<StudentRosterEntry | null>(null)
+  const [missionSummary, setMissionSummary] = useState<MissionCompletionSummary | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -67,6 +76,16 @@ function StudentDetailScreen({ tripId, participantId, onBack }: { tripId: string
     return () => { cancelled = true }
   }, [tripId, participantId])
 
+  useEffect(() => {
+    if (!student || student.type === 'MANUAL') return
+    let cancelled = false
+    teacherMissionApi.listMissions(tripId)
+      .then((missions) => Promise.all(missions.map((mission) => teacherMissionApi.getStatusBoard(mission.id))))
+      .then((boards) => { if (!cancelled) setMissionSummary(summarizeMissionCompletion(student.userId, boards)) })
+      .catch(() => { if (!cancelled) setMissionSummary(null) })
+    return () => { cancelled = true }
+  }, [tripId, student])
+
   if (error) return <p className="error" role="alert">{error}</p>
   if (!student) return <p className="hint">불러오는 중...</p>
 
@@ -76,10 +95,12 @@ function StudentDetailScreen({ tripId, participantId, onBack }: { tripId: string
   return <section aria-label="학생 상세">
     <button type="button" className="text-button back-button" onClick={onBack}>‹ {student.name}</button>
     <span className={`student-tag ${statusTagClass[status]}`}>{statusLabel[status]}</span>
+    <p className="hint">{formatJoinedAt(student.joinedAt)}</p>
     <div className="teacher-body" style={{ padding: '12px 0 0' }}>
       {student.type === 'MANUAL'
         ? <p className="hint">앱을 사용하지 않는 학생으로, 위치가 추적되지 않습니다.</p>
         : <div>
+          {missionSummary && <p className="hint">미션 {missionSummary.completed} / {missionSummary.total} 완료</p>}
           <div className="teacher-status-row">
             <p className="teacher-section-title" style={{ margin: 0 }}>{isLastKnown ? '마지막 위치' : '현재 위치'}</p>
             {student.lastSentAt && <span className="hint">{formatMinutesAgo(student.lastSentAt)} · {formatClockTime(student.lastSentAt)} 수신</span>}

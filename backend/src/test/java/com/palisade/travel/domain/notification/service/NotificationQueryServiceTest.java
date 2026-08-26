@@ -33,7 +33,7 @@ class NotificationQueryServiceTest {
         // given
         given(notificationRepository.findAllByUserIdOrderByCreatedAtDesc(TEACHER_ID)).willReturn(List.of(
                 notification(2L, NotificationType.RANGE_EXIT, "안전 구역 이탈 알림", "김하늘 학생이 안전 구역을 벗어났습니다.", LocalDateTime.of(2026, 8, 25, 14, 3)),
-                notification(1L, NotificationType.MISSION_INCOMPLETED, "미션 미완료 알림", "학생1이 미션을 수행하지 않았어요.", LocalDateTime.of(2026, 8, 25, 13, 12))
+                notification(1L, NotificationType.MISSION_INCOMPLETED, "미션 미완료 알림", "'어디서 사진 찍기' 미션을 3명이 완료하지 못했어요.", LocalDateTime.of(2026, 8, 25, 13, 12))
         ));
 
         // when

@@ -6,6 +6,22 @@ describe('authApi', () => {
     vi.unstubAllGlobals()
   })
 
+  it('Given_기존_세션_When_내_정보_조회_Then_현재_사용자를_복원한다', async () => {
+    // given
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({
+      success: true,
+      data: { id: 2, loginId: 'student01', name: '학생', role: 'STUDENT' },
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    // when
+    const user = await authApi.me()
+
+    // then
+    expect(user).toMatchObject({ id: 2, role: 'STUDENT' })
+    expect(fetchMock).toHaveBeenCalledWith('/api/auth/me', { credentials: 'include' })
+  })
+
   it('gets a CSRF token and includes it when logging in with session credentials', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse({ success: true, data: { token: 'csrf-token', headerName: 'X-CSRF-TOKEN' } }))

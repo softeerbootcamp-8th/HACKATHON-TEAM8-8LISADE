@@ -1,7 +1,13 @@
 package com.softeerbootcamp.eightlisade;
 
 import android.Manifest;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.location.LocationManager;
+import android.net.Uri;
 import android.os.Build;
+import android.provider.Settings;
 
 import androidx.core.location.LocationManagerCompat;
 
@@ -13,8 +19,6 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
-
-import java.net.URL;
 
 @CapacitorPlugin(
     name = "BackgroundLocation",
@@ -34,7 +38,7 @@ public class BackgroundLocationPlugin extends Plugin {
             call.reject("HTTPS 위치 API 주소가 필요합니다.", "INVALID_ENDPOINT");
             return;
         }
-        if (!NativeSessionCookieStore.syncFromWebView(endpoint)) {
+        if (WebViewSessionCookies.sessionCookie(endpoint) == null) {
             call.reject("WebView에 로그인 세션이 없습니다.", "SESSION_MISSING");
             return;
         }
@@ -47,7 +51,6 @@ public class BackgroundLocationPlugin extends Plugin {
     public void expireSession(PluginCall call) {
         BackgroundLocationService.stop(getContext());
         String endpoint = BackgroundLocationState.endpoint(getContext());
-        NativeSessionCookieStore.expire(endpoint);
         WebViewSessionCookies.expireSession(endpoint);
         BackgroundLocationState.clearSession(getContext());
         call.resolve(status());
@@ -59,7 +62,7 @@ public class BackgroundLocationPlugin extends Plugin {
             call.reject("로그인 세션을 먼저 동기화해야 합니다.", "SESSION_MISSING");
             return;
         }
-        if (!LocationManagerCompat.isLocationEnabled((android.location.LocationManager) getContext().getSystemService(android.content.Context.LOCATION_SERVICE))) {
+        if (!locationEnabled()) {
             call.reject("기기 위치 서비스가 꺼져 있습니다.", "LOCATION_DISABLED");
             return;
         }
@@ -90,6 +93,22 @@ public class BackgroundLocationPlugin extends Plugin {
         call.resolve(status());
     }
 
+    @PluginMethod
+    public void openSettings(PluginCall call) {
+        Intent intent;
+        if (!locationEnabled()) {
+            intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+        } else {
+            intent = new Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.fromParts("package", getContext().getPackageName(), null)
+            );
+        }
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        getContext().startActivity(intent);
+        call.resolve(status());
+    }
+
     private void start(PluginCall call) {
         BackgroundLocationService.start(getContext());
         call.resolve(status());
@@ -107,13 +126,29 @@ public class BackgroundLocationPlugin extends Plugin {
         return location && notifications;
     }
 
-    private boolean validEndpoint(String endpoint) {
-        try {
-            URL url = new URL(endpoint);
-            return "https".equals(url.getProtocol()) && !url.getHost().isEmpty() && url.getUserInfo() == null;
-        } catch (Exception ignored) {
-            return false;
+    private boolean locationEnabled() {
+        LocationManager manager = (LocationManager) getContext().getSystemService(Context.LOCATION_SERVICE);
+        return LocationManagerCompat.isLocationEnabled(manager);
+    }
+
+    private String permissionStatus() {
+        PermissionState location = getPermissionState("location");
+        PermissionState notifications = getPermissionState("notifications");
+        boolean notificationsGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+            || notifications == PermissionState.GRANTED;
+        if (location == PermissionState.GRANTED && notificationsGranted) {
+            return "GRANTED";
         }
+        if (location == PermissionState.DENIED
+            || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && notifications == PermissionState.DENIED)) {
+            return "DENIED";
+        }
+        return "PENDING";
+    }
+
+    private boolean validEndpoint(String endpoint) {
+        boolean localDebug = (getContext().getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+        return LocationEndpointPolicy.isAllowed(endpoint, localDebug);
     }
 
     private JSObject status() {
@@ -121,7 +156,16 @@ public class BackgroundLocationPlugin extends Plugin {
         status.put("supported", true);
         status.put("tracking", BackgroundLocationService.isTracking());
         status.put("sessionAvailable", hasSession());
+        String permission = permissionStatus();
+        boolean locationEnabled = locationEnabled();
+        status.put("permission", permission);
+        status.put("locationEnabled", locationEnabled);
         String reason = BackgroundLocationState.reason(getContext());
+        if (reason == null && !locationEnabled) {
+            reason = "LOCATION_DISABLED";
+        } else if (reason == null && "DENIED".equals(permission)) {
+            reason = "PERMISSION_DENIED";
+        }
         if (reason != null) {
             status.put("reason", reason);
         }

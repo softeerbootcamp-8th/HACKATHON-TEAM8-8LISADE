@@ -14,6 +14,7 @@ import com.palisade.travel.domain.notification.entity.Notification;
 import com.palisade.travel.domain.notification.entity.NotificationType;
 import com.palisade.travel.domain.notification.repository.NotificationRepository;
 import com.palisade.travel.domain.notification.service.PushNotificationService;
+import com.palisade.travel.domain.notification.service.UnreachableAlertService;
 import com.palisade.travel.domain.trip.entity.Trip;
 import com.palisade.travel.domain.trip.entity.TripParticipant;
 import com.palisade.travel.domain.trip.entity.TripParticipantType;
@@ -83,6 +84,9 @@ class LocationServiceTest {
     @Mock
     private NotificationRepository notificationRepository;
 
+    @Mock
+    private UnreachableAlertService unreachableAlertService;
+
     private LocationService locationService;
 
     @BeforeEach
@@ -96,7 +100,8 @@ class LocationServiceTest {
                 sseConnectionService,
                 userRepository,
                 pushNotificationService,
-                notificationRepository
+                notificationRepository,
+                unreachableAlertService
         );
     }
 
@@ -191,6 +196,83 @@ class LocationServiceTest {
         assertThat(firstUserFirst.consecutiveOutsideCount()).isEqualTo(1);
         assertThat(firstUserSecond.consecutiveOutsideCount()).isEqualTo(2);
         assertThat(secondUserFirst.consecutiveOutsideCount()).isEqualTo(1);
+    }
+
+    @Test
+    void Given_같은_recordedAt의_외부_좌표_When_다시_수신_Then_연속_이탈_횟수를_증가시키지_않는다() {
+        // given
+        givenActiveTrip(USER_ID);
+        CurrentLocation currentLocation = CurrentLocation.create(
+                USER_ID,
+                TRIP_ID,
+                new BigDecimal("37.0200000"),
+                new BigDecimal("127.0050000"),
+                true,
+                LocalDateTime.of(2026, 8, 25, 8, 55, 29)
+        );
+        given(currentLocationRepository.findByUserIdAndTripId(USER_ID, TRIP_ID))
+                .willReturn(Optional.of(currentLocation));
+        locationService.update(USER_ID, outsideRequest());
+
+        // when
+        LocationUpdateResponse duplicate = locationService.update(USER_ID, outsideRequest());
+
+        // then
+        assertThat(duplicate.consecutiveOutsideCount()).isEqualTo(1);
+    }
+
+    @Test
+    void Given_정확도_50미터를_초과한_외부_좌표_When_수신_Then_연속_이탈_횟수를_증가시키지_않는다() {
+        // given
+        givenActiveTripWithoutGeofence(USER_ID);
+        LocationUpdateRequest inaccurate = new LocationUpdateRequest(
+                new BigDecimal("37.0200000"),
+                new BigDecimal("127.0050000"),
+                new BigDecimal("50.1"),
+                Instant.parse("2026-08-25T08:55:30Z")
+        );
+
+        // when
+        LocationUpdateResponse response = locationService.update(USER_ID, inaccurate);
+
+        // then
+        assertThat(response.consecutiveOutsideCount()).isZero();
+    }
+
+    @Test
+    void Given_정확도가_없는_외부_좌표_When_수신_Then_연속_이탈_횟수를_증가시키지_않는다() {
+        // given
+        givenActiveTripWithoutGeofence(USER_ID);
+        LocationUpdateRequest withoutAccuracy = new LocationUpdateRequest(
+                new BigDecimal("37.0200000"),
+                new BigDecimal("127.0050000"),
+                null,
+                Instant.parse("2026-08-25T08:55:30Z")
+        );
+
+        // when
+        LocationUpdateResponse response = locationService.update(USER_ID, withoutAccuracy);
+
+        // then
+        assertThat(response.consecutiveOutsideCount()).isZero();
+    }
+
+    @Test
+    void Given_정확도_50미터를_초과한_외부_좌표_When_수신_Then_이탈_로그를_남기지_않는다() {
+        // given
+        givenActiveTripWithoutGeofence(USER_ID);
+        LocationUpdateRequest inaccurate = new LocationUpdateRequest(
+                new BigDecimal("37.0200000"),
+                new BigDecimal("127.0050000"),
+                new BigDecimal("50.1"),
+                Instant.parse("2026-08-25T08:55:30Z")
+        );
+
+        // when
+        locationService.update(USER_ID, inaccurate);
+
+        // then
+        then(locationLogRepository).should(never()).save(any());
     }
 
     @Test
@@ -389,6 +471,12 @@ class LocationServiceTest {
     }
 
     private void givenActiveTrip(Long userId) {
+        givenActiveTripWithoutGeofence(userId);
+        given(geofencePointRepository.findAllByGeofenceIdOrderBySequenceAsc(GEOFENCE_ID))
+                .willReturn(square());
+    }
+
+    private void givenActiveTripWithoutGeofence(Long userId) {
         given(tripParticipantRepository.findFirstByUserIdOrderByCreatedAtDescIdDesc(userId))
                 .willReturn(Optional.of(new TripParticipant(
                         100L + userId,
@@ -399,8 +487,6 @@ class LocationServiceTest {
                         LocalDateTime.of(2026, 1, 1, 0, 0)
                 )));
         given(tripRepository.findById(TRIP_ID)).willReturn(Optional.of(trip(TripStatus.ACTIVE)));
-        given(geofencePointRepository.findAllByGeofenceIdOrderBySequenceAsc(GEOFENCE_ID))
-                .willReturn(square());
     }
 
     private TripParticipant participant() {

@@ -14,6 +14,8 @@ export interface StudentTrip {
 
 export interface LocationTrackingState {
   permission: LocationPermission
+  locationEnabled: boolean
   sendStatus: LocationSendStatus
   lastSentAt: string | null
+  reason?: 'LOCATION_DISABLED' | 'PERMISSION_DENIED' | 'SESSION_EXPIRED' | 'SESSION_MISSING' | 'TRIP_ENDED' | 'UNAVAILABLE'
 }

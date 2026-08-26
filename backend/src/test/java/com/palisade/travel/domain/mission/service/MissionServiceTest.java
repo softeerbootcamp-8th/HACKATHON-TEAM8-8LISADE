@@ -71,6 +71,51 @@ class MissionServiceTest {
     }
 
     @Test
+    void statusBoardIssuesAViewUrlForEachSubmittedPhoto() {
+        Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, null);
+        when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
+        when(tripRepository.findById(1L)).thenReturn(Optional.of(trip(100L)));
+        when(participantRepository.findAllByTripIdOrderByCreatedAtAsc(1L))
+                .thenReturn(List.of(TripParticipant.create(1L, 10L)));
+        when(submissionRepository.findByMissionId(2L))
+                .thenReturn(List.of(MissionSubmission.photo(2L, 10L, "upload/missions/2/students/10/a.jpg")));
+        when(userRepository.findAllById(any())).thenReturn(List.of(user(10L, "김학생")));
+        when(storagePresigner.presignGet("upload/missions/2/students/10/a.jpg"))
+                .thenReturn("https://storage.example/view");
+
+        var board = missionService.getStatusBoard(2L, 100L);
+
+        assertThat(board.submitted().get(0).imageUrl()).isEqualTo("https://storage.example/view");
+    }
+
+    @Test
+    void statusBoardOmitsTheViewUrlWhenTheSubmissionHasNoImage() {
+        Mission mission = Mission.createCheck(1L, "출석", "", null, null, "1234");
+        when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
+        when(tripRepository.findById(1L)).thenReturn(Optional.of(trip(100L)));
+        when(participantRepository.findAllByTripIdOrderByCreatedAtAsc(1L))
+                .thenReturn(List.of(TripParticipant.create(1L, 10L)));
+        when(submissionRepository.findByMissionId(2L))
+                .thenReturn(List.of(MissionSubmission.completedCheck(2L, 10L)));
+        when(userRepository.findAllById(any())).thenReturn(List.of(user(10L, "김학생")));
+
+        var board = missionService.getStatusBoard(2L, 100L);
+
+        assertThat(board.submitted().get(0).imageUrl()).isNull();
+        org.mockito.Mockito.verify(storagePresigner, org.mockito.Mockito.never()).presignGet(any());
+    }
+
+    @Test
+    void statusBoardIsDeniedToATeacherWhoDoesNotOwnTheTrip() {
+        Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, null);
+        when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));
+        when(tripRepository.findById(1L)).thenReturn(Optional.of(trip(100L)));
+
+        assertThatThrownBy(() -> missionService.getStatusBoard(2L, 999L))
+                .isInstanceOf(ApiException.class);
+    }
+
+    @Test
     void statusBoardExposesTheRejectionReasonForARejectedStudent() {
         Mission mission = Mission.create(1L, "사진", "", MissionType.ACTIVITY, null, null);
         when(missionRepository.findById(2L)).thenReturn(Optional.of(mission));

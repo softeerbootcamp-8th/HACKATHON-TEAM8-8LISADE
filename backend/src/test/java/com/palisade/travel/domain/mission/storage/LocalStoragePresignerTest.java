@@ -15,4 +15,13 @@ class LocalStoragePresignerTest {
         assertThat(upload.objectKey()).isEqualTo("missions/12/students/3/photo.jpg");
         assertThat(upload.uploadUrl()).isEqualTo("http://localhost:8080/mock-storage/missions/12/students/3/photo.jpg");
     }
+
+    @Test
+    void returnsALocalViewUrlForTheStoredObjectKey() {
+        LocalStoragePresigner presigner = new LocalStoragePresigner();
+
+        String viewUrl = presigner.presignGet("upload/missions/12/students/3/photo.jpg");
+
+        assertThat(viewUrl).isEqualTo("http://localhost:8080/mock-storage/upload/missions/12/students/3/photo.jpg");
+    }
 }

@@ -1,7 +1,5 @@
 import type { MissionCreateInput, MissionStatusBoard, TeacherMission } from '../types/mission'
-import { apiUrl } from './apiUrl'
-
-export interface MissionApi { verifyAttendancePin(pin: string): Promise<void>; uploadPhoto(uri: string): Promise<void> }
+import { apiFetch } from './httpClient'
 
 export type MissionType = 'ACTIVITY' | 'CHECK'
 export type SubmissionStatus = 'WAITING' | 'COMPLETED' | 'REJECTED' | 'EXPIRED'
@@ -39,7 +37,7 @@ type PresignedUpload = {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(apiUrl(path), { credentials: 'include', ...init })
+  const response = await apiFetch(path, init)
   const body = await response.json().catch(() => null) as ApiResponse<T> | null
 
   if (!response.ok || !body?.success) {
@@ -64,9 +62,8 @@ async function post<T>(path: string, payload?: unknown): Promise<T> {
 
 async function del(path: string): Promise<void> {
   const csrfToken = await request<CsrfToken>('/api/auth/csrf')
-  const response = await fetch(apiUrl(path), {
+  const response = await apiFetch(path, {
     method: 'DELETE',
-    credentials: 'include',
     headers: { [csrfToken.headerName]: csrfToken.token },
   })
 

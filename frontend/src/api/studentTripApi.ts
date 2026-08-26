@@ -1,5 +1,5 @@
 import type { StudentTrip } from '../types/studentTrip'
-import { apiUrl } from './apiUrl'
+import { apiFetch } from './httpClient'
 
 export interface StudentTripApi {
   getActiveTrip(): Promise<StudentTrip | null>
@@ -25,7 +25,7 @@ type ActiveTripResponse = {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(apiUrl(path), { credentials: 'include', ...init })
+  const response = await apiFetch(path, init)
   const body = await response.json().catch(() => null) as ApiResponse<T> | null
 
   if (!response.ok || !body?.success) {

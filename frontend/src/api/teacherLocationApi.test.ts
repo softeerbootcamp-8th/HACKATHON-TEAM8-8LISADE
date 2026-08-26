@@ -24,7 +24,23 @@ class FakeEventSource {
 }
 
 describe('teacherLocationApi', () => {
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs() })
+
+  it('배포 API 주소가 설정되면 상대경로 대신 그 주소로 요청·구독한다', async () => {
+    // given
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com')
+    const fetchMock = vi.fn().mockResolvedValue(apiResponse({ success: true, data: [] }))
+    vi.stubGlobal('fetch', fetchMock)
+    vi.stubGlobal('EventSource', FakeEventSource)
+
+    // when
+    await teacherLocationApi.getContext(7)
+    teacherLocationApi.subscribe(vi.fn())
+
+    // then
+    expect(fetchMock.mock.calls[0][0]).toBe('https://api.example.com/api/teacher/trips/7/participants')
+    expect(FakeEventSource.instance.url).toBe('https://api.example.com/api/teacher/sse/connect')
+  })
 
   it('Trip을 선택하면 학생 명단과 최신 위치와 지오펜스를 함께 조회한다', async () => {
     // given

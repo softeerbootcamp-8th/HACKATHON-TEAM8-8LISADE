@@ -27,3 +27,12 @@
 - 배포 검증 중 `3.34.148.229:8080`에 대한 외부 연결이 거부되는 걸 발견했다. EC2 보안그룹에는 8080이 이미 열려 있었고, 원인은 백엔드 컨테이너 자체가 떠 있지 않았던 것 — `docker compose -f docker-compose.prod.yml down && up -d`로 재기동 후 해결했다. 이건 이번 rewrite 구현과는 별개의 인프라 이슈였다.
 
 검증: `gh workflow run vercel-deploy.yml --ref fix/#76-vercel-backend-rewrite`로 수동 실행 후, `curl https://8lisade.vercel.app/api/auth/csrf` → `HTTP 200` + 실제 백엔드가 발급한 CSRF 토큰 응답 확인. SPA 딥링크(`/some/deep/route`)도 `HTTP 200`으로 `index.html` fallback 정상 동작 확인.
+
+# Capacitor Android WebView origin CORS 허용 (#102)
+
+- Capacitor는 `capacitor.config.ts`에 `server.hostname`을 지정하지 않으면 WebView가 기본 origin `https://localhost`로 동작한다. Vercel 프록시(#76)는 웹에서만 same-origin을 만들어주고, 안드로이드 앱은 그 프록시를 거치지 않고 `VITE_API_BASE_URL`로 백엔드를 절대경로 호출하므로 여전히 cross-origin이다.
+- `BackgroundLocationPlugin`처럼 네이티브 Java HTTP 클라이언트로 직접 보내는 요청(위치 전송)은 브라우저가 아니라 CORS 대상이 아니지만, 로그인·FCM 기기 등록 같은 나머지 API는 WebView 안 React 코드가 일반 `fetch()`로 호출해서 똑같이 CORS 검사를 받는다.
+- `application-prod.yml`의 `app.security.cors.allowed-origins`에 `https://localhost`를 추가했다. 로컬(`application.yml`)은 이미 `http://localhost:5173/5174`만 쓰고 Capacitor 앱을 로컬에서 prod API로 붙일 계획이 없어 변경하지 않았다.
+- S3 버킷 CORS(`docs/hyeonyway/production-api-deployment.md`의 "버킷 CORS" 절, #92)에도 같은 이유로 `https://localhost`가 필요하다 — 미션 사진 업로드가 S3에 직접 presigned `PUT`을 보내기 때문이다. 이건 저장소 코드가 아니라 AWS 콘솔/CLI로 버킷에 직접 설정해야 해서 이 PR에는 포함하지 않았다.
+
+검증: YAML 설정 변경만이라 `./gradlew test` 영향 없음(회귀 확인용으로만 재실행). 실제 안드로이드 앱에서의 CORS 통과 여부는 실기기 검증(#40/#29 후속)과 함께 확인한다.

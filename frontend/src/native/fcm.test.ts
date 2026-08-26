@@ -55,4 +55,38 @@ describe('네이티브 FCM 브리지', () => {
 
     expect(plugin.unregister).toHaveBeenCalled()
   })
+
+  it('Given 웹 환경 When 포그라운드 알림을 구독하면 Then 네이티브 리스너를 걸지 않는다', () => {
+    const plugin = createPlugin()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fcm = createNativeFcm(plugin as any, false)
+
+    fcm.onForegroundMessage(vi.fn())
+
+    expect(plugin.addListener).not.toHaveBeenCalled()
+  })
+
+  it('Given 네이티브 환경 When 포그라운드 알림이 오면 Then 제목과 본문을 콜백으로 넘긴다', () => {
+    const plugin = createPlugin()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fcm = createNativeFcm(plugin as any, true)
+    const received: { title: string; body: string }[] = []
+
+    fcm.onForegroundMessage((notification) => received.push(notification))
+    plugin.listeners.pushNotificationReceived?.({ title: '안전 구역 이탈', body: '김학생이 안전 구역을 벗어났습니다.' })
+
+    expect(received).toEqual([{ title: '안전 구역 이탈', body: '김학생이 안전 구역을 벗어났습니다.' }])
+  })
+
+  it('Given 네이티브 환경 When 제목 없는 알림이 오면 Then 콜백을 호출하지 않는다', () => {
+    const plugin = createPlugin()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fcm = createNativeFcm(plugin as any, true)
+    const received: unknown[] = []
+
+    fcm.onForegroundMessage((notification) => received.push(notification))
+    plugin.listeners.pushNotificationReceived?.({ data: { tripId: '1' } })
+
+    expect(received).toHaveLength(0)
+  })
 })

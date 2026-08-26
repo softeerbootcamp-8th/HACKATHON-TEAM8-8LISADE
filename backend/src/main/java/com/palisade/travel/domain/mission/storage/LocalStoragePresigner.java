@@ -7,8 +7,15 @@ import org.springframework.stereotype.Component;
 @Profile({"local", "test"})
 public class LocalStoragePresigner implements StoragePresigner {
 
+    private static final String MOCK_STORAGE_BASE_URL = "http://localhost:8080/mock-storage/";
+
     @Override
     public PresignedUpload presignPut(String objectKey) {
-        return new PresignedUpload(objectKey, "http://localhost:8080/mock-storage/" + objectKey);
+        return new PresignedUpload(objectKey, MOCK_STORAGE_BASE_URL + objectKey);
+    }
+
+    @Override
+    public String presignGet(String objectKey) {
+        return MOCK_STORAGE_BASE_URL + objectKey;
     }
 }

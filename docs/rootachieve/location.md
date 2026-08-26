@@ -87,3 +87,37 @@
 - `npm test`: 19개 파일, 105개 테스트 통과
 - `npm run lint`: 통과
 - `npm run build`: 통과
+
+## Issue #85: 위치 추적 신선도·생명주기 계약
+
+- Android 포그라운드 서비스는 1초 수집 요청과 10초 전송 시도를 별도 상수와
+  정책으로 운용한다. monotonic clock으로 10초를 넘긴 좌표와 이미 처리한
+  `recordedAt`을 제외한다.
+- 학생이 초대 코드로 ACTIVE Trip에 참여하거나, 로그인·앱 재실행 뒤 기존 ACTIVE
+  Trip이 확인되면 같은 네이티브 시작 경로를 호출한다. ACTIVE Trip이 없으면
+  시작하지 않고 로그아웃·401·410에서는 포그라운드 서비스를 중단한다.
+- Android UI는 mock 권한 상태 대신 네이티브 위치·알림 권한과 기기 위치 서비스
+  상태를 사용한다. 운영 위치 endpoint는 HTTPS만 허용하며 디버그 APK의
+  localhost HTTP만 예외로 허용한다. `VITE_API_BASE_URL`이 없을 때의 로컬 기본값은
+  `http://localhost:8080`이다.
+- Android `HttpURLConnection`에는 WebView의 `JSESSIONID`를 Cookie 헤더로 직접
+  첨부한다. localhost HTTP의 만료 쿠키에는 `Secure`를 붙이지 않고 HTTPS에서만
+  유지해 로컬 세션 만료도 실제 CookieManager 정책과 맞춘다.
+- 실기기 검증에 사용한 Android 전송 로그와 Spring 좌표 DEBUG 로그·로컬 로그
+  레벨 설정은 최종 코드에서 제거했다.
+- 서버는 현재 위치보다 늦지 않은 `recordedAt`을 멱등 처리한다. 정확도가 없거나
+  50m를 초과하면 좌표 시각만 갱신하고 지오펜스 상태·연속 이탈 횟수·이탈 로그는
+  변경하지 않는다.
+- 이번 백그라운드 범위는 홈 버튼·화면 잠금까지다. 최근 앱 제거·프로세스 재시작
+  지속 추적, `ACCESS_BACKGROUND_LOCATION`, 상태 영속 재시작, WorkManager는
+  포함하지 않았다.
+
+### 검증
+
+- `./gradlew test`: 백엔드 135개 테스트 통과
+- `npm test -- --run`: 프런트 28개 파일, 166개 테스트 통과
+- `npm run lint`, `npm run build`, `npx cap sync android`: 통과
+- `./gradlew testDebugUnitTest assembleDebug`: Android 14개 테스트와 디버그 APK 조립 통과
+- `SM_S911N` 실측: ACTIVE Trip 재로그인 후 `12:15:05`부터 `12:15:55`까지
+  약 10초 간격으로 6회 전송되었고 모두 HTTP 200 응답 확인
+- `git diff --check`: 통과

@@ -64,7 +64,7 @@
 | `MissionType` | `ACTIVITY`, `CHECK` |
 | `SubmissionStatus` | `WAITING`, `COMPLETED`, `REJECTED`, `EXPIRED` |
 | `DevicePlatform` | `WEB`, `ANDROID`, `IOS` |
-| `NotificationType` | `RANGE_EXIT`, `MISSION_CREATED`, `MISSION_INCOMPLETED` |
+| `NotificationType` | `RANGE_EXIT`, `MISSION_CREATED`, `MISSION_INCOMPLETED`, `UNREACHABLE` |
 | `SseEventType` | `CONNECTED`, `HEARTBEAT`, `LOCATION_UPDATED` |
 
 ---
@@ -105,7 +105,8 @@
 | 30 | GET | `/api/missions/{missionId}/submission` | 인증 | 내 제출 조회 |
 | 31 | POST | `/api/notifications/devices` | 인증 | 기기 토큰 등록 |
 | 32 | DELETE | `/api/notifications/devices` | 인증 | 기기 토큰 해제 |
-| 33 | PUT | `/mock-storage/{objectKey}` | 공개 (local/test) | 로컬 목 스토리지 업로드 |
+| 33 | GET | `/api/teacher/notifications` | TEACHER | 교사 수신 알림 목록 조회 |
+| 34 | PUT | `/mock-storage/{objectKey}` | 공개 (local/test) | 로컬 목 스토리지 업로드 |
 
 ---
 
@@ -559,7 +560,8 @@ data: {"userId":3,"latitude":35.7901234,"longitude":129.3321234,"outside":true,"
       {
         "studentId": 3,
         "studentName": "김학생",
-        "imageKey": "missions/5/students/3/uuid.jpg",
+        "imageKey": "upload/missions/5/students/3/uuid.jpg",
+        "imageUrl": "https://....s3.ap-northeast-2.amazonaws.com/upload/missions/5/students/3/uuid.jpg?X-Amz-Signature=...",
         "submittedAt": "2026-03-01T10:30:00"
       }
     ],
@@ -574,7 +576,11 @@ data: {"userId":3,"latitude":35.7901234,"longitude":129.3321234,"outside":true,"
 | --- | --- |
 | `totalStudentCount` | 여행 참가 학생 수 |
 | `submitted[]` | 제출 완료 학생 |
+| `submitted[].imageKey` | S3 object key |
+| `submitted[].imageUrl` | **30분 만료** presigned 조회 URL. 사진이 없는 제출(PIN 미션·교사 대리 완료)은 `null` |
 | `notSubmitted[].rejectionReason` | 반려된 경우 사유, 미제출이면 `null` |
+
+운영 버킷은 비공개다. `imageUrl` 은 담당 교사가 이 API 를 호출한 시점에 발급되며 30분 뒤 만료되므로, 프론트는 URL 을 장기 보관하지 말고 만료되면 현황판을 다시 조회한다. 업로드용 PUT URL 은 5분 그대로다.
 
 ---
 
@@ -638,8 +644,8 @@ data: {"userId":3,"latitude":35.7901234,"longitude":129.3321234,"outside":true,"
 {
   "success": true,
   "data": {
-    "objectKey": "missions/5/students/3/3f2a...-.jpg",
-    "uploadUrl": "https://.../missions/5/students/3/3f2a...-.jpg?X-Amz-Signature=..."
+    "objectKey": "upload/missions/5/students/3/3f2a...-.jpg",
+    "uploadUrl": "https://.../upload/missions/5/students/3/3f2a...-.jpg?X-Amz-Signature=..."
   }
 }
 ```
@@ -664,7 +670,7 @@ data: {"userId":3,"latitude":35.7901234,"longitude":129.3321234,"outside":true,"
   "data": {
     "submissionId": 42,
     "status": "WAITING",
-    "imageKey": "missions/5/students/3/3f2a...-.jpg"
+    "imageKey": "upload/missions/5/students/3/3f2a...-.jpg"
   }
 }
 ```
@@ -724,6 +730,38 @@ data: {"userId":3,"latitude":35.7901234,"longitude":129.3321234,"outside":true,"
 | `token` | string | O |
 
 **Response `204 No Content`** (body 없음)
+
+---
+
+### 11.3 GET `/api/teacher/notifications` — 교사 수신 알림 목록 조회
+
+| 항목 | 값 |
+| --- | --- |
+| 권한 | TEACHER |
+
+인증 교사에게 온 모든 알림을 `createdAt` 최신순으로 반환한다(유형 무관).
+
+**Response `200 OK`** — `data`: 배열
+
+| 필드 | 타입 | 설명 |
+| --- | --- | --- |
+| `id` | number | 알림 ID |
+| `type` | `NotificationType` | 알림 유형 |
+| `tripId` | number \| null | 관련 Trip |
+| `missionId` | number \| null | 관련 미션(미완료 등) |
+| `title` | string | 제목 |
+| `message` | string | 본문 |
+| `createdAt` | datetime | 생성 시각 |
+
+#### 교사 알림 정책 (§6.1)
+
+| 알림 | 유형 | 발송 조건 | 횟수 규칙 |
+| --- | --- | --- | --- |
+| 미션 미완료 | `MISSION_INCOMPLETED` | 미션 마감 시각에 미완료 학생이 있을 때. 출석체크(`CHECK`)는 마감이 없어 발송하지 않는다. | 미션당 1회, 미완료 인원 요약 |
+| 이탈 발생 | `RANGE_EXIT` | 학생이 이탈 판정될 때 | 학생당 1회, 해제 후 다시 이탈하면 재발송 |
+| 위치 확인 불가 | `UNREACHABLE` | 확인 불가 3분 지속 시 | 학생당 1회 |
+
+> 미완료(마감 배치)·확인 불가(3분 미수신 감지)의 발송 트리거 로직은 후속 이슈에서 구현한다. 현재 자동 발송은 이탈(`RANGE_EXIT`)만 동작한다.
 
 ---
 
