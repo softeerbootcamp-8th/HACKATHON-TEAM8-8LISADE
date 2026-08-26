@@ -29,10 +29,14 @@ Figma T-04-1(학생 상세 — 미션 현황)이 요구하는 제출/지각/미�
 - `MissionService.getStatusBoard`: `submitted` 버킷 조건을 `COMPLETED || LATE`로 확장하고,
   `SubmittedEntry`에 `late` 플래그를 실어 응답 — 지각도 결국 제출이므로 별도 버킷을
   신설하지 않았다.
-- `DeadlineImminentAlertService`/`MissionIncompleteAlertService`의 "완료" 판정도
-  `COMPLETED || LATE`로 확장했다(지각 제출자를 미완료로 오분류해 알림을 보내지 않도록).
-  `docs/minseo6753/mission-incomplete-alert.md`의 "미완료 = COMPLETED가 아닌 참가 학생"
-  정의가 이 변경으로 "COMPLETED/LATE가 아닌 참가 학생"으로 바뀌었다.
+- `DeadlineImminentAlertService`/`MissionIncompleteAlertService`의 "완료" 판정은
+  `COMPLETED`만 유지하고 건드리지 않았다. 처음엔 "지각도 결국 제출이니 완료로 쳐서 알림
+  대상에서 빼야 한다"고 판단해 `LATE`도 포함하도록 넓혔었는데, 특히
+  `MissionIncompleteAlertService`("§6.1 미션 마감 시 미완료 요약")는 애초에 **마감까지
+  제출했는지**를 교사에게 알려주는 게 목적이라 — 지각 제출은 정의상 마감을 못 지킨
+  것이므로 오히려 미완료로 집계되는 게 맞다고 리뷰 중 정정했다. `getStatusBoard`(교사가
+  "누가 뭘 냈는지" 보는 뷰)는 지각도 제출로 쳐서 `submitted`에 포함시키는 게 맞지만, 이
+  두 알림(마감 준수 여부 리포트)은 성격이 달라 그대로 `COMPLETED`만 본다.
 - 프론트 `TeacherMissions.tsx`: 학생 상세(`TeacherStudents.tsx`)에는 미션별 목록 자체가
   없어(집계 카운트만 존재) 이미 미션별 제출 현황을 보여주는 `TeacherMissions.tsx`의
   "제출한 학생" 목록 안에 지각 배지(`badge-late`, `--color-warning` 토큰)를 추가했다.
@@ -42,8 +46,8 @@ Figma T-04-1(학생 상세 — 미션 현황)이 요구하는 제출/지각/미�
 - `MissionSubmissionTest`/`MissionServiceTest`: 지각 판정(신규 제출·반려 후 재제출),
   마감 후 업로드 URL 발급 허용, CHECK는 마감 후 여전히 차단, 현황판 `submitted` 버킷에
   LATE 플래그 노출 — 신규 케이스 포함 backend 178개 테스트 전부 통과(`./gradlew test`).
-- `DeadlineImminentAlertServiceTest`/`MissionIncompleteAlertServiceTest`: 지각 제출도
-  완료로 집계되어 알림 대상에서 빠지는지 검증.
+- `MissionIncompleteAlertServiceTest`: 지각 제출도 마감을 못 지킨 것이므로 여전히
+  미완료로 집계되어 교사 알림이 나가는지 검증.
 - 프론트 `TeacherMissions.test.tsx`: 지각 제출이 "제출한 학생" 목록에 남아 있으면서
   지각 배지만 붙는지 검증 — frontend 256개 테스트 전부 통과(`npx vitest run`),
   `npx tsc -b` 타입체크 통과.

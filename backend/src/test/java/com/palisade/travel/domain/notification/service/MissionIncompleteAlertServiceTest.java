@@ -121,8 +121,8 @@ class MissionIncompleteAlertServiceTest {
     }
 
     @Test
-    void 지각_제출도_완료로_취급해_미완료_알림에서_제외한다() {
-        // given
+    void 지각_제출은_마감을_지키지_못한_것이므로_여전히_미완료로_집계한다() {
+        // given — 1L은 마감 전 제출(COMPLETED), 2L은 마감을 넘겨 제출(LATE)
         given(missionRepository.findByTypeAndEndAtIsNotNullAndEndAtBefore(MissionType.ACTIVITY, NOW))
                 .willReturn(List.of(mission("어디서 사진 찍기")));
         given(notificationRepository.existsByMissionIdAndType(MISSION_ID, NotificationType.MISSION_INCOMPLETED))
@@ -131,13 +131,15 @@ class MissionIncompleteAlertServiceTest {
                 .willReturn(List.of(participant(1L), participant(2L)));
         given(submissionRepository.findByMissionId(MISSION_ID))
                 .willReturn(List.of(MissionSubmission.photo(MISSION_ID, 1L, "k", false), MissionSubmission.photo(MISSION_ID, 2L, "k", true)));
+        given(tripRepository.findById(TRIP_ID)).willReturn(Optional.of(trip()));
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
 
         // when
         service.notifyOverdueMissions(NOW);
 
-        // then
-        then(notificationRepository).should(never()).save(any());
-        then(pushNotificationService).should(never()).sendToUser(any(), any(), any());
+        // then — 지각한 2L도 미완료로 집계되어 1명 미완료 알림이 나간다
+        then(notificationRepository).should().save(captor.capture());
+        assertThat(captor.getValue().getMessage()).contains("1명");
     }
 
     private Mission mission(String title) {
