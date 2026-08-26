@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 
 @RestController
 @RequestMapping("/api/student/locations")
@@ -46,17 +45,8 @@ public class LocationController {
     }
 
     @PutMapping("/override")
-    public ApiResponse<LocationOverrideResponse> enableOverride(Authentication authentication,
-                                                               @Valid @RequestBody LocationOverrideRequest request,
+    public ApiResponse<LocationOverrideResponse> enableOverride(@Valid @RequestBody LocationOverrideRequest request,
                                                                HttpSession session) {
-        UserPrincipal user = (UserPrincipal) authentication.getPrincipal();
-        locationService.update(user.userId(), new LocationUpdateRequest(
-                request.latitude(),
-                request.longitude(),
-                BigDecimal.ZERO,
-                Instant.now()
-        ));
-
         // WebView와 Android 네이티브 요청이 같은 JSESSIONID를 쓰므로 세션에 둔 좌표 하나로 두 경로를 함께 제어한다.
         session.setAttribute(OVERRIDE_LATITUDE, request.latitude());
         session.setAttribute(OVERRIDE_LONGITUDE, request.longitude());

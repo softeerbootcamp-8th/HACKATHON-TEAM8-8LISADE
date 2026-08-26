@@ -168,7 +168,7 @@ class LocationApiIntegrationTest {
     }
 
     @Test
-    void 수동_위치를_활성화하면_선택한_좌표가_즉시_저장된다() throws Exception {
+    void 수동_위치를_활성화해도_다음_전송_주기_전에는_선택한_좌표를_저장하지_않는다() throws Exception {
         // given
         MockHttpSession session = login();
 
@@ -176,7 +176,7 @@ class LocationApiIntegrationTest {
         enableOverride(session, "37.0200000", "127.0200000");
 
         // then
-        assertThat(savedLocationCount("37.0200000", "127.0200000")).isEqualTo(1);
+        assertThat(savedLocationCount("37.0200000", "127.0200000")).isZero();
     }
 
     @Test

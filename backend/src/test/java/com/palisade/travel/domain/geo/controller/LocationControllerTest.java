@@ -17,12 +17,10 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
-import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -177,11 +175,9 @@ class LocationControllerTest {
     }
 
     @Test
-    void 수동_위치를_활성화하면_선택한_좌표를_즉시_현재_위치로_전달한다() throws Exception {
+    void 수동_위치를_활성화해도_다음_전송_주기_전에는_현재_위치를_변경하지_않는다() throws Exception {
         // given
         MockHttpSession session = new MockHttpSession();
-        given(locationService.update(eq(42L), any()))
-                .willReturn(new LocationUpdateResponse(10L, false, 0));
 
         // when
         mockMvc.perform(put("/api/student/locations/override")
@@ -195,11 +191,7 @@ class LocationControllerTest {
                 .andExpect(jsonPath("$.data.longitude").value(127.001));
 
         // then
-        ArgumentCaptor<LocationUpdateRequest> request = ArgumentCaptor.forClass(LocationUpdateRequest.class);
-        then(locationService).should().update(eq(42L), request.capture());
-        assertThat(request.getValue().latitude()).isEqualByComparingTo("37.501");
-        assertThat(request.getValue().longitude()).isEqualByComparingTo("127.001");
-        assertThat(request.getValue().accuracy()).isEqualByComparingTo(BigDecimal.ZERO);
+        then(locationService).should(never()).update(any(), any());
     }
 
     @Test

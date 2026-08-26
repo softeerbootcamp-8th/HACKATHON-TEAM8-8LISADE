@@ -39,6 +39,7 @@ export interface BackgroundLocationClient {
 
 const NativeBackgroundLocation = registerPlugin<NativeBackgroundLocationPlugin>('BackgroundLocation')
 const STUDENT_LOCATION_PATH = '/api/student/locations'
+const BROWSER_UPLOAD_INTERVAL_MILLIS = 10_000
 
 type BrowserLocationDependencies = {
   geolocation?: Pick<Geolocation, 'watchPosition' | 'clearWatch'>
@@ -75,6 +76,8 @@ function createBrowserBackgroundLocation(
 ): BackgroundLocationClient {
   let endpoint = ''
   let watchId: number | null = null
+  let uploadTimer: ReturnType<typeof setInterval> | null = null
+  let latestPosition: GeolocationPosition | null = null
   let generation = 0
   let status: TrackingStatus = geolocation
     ? browserStatus()
@@ -83,7 +86,10 @@ function createBrowserBackgroundLocation(
   const stopWatch = () => {
     generation += 1
     if (watchId !== null && geolocation) geolocation.clearWatch(watchId)
+    if (uploadTimer !== null) clearInterval(uploadTimer)
     watchId = null
+    uploadTimer = null
+    latestPosition = null
   }
 
   const send = async (position: GeolocationPosition, activeGeneration: number) => {
@@ -151,7 +157,17 @@ function createBrowserBackgroundLocation(
 
       try {
         watchId = geolocation.watchPosition(
-          (position) => { void send(position, activeGeneration).then(resolveFirst) },
+          (position) => {
+            if (activeGeneration !== generation) return
+            latestPosition = position
+            status = browserStatus({
+              tracking: true,
+              permission: 'GRANTED',
+              lastSentAt: status.lastSentAt,
+              sendFailed: status.sendFailed,
+            })
+            resolveFirst(status)
+          },
           (error) => {
             if (activeGeneration !== generation) return
             stopWatch()
@@ -165,6 +181,9 @@ function createBrowserBackgroundLocation(
           },
           { enableHighAccuracy: true, maximumAge: 0, timeout: 15_000 },
         )
+        uploadTimer = setInterval(() => {
+          if (latestPosition) void send(latestPosition, activeGeneration)
+        }, BROWSER_UPLOAD_INTERVAL_MILLIS)
       } catch {
         stopWatch()
         status = browserStatus({ supported: false, locationEnabled: false, reason: 'UNAVAILABLE' })
