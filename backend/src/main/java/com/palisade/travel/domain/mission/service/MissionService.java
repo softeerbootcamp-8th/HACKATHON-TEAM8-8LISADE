@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
@@ -70,7 +71,17 @@ public class MissionService {
         mission.change(title, description, startAt, endAt); return mission;
     }
     public Mission getStudentMission(Long missionId, Long studentId) { Mission mission = findMission(missionId); requireParticipant(mission, studentId); requireAccessible(mission); return mission; }
-    public List<Mission> getCurrentStudentMissions(Long tripId, Long studentId) { if (!participantRepository.existsByTripIdAndUserId(tripId, studentId)) throw new MissionException(MissionErrorCode.NOT_A_TRIP_PARTICIPANT); LocalDateTime now=LocalDateTime.now(); return missionRepository.findByTripIdOrderByStartAtAsc(tripId).stream().filter(m -> m.isAccessibleAt(now) && !m.isCompleted()).toList(); }
+    public List<Mission> getCurrentStudentMissions(Long tripId, Long studentId) {
+        if (!participantRepository.existsByTripIdAndUserId(tripId, studentId)) throw new MissionException(MissionErrorCode.NOT_A_TRIP_PARTICIPANT);
+        LocalDateTime now = LocalDateTime.now();
+        List<Mission> accessible = missionRepository.findByTripIdOrderByStartAtAsc(tripId).stream().filter(m -> m.isAccessibleAt(now) && !m.isCompleted()).toList();
+        List<Long> missionIds = accessible.stream().map(Mission::getId).toList();
+        Set<Long> completedMissionIds = submissionRepository.findByMissionIdInAndUserId(missionIds, studentId).stream()
+                .filter(submission -> submission.getStatus() == SubmissionStatus.COMPLETED)
+                .map(MissionSubmission::getMissionId)
+                .collect(Collectors.toSet());
+        return accessible.stream().filter(m -> !completedMissionIds.contains(m.getId())).toList();
+    }
     @Transactional
     public SubmissionResult verifyPin(Long missionId, Long studentId, String pin) {
         Mission mission = getStudentMission(missionId, studentId);
