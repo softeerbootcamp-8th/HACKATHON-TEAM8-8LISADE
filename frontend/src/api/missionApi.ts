@@ -73,9 +73,11 @@ async function del(path: string): Promise<void> {
 }
 
 async function uploadToStorage(uploadUrl: string, photo: Blob): Promise<void> {
+  // 백엔드가 presigned URL을 항상 Content-Type: image/jpeg로 서명하므로(S3StoragePresigner),
+  // 실제 Blob의 MIME 타입과 무관하게 서명에 쓰인 값과 정확히 맞춰 보내야 SigV4 검증을 통과한다.
   const response = await fetch(uploadUrl, {
     method: 'PUT',
-    headers: { 'Content-Type': photo.type || 'image/jpeg' },
+    headers: { 'Content-Type': 'image/jpeg' },
     body: photo,
   })
 
