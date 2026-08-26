@@ -23,3 +23,11 @@
 - EC2 Role이 허용한 `upload/*` 정책과 일치하도록 서버 발급·제출 검증 object key를 `upload/missions/{missionId}/students/{studentId}/...`로 통일했다.
 
 검증: `npm test`(128개), `npm run lint`, `npm run build`, `./gradlew test`, `npx cap sync android`
+
+## 학생 사진 확인 화면 실사진 표시 (#27 후속)
+
+- `ActivityConfirmation`(`StudentScreens.tsx`)이 `photoUri` prop을 텍스트로만 출력하고 `<img>`는 고정 `preview-placeholder.svg`를 렌더링하던 버그를 고쳤다. `<img src={photoUri}>`로 바꾸고, 이제 사진으로 대체된 텍스트 줄은 제거했다. Figma `S-04-1 활동 미션 제출`(fileKey `Gp5SdtjYGtXq3UJ9qk4ZTZ`, node `82:582`)이 큰 사진 미리보기를 요구하는 걸 확인하고 진행했다.
+- `alt=""` + `aria-label`은 `<img alt="">`가 접근성 트리에서 presentation role로 취급돼 `aria-label`이 무시된다(`getByRole('img', {name})`으로 못 찾음) — 의미 있는 사진이므로 `alt="촬영한 사진 미리보기"`로 바꿔 접근성 이름을 실제로 노출시켰다.
+- 같이 정리: `missionApi.ts`의 미사용 `MissionApi` interface(#27 설계 문서가 언급한 이름이지만 실제 구현체는 다른 이름으로 나가서 orphan됨) 제거.
+
+검증: `npm test`(신규 `StudentScreens.test.tsx` 포함 34파일 199개 통과), `npm run lint`, `npm run build` 모두 통과.
