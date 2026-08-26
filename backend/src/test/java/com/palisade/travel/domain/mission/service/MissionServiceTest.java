@@ -383,4 +383,28 @@ class MissionServiceTest {
 
         assertThat(missionService.getCurrentStudentMissions(1L, 10L)).containsExactly(open);
     }
+
+    @Test
+    void currentMissionsExcludeOnesTheStudentAlreadyCompleted() {
+        Mission open = new Mission(1L, 1L, "출석 체크", "", MissionType.CHECK, "1234", null, null, LocalDateTime.now(), null);
+        Mission done = new Mission(2L, 1L, "사진 미션", "", MissionType.ACTIVITY, null, null, null, LocalDateTime.now(), null);
+        when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(true);
+        when(missionRepository.findByTripIdOrderByStartAtAsc(1L)).thenReturn(List.of(open, done));
+        MissionSubmission completed = MissionSubmission.photo(2L, 10L, "upload/missions/2/students/10/a.jpg");
+        when(submissionRepository.findByMissionIdInAndUserId(List.of(1L, 2L), 10L)).thenReturn(List.of(completed));
+
+        assertThat(missionService.getCurrentStudentMissions(1L, 10L)).containsExactly(open);
+    }
+
+    @Test
+    void currentMissionsKeepARejectedSubmissionSoTheStudentCanResubmit() {
+        Mission mission = new Mission(1L, 1L, "사진 미션", "", MissionType.ACTIVITY, null, null, null, LocalDateTime.now(), null);
+        when(participantRepository.existsByTripIdAndUserId(1L, 10L)).thenReturn(true);
+        when(missionRepository.findByTripIdOrderByStartAtAsc(1L)).thenReturn(List.of(mission));
+        MissionSubmission rejected = MissionSubmission.photo(1L, 10L, "upload/missions/1/students/10/a.jpg");
+        rejected.reject("흐릿합니다");
+        when(submissionRepository.findByMissionIdInAndUserId(List.of(1L), 10L)).thenReturn(List.of(rejected));
+
+        assertThat(missionService.getCurrentStudentMissions(1L, 10L)).containsExactly(mission);
+    }
 }
