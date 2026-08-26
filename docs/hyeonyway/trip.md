@@ -47,3 +47,11 @@
 - Figma 시안의 "학부모 전화번호" 입력란은 `ManualParticipantRequest`에 대응 필드가 없어 제외했다. 학생 정보 카드의 전화번호도 현재 참가자 조회 계약에 없어 후속 이슈 대상이다.
 
 검증: `npm test`(103 passed), `npm run lint`, `npm run build`, `cd backend && ./gradlew test`
+
+## 체험학습 상세 시간 표시 제거 및 진행중 레이아웃 수정 (#127)
+
+- `TripDetail.tsx`의 "시간" 항목이 시:분까지 보여주고 있었는데, `TripCreationFlow`는 날짜만 입력받고 `teacherTripApi.create`가 `startAt`/`endAt`을 항상 `T00:00:00`/`T23:59:59`로 고정 생성한다 — 받지도 않는 시간을 보여준 것이라 `formatSchedule`에서 시:분 표시를 제거하고 라벨도 "시간"→"날짜"로 바꿨다.
+- "진행 중" 상세 화면이 늘어져 보이던 원인: `.trip-detail-content { display:grid; gap:16px }`가 `align-content` 기본값(그리드의 `normal`은 `stretch`처럼 동작)이라, 부모(`.trip-create-content`가 `.trip-create-shell`의 `1fr` 트랙에 들어가 화면 남는 세로 공간을 다 차지함)의 남는 공간을 두 카드(정보 카드/초대 카드) 트랙에 나눠 늘리고 있었다. 내용과 무관하게 각 카드가 화면을 꽉 채우도록 부풀려진 것 — `align-items`가 아니라 `align-content`(트랙 자체의 크기)가 원인이라 찾기 까다로웠다.
+- `.trip-detail-content { align-content: start }` 한 줄로 해결. jsdom은 실제 grid 트랙 크기를 계산하지 않아 자동화 테스트로는 못 잡는 문제라, 임시 디버그 진입점(`main.tsx`에 `TripDetail`을 직접 mount, 커밋 전 원복)으로 브라우저에서 실제 렌더링해 Figma 시안(T-03-1 진행중, node 80:613)과 대조하며 확인했다.
+
+검증: `npx vitest run`(37 files, 222 passed), `npm run lint`, `npm run build` 통과.
