@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { authApi } from './api/authApi'
 import { mockLocationTrackingAdapter } from './api/locationTrackingApi'
 import { missionApi } from './api/missionApi'
@@ -8,6 +8,7 @@ import { LoginScreen, SignUpScreen, StartScreen } from './features/auth/AuthScre
 import { ActivityConfirmation, ActivityMissionScreen, CheckMissionScreen, InviteCodeScreen, LocationBlockedScreen, LocationPermissionScreen, StudentHome, type CurrentMission } from './features/student/StudentScreens'
 import { TeacherDashboard } from './features/teacher/TeacherDashboard'
 import { pushNotifications } from './notifications/pushNotifications'
+import { clearPendingMissionPhoto, listenForRestoredMissionPhoto } from './native/missionPhotoRecovery'
 import type { CurrentUser, SignUpInput } from './types/auth'
 import type { LocationTrackingState, StudentTrip } from './types/studentTrip'
 
@@ -31,6 +32,20 @@ export default function App() {
   const [missionNotice, setMissionNotice] = useState('')
   const [currentMission, setCurrentMission] = useState<CurrentMission | null>(null)
   const [availableMissions, setAvailableMissions] = useState<CurrentMission[]>([])
+
+  useEffect(() => {
+    let disposed = false
+    let removeListener: (() => Promise<void>) | undefined
+    void listenForRestoredMissionPhoto(({ mission, uri }) => {
+      setCurrentMission(mission)
+      setCapturedPhotoUri(uri)
+      setScreen('ACTIVITY_CONFIRMATION')
+    }).then((listener) => {
+      if (disposed) void listener.remove()
+      else removeListener = listener.remove
+    })
+    return () => { disposed = true; if (removeListener) void removeListener() }
+  }, [])
 
   const showLogin = () => { setError(''); setScreen('LOGIN') }
   const showSignUp = () => { setError(''); setNotice(''); setScreen('SIGN_UP') }
@@ -86,6 +101,7 @@ export default function App() {
   if (screen === 'ACTIVITY_CONFIRMATION') return <ActivityConfirmation isResubmission={currentMission?.isResubmission ?? false} photoUri={capturedPhotoUri} onRetake={() => setScreen('ACTIVITY_MISSION')} onSubmit={async () => {
     if (!currentMission) throw new Error('현재 미션을 찾을 수 없습니다.')
     await missionApi.submitPhoto(currentMission.id, await photoUriToBlob(capturedPhotoUri))
+    await clearPendingMissionPhoto()
     incrementMissionProgress()
     setCurrentMission(availableMissions.find((mission) => mission.id !== currentMission.id) ?? null)
     setMissionNotice(currentMission.isResubmission ? '사진 미션을 재제출했습니다.' : '사진 미션을 제출했습니다.')

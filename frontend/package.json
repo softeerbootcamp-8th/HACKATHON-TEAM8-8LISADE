@@ -14,7 +14,10 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/camera": "^8.2.3",
     "@capacitor/core": "^8.5.0",
+    "@capacitor/preferences": "^8.0.1",
     "@capacitor/push-notifications": "^8.1.2",
     "@phosphor-icons/react": "^2.1.10",
     "@turf/buffer": "^7.4.0",
