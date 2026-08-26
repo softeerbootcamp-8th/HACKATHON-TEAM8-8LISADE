@@ -4,6 +4,8 @@ import TeacherMissions from '../../components/TeacherMissions'
 import { Field } from '../../shared/ui/Field'
 import { ScreenCard } from '../../shared/ui/ScreenCard'
 import { AppHeader } from '../../shared/ui/AppHeader'
+import { TeacherNotifications } from './TeacherNotifications'
+import type { TeacherNotification } from '../../types/notification'
 import type { CurrentUser } from '../../types/auth'
 import type { TeacherTrip, TeacherTripStatus } from '../../types/teacherTrip'
 import icHome from '../../assets/icons/ic-home.svg'
@@ -32,6 +34,11 @@ const teacherTripStatusLabels: Record<TeacherTripStatus, string> = {
   FINISHED: '완료',
 }
 
+/** 알림 유형별 딥링크 대상 탭 — 이탈·확인 불가는 위치 화면, 그 외(미션류)는 미션 현황으로 (Figma T-07 §6.1). */
+function notificationTargetTab(type: TeacherNotification['type']): TeacherTab {
+  return type === 'RANGE_EXIT' || type === 'UNREACHABLE' ? 'LOCATION' : 'MISSIONS'
+}
+
 export function TeacherDashboard({ user }: { user: CurrentUser }) {
   const [tripId, setTripId] = useState(teacherTrips[0].id)
   const [tab, setTab] = useState<TeacherTab>('HOME')
@@ -39,6 +46,7 @@ export function TeacherDashboard({ user }: { user: CurrentUser }) {
   const [createdNotice, setCreatedNotice] = useState('')
   const [trips, setTrips] = useState<TeacherTrip[] | null>(null)
   const [tripError, setTripError] = useState('')
+  const [showNotifications, setShowNotifications] = useState(false)
   const trip = teacherTrips.find((candidate) => candidate.id === tripId) ?? teacherTrips[0]
   const missionTripId = trips && trips.length > 0 ? String(trips[0].id) : null
 
@@ -50,6 +58,11 @@ export function TeacherDashboard({ user }: { user: CurrentUser }) {
     return () => { active = false }
   }, [])
 
+  const openNotification = (notification: TeacherNotification) => {
+    setTab(notificationTargetTab(notification.type))
+    setShowNotifications(false)
+  }
+
   if (creating) return <TripCreationFlow
     onCancel={() => setCreating(false)}
     onCreated={(code) => {
@@ -58,8 +71,15 @@ export function TeacherDashboard({ user }: { user: CurrentUser }) {
     }}
   />
 
-  return <ScreenCard title="교사 홈">
+  if (showNotifications) return <ScreenCard title="알림">
     <AppHeader />
+    <div className="teacher-body">
+      <TeacherNotifications onBack={() => setShowNotifications(false)} onSelect={openNotification} />
+    </div>
+  </ScreenCard>
+
+  return <ScreenCard title="교사 홈">
+    <AppHeader onBellClick={() => setShowNotifications(true)} />
     {tab === 'MANAGE'
       ? <ManagementTab user={user} trips={trips} error={tripError} notice={createdNotice} onAdd={() => setCreating(true)} />
       : <div className="teacher-body">
