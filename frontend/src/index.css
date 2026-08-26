@@ -139,6 +139,13 @@ h2 { font-size: 17px; margin: 0; }
 .location-override-actions { display: flex; gap: 10px; margin-top: 14px; }
 .location-override-actions button { flex: 1; min-height: 48px; }
 .location-auto-button { background: var(--color-danger-soft); box-shadow: none; color: var(--color-danger); }
+.photo-source-dialog { background: var(--color-bg); border: 0; border-radius: 22px; box-shadow: 0 18px 50px rgb(39 48 58 / 30%); color: var(--color-text); margin: auto; max-width: 360px; padding: 18px; width: calc(100% - 32px); }
+.photo-source-dialog::backdrop { background: rgb(39 48 58 / 48%); }
+.photo-source-dialog h2 { font-size: 19px; margin: 0 0 5px; }
+.photo-source-dialog p { color: var(--color-text-muted); font-size: 13px; margin: 0 0 14px; }
+.photo-source-actions { display: flex; flex-direction: column; gap: 10px; }
+.photo-source-actions button { min-height: 48px; }
+.photo-source-dialog .text-button { margin-top: 10px; width: 100%; }
 
 /* Bottom nav (teacher) */
 .screen:has(.teacher-tabs) { padding-bottom: 0; }
