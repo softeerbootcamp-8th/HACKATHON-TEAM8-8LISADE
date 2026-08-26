@@ -4,6 +4,7 @@ import com.palisade.travel.domain.geo.dto.LocationUpdateRequest;
 import com.palisade.travel.domain.geo.dto.LocationUpdateResponse;
 import com.palisade.travel.domain.geo.exception.LocationErrorCode;
 import com.palisade.travel.domain.geo.exception.LocationException;
+import com.palisade.travel.domain.geo.entity.CurrentLocation;
 import com.palisade.travel.domain.geo.service.LocationService;
 import com.palisade.travel.domain.user.entity.UserRole;
 import com.palisade.travel.global.error.GlobalExceptionHandler;
@@ -20,6 +21,8 @@ import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -276,6 +279,35 @@ class LocationControllerTest {
                 .andExpect(jsonPath("$.data.enabled").value(true))
                 .andExpect(jsonPath("$.data.latitude").value(37.501))
                 .andExpect(jsonPath("$.data.longitude").value(127.001));
+    }
+
+    @Test
+    void 수동_위치_조회는_마지막으로_보고된_위치를_기본_중심으로_함께_반환한다() throws Exception {
+        // given
+        given(locationService.findDefaultCenter(42L)).willReturn(Optional.of(
+                CurrentLocation.create(42L, 10L, new BigDecimal("37.5796000"), new BigDecimal("126.9770000"),
+                        false, LocalDateTime.of(2026, 1, 1, 10, 0))
+        ));
+
+        // when & then
+        mockMvc.perform(get("/api/student/locations/override")
+                        .principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.enabled").value(false))
+                .andExpect(jsonPath("$.data.defaultCenter.latitude").value(37.5796))
+                .andExpect(jsonPath("$.data.defaultCenter.longitude").value(126.977));
+    }
+
+    @Test
+    void 보고된_위치가_없으면_기본_중심이_비어있다() throws Exception {
+        // given
+        given(locationService.findDefaultCenter(42L)).willReturn(Optional.empty());
+
+        // when & then
+        mockMvc.perform(get("/api/student/locations/override")
+                        .principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.defaultCenter").doesNotExist());
     }
 
     @Test

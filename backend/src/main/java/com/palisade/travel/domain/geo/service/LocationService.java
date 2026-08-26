@@ -34,6 +34,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -139,6 +140,12 @@ public class LocationService {
         }
 
         return new LocationUpdateResponse(trip.getId(), outside, consecutiveOutsideCount);
+    }
+
+    /** 시연용 위치 조정 다이얼로그의 초기 지도 중심용 — 학생의 마지막으로 보고된 위치가 있을 때만 값을 준다. */
+    public Optional<CurrentLocation> findDefaultCenter(Long userId) {
+        return tripParticipantRepository.findFirstByUserIdOrderByCreatedAtDescIdDesc(userId)
+                .flatMap(participant -> currentLocationRepository.findByUserIdAndTripId(userId, participant.getTripId()));
     }
 
     private LocationUpdateResponse response(Long tripId, Long userId, boolean outside) {
