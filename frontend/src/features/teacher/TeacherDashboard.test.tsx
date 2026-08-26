@@ -6,7 +6,7 @@ import { TeacherDashboard } from './TeacherDashboard'
 import { foregroundNotifications } from '../../notifications/foregroundNotifications'
 
 vi.mock('../../api/teacherTripApi', () => ({
-  teacherTripApi: { getTrips: vi.fn() },
+  teacherTripApi: { getTrips: vi.fn(), start: vi.fn(), getParticipants: vi.fn(), getCurrentInviteCode: vi.fn() },
 }))
 
 vi.mock('./TeacherHomeProgress', () => ({
@@ -39,6 +39,9 @@ const 최신체험학습 = trip(3, '최신 체험학습')
 describe('TeacherDashboard', () => {
   beforeEach(() => {
     vi.mocked(teacherTripApi.getTrips).mockReset()
+    vi.mocked(teacherTripApi.start).mockReset().mockResolvedValue({ code: 'AB1234' })
+    vi.mocked(teacherTripApi.getParticipants).mockReset().mockResolvedValue([])
+    vi.mocked(teacherTripApi.getCurrentInviteCode).mockReset().mockResolvedValue(null)
   })
 
   it('교사가_탭을_이동할_때마다_최신_체험학습_목록을_본다', async () => {
@@ -168,8 +171,122 @@ describe('TeacherDashboard', () => {
 
     expect(await screen.findByText('현장체험학습을 종료했습니다.')).toBeInTheDocument()
   })
+
+  describe('예정(READY) 체험학습 홈 카드', () => {
+    it('Given_진행_중인_체험학습이_없고_예정만_있을_때_When_홈을_열면_Then_다가오는_카드를_보여준다', async () => {
+      // given
+      vi.mocked(teacherTripApi.getTrips).mockResolvedValue([readyTrip(7, '26년 5학년 2반', 18)])
+
+      // when
+      render(<TeacherDashboard user={user} />)
+
+      // then
+      expect(await screen.findByRole('heading', { name: '다가오는 현장체험학습' })).toBeInTheDocument()
+      expect(screen.getByText('26년 5학년 2반')).toBeInTheDocument()
+      expect(screen.getByText('예정')).toBeInTheDocument()
+      expect(screen.getByText('D-18')).toBeInTheDocument()
+      expect(screen.getByText('국립중앙박물관')).toBeInTheDocument()
+      expect(screen.getByText('고심 선생님')).toBeInTheDocument()
+      expect(screen.queryByText(/진행 중인 현장체험학습이 없습니다/)).not.toBeInTheDocument()
+    })
+
+    it('Given_일자만_지정된_체험학습_When_홈을_열면_Then_날짜와_요일을_보여준다', async () => {
+      // 체험학습 생성 화면이 일자만 받으므로 카드도 날짜까지만 보여준다.
+      vi.mocked(teacherTripApi.getTrips).mockResolvedValue([{
+        ...readyTrip(7, '26년 5학년 2반', 18),
+        startAt: '2026-09-12T00:00:00',
+      }])
+
+      render(<TeacherDashboard user={user} />)
+
+      expect(await screen.findByText('2026. 09. 12 (토)')).toBeInTheDocument()
+    })
+
+    it('Given_당일_시작하는_체험학습_When_홈을_열면_Then_D-DAY로_표시한다', async () => {
+      vi.mocked(teacherTripApi.getTrips).mockResolvedValue([readyTrip(7, '오늘 체험학습', 0)])
+
+      render(<TeacherDashboard user={user} />)
+
+      expect(await screen.findByText('D-DAY')).toBeInTheDocument()
+    })
+
+    it('Given_예정_체험학습이_여러_개일_때_When_홈을_열면_Then_날짜가_빠른_순서로_보여준다', async () => {
+      vi.mocked(teacherTripApi.getTrips).mockResolvedValue([
+        readyTrip(8, '나중 체험학습', 30),
+        readyTrip(9, '먼저 체험학습', 3),
+      ])
+
+      render(<TeacherDashboard user={user} />)
+
+      const titles = (await screen.findAllByRole('heading', { level: 3 })).map((heading) => heading.textContent)
+      expect(titles).toEqual(['먼저 체험학습', '나중 체험학습'])
+    })
+
+    it('Given_다가오는_카드_When_시작하기를_누르면_Then_start를_호출하고_진행_중_홈으로_바뀐다', async () => {
+      // given
+      vi.mocked(teacherTripApi.getTrips)
+        .mockResolvedValueOnce([readyTrip(7, '26년 5학년 2반', 18)])
+        .mockResolvedValue([trip(7, '26년 5학년 2반')])
+      render(<TeacherDashboard user={user} />)
+      await screen.findByRole('heading', { name: '다가오는 현장체험학습' })
+
+      // when
+      fireEvent.click(screen.getByRole('button', { name: '시작하기' }))
+
+      // then
+      await waitFor(() => expect(teacherTripApi.start).toHaveBeenCalledWith(7))
+      expect(await screen.findByText('진행 현황(Trip 7)')).toBeInTheDocument()
+    })
+
+    it('Given_다가오는_카드_When_시작에_실패하면_Then_실패_사유를_보여주고_카드를_유지한다', async () => {
+      vi.mocked(teacherTripApi.getTrips).mockResolvedValue([readyTrip(7, '26년 5학년 2반', 18)])
+      vi.mocked(teacherTripApi.start).mockRejectedValue(new Error('이미 진행 중인 체험학습이 있습니다.'))
+      render(<TeacherDashboard user={user} />)
+      await screen.findByRole('heading', { name: '다가오는 현장체험학습' })
+
+      fireEvent.click(screen.getByRole('button', { name: '시작하기' }))
+
+      expect(await screen.findByText('이미 진행 중인 체험학습이 있습니다.')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '시작하기' })).toBeInTheDocument()
+    })
+
+    it('Given_다가오는_카드_When_카드를_누르면_Then_관리_상세로_이동한다', async () => {
+      vi.mocked(teacherTripApi.getTrips).mockResolvedValue([readyTrip(7, '26년 5학년 2반', 18)])
+      render(<TeacherDashboard user={user} />)
+      await screen.findByRole('heading', { name: '다가오는 현장체험학습' })
+
+      fireEvent.click(screen.getByRole('button', { name: '26년 5학년 2반 상세 보기' }))
+
+      expect(await screen.findByRole('heading', { name: '26년 5학년 2반' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '관리 화면으로 돌아가기' })).toBeInTheDocument()
+    })
+
+    it('Given_진행_중인_체험학습이_있을_때_When_홈을_열면_Then_다가오는_카드_대신_진행_현황을_보여준다', async () => {
+      vi.mocked(teacherTripApi.getTrips).mockResolvedValue([기존체험학습, readyTrip(7, '26년 5학년 2반', 18)])
+
+      render(<TeacherDashboard user={user} />)
+
+      expect(await screen.findByText('진행 현황(Trip 1)')).toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: '다가오는 현장체험학습' })).not.toBeInTheDocument()
+    })
+  })
 })
 
 function trip(id: number, title: string): TeacherTrip {
   return { id, title, place: '경주', startAt: '2026-08-26T09:00:00', status: 'ACTIVE' }
+}
+
+// D-day는 오늘 기준으로 계산되므로 고정 날짜 대신 상대 날짜로 만든다.
+function readyTrip(id: number, title: string, daysFromToday: number, place = '국립중앙박물관'): TeacherTrip {
+  const startAt = new Date()
+  startAt.setHours(9, 0, 0, 0)
+  startAt.setDate(startAt.getDate() + daysFromToday)
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return {
+    id,
+    title,
+    place,
+    startAt: `${startAt.getFullYear()}-${pad(startAt.getMonth() + 1)}-${pad(startAt.getDate())}T09:00:00`,
+    status: 'READY',
+  }
 }
