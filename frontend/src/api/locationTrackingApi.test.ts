@@ -72,7 +72,19 @@ describe('위치 추적 어댑터', () => {
     })
   })
 
-  it('Given_웹_미리보기_When_권한_허용_Then_네이티브를_호출하지_않는다', async () => {
+  it('Given_GPS_권한은_있지만_전송이_실패한_상태_When_UI_상태_조회_Then_전송_실패를_표시한다', async () => {
+    // given
+    const client = nativeClient({ ...granted, sendFailed: true })
+    const adapter = createLocationTrackingAdapter(client, 'https://api.example.com', false)
+
+    // when
+    const state = await adapter.getState()
+
+    // then
+    expect(state.sendStatus).toBe('FAILED')
+  })
+
+  it('Given_웹_학생과_ACTIVE_Trip_When_추적_시작_Then_브라우저_위치_클라이언트를_시작한다', async () => {
     // given
     const client = nativeClient()
     const adapter = createLocationTrackingAdapter(client, undefined, false)
@@ -82,6 +94,7 @@ describe('위치 추적 어댑터', () => {
 
     // then
     expect(state.permission).toBe('GRANTED')
-    expect(client.startTracking).not.toHaveBeenCalled()
+    expect(client.syncSession).toHaveBeenCalledWith({ apiBaseUrl: window.location.origin })
+    expect(client.startTracking).toHaveBeenCalledOnce()
   })
 })

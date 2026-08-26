@@ -15,7 +15,9 @@ import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -165,6 +167,71 @@ class LocationApiIntegrationTest {
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
 
+    @Test
+    void 수동_위치를_활성화해도_다음_전송_주기_전에는_선택한_좌표를_저장하지_않는다() throws Exception {
+        // given
+        MockHttpSession session = login();
+
+        // when
+        enableOverride(session, "37.0200000", "127.0200000");
+
+        // then
+        assertThat(savedLocationCount("37.0200000", "127.0200000")).isZero();
+    }
+
+    @Test
+    void 수동_위치가_활성화된_세션의_GPS는_선택한_좌표로_저장된다() throws Exception {
+        // given
+        MockHttpSession session = login();
+        enableOverride(session, "37.0200000", "127.0200000");
+
+        // when
+        mockMvc.perform(post("/api/student/locations")
+                        .session(session)
+                        .contentType("application/json")
+                        .content(locationJson("37.0060000", "127.0060000", "2099-08-25T09:00:00Z")))
+                .andExpect(status().isOk());
+
+        // then
+        assertThat(savedLocationCount("37.0200000", "127.0200000")).isEqualTo(1);
+        assertThat(savedLocationCount("37.0060000", "127.0060000")).isZero();
+    }
+
+    @Test
+    void 수동_위치를_해제하면_다음_GPS가_실제_좌표로_저장된다() throws Exception {
+        // given
+        MockHttpSession session = login();
+        enableOverride(session, "37.0200000", "127.0200000");
+        mockMvc.perform(delete("/api/student/locations/override")
+                        .with(csrf())
+                        .session(session))
+                .andExpect(status().isOk());
+
+        // when
+        mockMvc.perform(post("/api/student/locations")
+                        .session(session)
+                        .contentType("application/json")
+                        .content(locationJson("37.0060000", "127.0060000", "2099-08-25T09:00:00Z")))
+                .andExpect(status().isOk());
+
+        // then
+        assertThat(savedLocationCount("37.0060000", "127.0060000")).isEqualTo(1);
+    }
+
+    @Test
+    void 세션이_없는_수동_위치_활성화는_인증_오류를_반환한다() throws Exception {
+        // given
+        String manualLocation = "{\"latitude\":37.0200000,\"longitude\":127.0200000}";
+
+        // when & then
+        mockMvc.perform(put("/api/student/locations/override")
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content(manualLocation))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
     private MockHttpSession login() throws Exception {
         return (MockHttpSession) mockMvc.perform(post("/api/auth/login")
                         .with(csrf())
@@ -174,6 +241,26 @@ class LocationApiIntegrationTest {
                 .andReturn()
                 .getRequest()
                 .getSession(false);
+    }
+
+    private void enableOverride(MockHttpSession session, String latitude, String longitude) throws Exception {
+        mockMvc.perform(put("/api/student/locations/override")
+                        .with(csrf())
+                        .session(session)
+                        .contentType("application/json")
+                        .content("{\"latitude\":" + latitude + ",\"longitude\":" + longitude + "}"))
+                .andExpect(status().isOk());
+    }
+
+    private int savedLocationCount(String latitude, String longitude) {
+        return jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM current_location WHERE user_id = ? AND trip_id = ? AND latitude = ? AND longitude = ?",
+                Integer.class,
+                userId,
+                tripId,
+                new BigDecimal(latitude),
+                new BigDecimal(longitude)
+        );
     }
 
     private void savePoint(Long geofenceId, int sequence, String latitude, String longitude) {
@@ -195,5 +282,16 @@ class LocationApiIntegrationTest {
                   "recordedAt": "2026-08-25T08:55:30.123Z"
                 }
                 """;
+    }
+
+    private String locationJson(String latitude, String longitude, String recordedAt) {
+        return """
+                {
+                  "latitude": %s,
+                  "longitude": %s,
+                  "accuracy": 8.2,
+                  "recordedAt": "%s"
+                }
+                """.formatted(latitude, longitude, recordedAt);
     }
 }
