@@ -11,7 +11,7 @@ public class UnreachableAlertScheduler {
 
     private final UnreachableAlertService unreachableAlertService;
 
-    @Scheduled(fixedDelayString = "${notification.unreachable.fixed-delay-ms:60000}")
+    @Scheduled(fixedDelayString = "${notification.unreachable.fixed-delay-ms:10000}")
     public void run() {
         unreachableAlertService.sweep();
     }
