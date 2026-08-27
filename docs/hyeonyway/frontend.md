@@ -54,3 +54,13 @@
 - 이미 정확히 일치하던 클래스(`student-tag--*`, `mission-status--*`, `noti-badge-exit/new/redo`, `status-pill--success`, `upcoming-trip-badge`)는 손대지 않았다. `status-pill--neutral`은 `currentTrip`이 항상 `ACTIVE`이거나 `null`이라 실제로 도달 불가능한 분기라 건드리지 않았다.
 
 검증: `npm test`(41파일 255개), `npm run lint` 모두 통과. 로컬 dev 서버(Browser 도구)에 9개 클래스를 각각 적용한 요소를 직접 주입해 렌더링된 색을 스크린샷으로 확인 — 보라/남색/호박색/초록/회색이 Figma와 일치.
+## 학생 홈/미션 진행률/전화 걸기 버튼 Figma 반영 (#238)
+
+- 학생 홈(`StudentHome`)에 로그인한 학생 이름을 새 `studentName` prop으로 받아 인사말 상단에 노출("OO 님, 즐거운 여행 하세요!")했다. `App.tsx`에서 `currentUser.name`을 그대로 넘긴다.
+- "미션 진행률 N/M" 문구(`.trip-summary`)를 제거했다. `StudentTrip.missionCompleted`/`missionTotal`과 이를 채우는 `getStudentMissionOverview` 폴링은 다른 소비처가 없어 이번엔 표시만 걷어내고 그대로 뒀다 — 폴링 자체를 걷어내는 건 요청 범위 밖이라 손대지 않았다.
+- 학생 홈 하단에 "선생님께 전화 걸기" mock 버튼(`.call-teacher-button`, 흰 배경 + 초록 60% 투명 테두리)을 추가했다. 실제 통화 연결은 만들지 않았다(`disabled`).
+- 교사 미션 리스트/현황판의 진행률 바 색을 파랑(`#276ef1`)에서 Figma 값인 초록(`--color-success`)으로 바꿨다. `.progress-bar-fill`을 활동 미션 리스트와 출석체크 현황판이 공유하므로 한 곳만 고쳐도 둘 다 반영된다. "+ 미션 추가하기" 버튼에 `trip-primary-button`을 재사용해 다른 전체 폭 버튼과 동일하게 만들었다(Figma 스펙과 배경색·그림자·radius가 정확히 일치해 별도 클래스를 새로 만들지 않았다).
+- 교사용 학생 상세의 "전화 걸기" 버튼(`.call-button`)을 꽉 찬 연초록 배경 pill에서 Figma 스펙(흰 배경, 1.5px 초록 테두리, 전화 아이콘 + 텍스트)으로 다시 그렸다. Figma에서 받은 phone 아이콘을 `frontend/src/assets/icons/phone.svg`로 추가했다.
+- 학생 리스트 카드 간 간격(`.teacher-body { gap: 12px }`)은 확인해보니 이미 Figma와 일치하는 상태였다 — 재현되지 않아 손대지 않았다.
+
+검증: 로컬 백엔드+프론트를 직접 띄우고 교사 계정으로 로그인해 학생 5명을 트립에 참여시킨 뒤(curl로 회원가입·초대코드 참여를 스크립트해 데이터 시딩), 학생 상세 전화 걸기 버튼과 미션 리스트 진행률 바/추가 버튼을 브라우저로 직접 확인했다. 학생 홈은 위치 권한 프롬프트 때문에 브라우저 자동화로는 끝까지 못 열어서, 동일 마크업/CSS를 페이지에 직접 주입해 렌더링을 확인했다. `npm test`(44파일 313개 통과, 진행률 텍스트를 검증하던 기존 테스트 5개는 어서션을 제거/전환), `npm run lint`, `npx tsc -b --noEmit` 모두 통과.
