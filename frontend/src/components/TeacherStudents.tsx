@@ -7,6 +7,7 @@ import { BackHeader } from '../shared/ui/BackHeader'
 import { ListSkeleton } from '../shared/ui/ListSkeleton'
 import { collectIncompleteStudentIds } from '../features/teacher/teacherHomeAttention'
 import { pollEverySecond } from '../shared/pollEverySecond'
+import phoneIcon from '../assets/icons/phone.svg'
 
 type View = { name: 'LIST' } | { name: 'DETAIL'; participantId: number }
 type DisplayStatus = StudentLocationStatus | 'MANUAL'
@@ -120,11 +121,11 @@ function StudentDetailScreen({ tripId, participantId, onBack }: { tripId: string
         <p className="info-card-title">학생 정보</p>
         <div className="info-card-row">
           <p className="label">학생 전화번호</p>
-          <button type="button" className="call-button" disabled aria-label="학생 전화 걸기, 준비 중">전화 걸기</button>
+          <button type="button" className="call-button" disabled aria-label="학생 전화 걸기, 준비 중"><img src={phoneIcon} alt="" aria-hidden="true" />전화 걸기</button>
         </div>
         <div className="info-card-row">
           <p className="label">학부모 전화번호</p>
-          <button type="button" className="call-button" disabled aria-label="학부모 전화 걸기, 준비 중">전화 걸기</button>
+          <button type="button" className="call-button" disabled aria-label="학부모 전화 걸기, 준비 중"><img src={phoneIcon} alt="" aria-hidden="true" />전화 걸기</button>
         </div>
       </section>
 

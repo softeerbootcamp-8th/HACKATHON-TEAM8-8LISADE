@@ -265,7 +265,7 @@ export default function App() {
   if (screen === 'STUDENT_INVITE') return <InviteCodeScreen onSubmit={joinTrip} onLogout={() => { void handleLogout() }} />
   if (screen === 'STUDENT_PERMISSION_BLOCKED') return <LocationBlockedScreen onOpenSettings={retryLocationPermission} />
   if (screen === 'STUDENT_HOME' && studentTrip && locationState) return <>
-    <StudentHome trip={studentTrip} location={locationState} notice={missionNotice} currentMission={currentMission} onCurrentMission={() => {
+    <StudentHome trip={studentTrip} location={locationState} notice={missionNotice} currentMission={currentMission} studentName={currentUser?.name ?? ''} onCurrentMission={() => {
       if (!currentMission) return
       if (currentMission.type === 'CHECK') { setScreen('CHECK_MISSION'); return }
       captureActivityMission(currentMission)

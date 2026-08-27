@@ -473,7 +473,7 @@ describe('App', () => {
     expect(missionApiMock.getStudentMissionOverview).toHaveBeenCalledWith(1)
   })
 
-  it('Given_완료한_미션이_네개인_학생_When_앱을_재실행하면_Then_서버의_실제_진행률을_복구한다', async () => {
+  it('Given_완료한_미션이_네개인_학생_When_앱을_재실행하면_Then_서버에서_미션_개요를_다시_불러온다', async () => {
     // given
     studentTripApiMock.getActiveTrip.mockResolvedValue(activeStudentTrip)
     missionApiMock.getStudentMissionOverview.mockResolvedValue({ currentMissions: [], completedCount: 4, totalCount: 5 })
@@ -488,7 +488,8 @@ describe('App', () => {
     render(<App />)
 
     // then
-    expect(await screen.findByText('4 / 5')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '학생 홈' })).toBeInTheDocument()
+    expect(missionApiMock.getStudentMissionOverview).toHaveBeenCalledWith(1)
   })
 
   it('Given_ACTIVE_Trip에_참여한_학생_When_로그인_Then_현재_미션을_불러온다', async () => {
@@ -506,7 +507,7 @@ describe('App', () => {
     expect(missionApiMock.getStudentMissionOverview).toHaveBeenCalledWith(1)
   })
 
-  it('Given_학생_홈이_열려_있을_때_When_일초가_지나면_Then_현재_미션과_진행률을_다시_불러온다', async () => {
+  it('Given_학생_홈이_열려_있을_때_When_일초가_지나면_Then_현재_미션을_다시_불러온다', async () => {
     // given
     vi.useFakeTimers({ shouldAdvanceTime: true })
     missionApiMock.getStudentMissionOverview
@@ -523,7 +524,6 @@ describe('App', () => {
 
     // then
     expect(await screen.findByRole('heading', { name: '새 출석 미션' })).toBeInTheDocument()
-    expect(screen.getByText('2 / 4')).toBeInTheDocument()
     vi.useRealTimers()
   })
 
@@ -699,7 +699,6 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: '제출하기' }))
     expect(await screen.findByText('사진 미션을 제출했습니다.')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '경복궁 출석 체크' })).toBeInTheDocument()
-    expect(screen.getByText('2 / 3')).toBeInTheDocument()
   })
 
   it('Given_카메라를_쓸_수_없는_환경_When_갤러리에서_선택하면_Then_사진을_그대로_제출할_수_있다', async () => {
@@ -737,7 +736,6 @@ describe('App', () => {
     expect(await screen.findByText('촬영이 취소되었습니다.')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '학생 홈' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '현재 미션 수행' })).toBeInTheDocument()
-    expect(screen.getByText('1 / 3')).toBeInTheDocument()
   })
 
   it('Given_사진_확인_화면_When_재촬영하기를_누르면_Then_사진_소스를_다시_고르게_한다', async () => {
@@ -769,7 +767,6 @@ describe('App', () => {
 
     expect(await screen.findByRole('button', { name: '현재 미션 수행' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '출석 체크' })).not.toBeInTheDocument()
-    expect(screen.getByText('2 / 3')).toBeInTheDocument()
   })
 
   it('keeps the next mission hidden while the current mission is not completed', async () => {
