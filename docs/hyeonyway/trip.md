@@ -92,3 +92,11 @@
 - 실제 로그인 렌더링은 백엔드 계정 없이는 확인이 어려워, `frontend/src/index.css`를 그대로 불러와 실제 마크업 구조(`날짜`/`장소`/`담당자`/`참여 학생` 행, 긴 주소로 줄바꿈 유도)를 재현한 정적 HTML로 전/후를 비교해 레이아웃 깨짐이 없고 줄바꿈된 `장소` 값의 가독성이 개선됨을 스크린샷으로 확인했다.
 
 검증: `npx vitest run`(42 files, 279 passed), `npm run lint`, `npm run build` 통과.
+
+## 학생탭/미션탭 진행중 체험학습 판별 수정 (#246)
+
+- `TeacherDashboard.tsx`의 `activeTripId`가 `trips[0].id`(배열 순서 기준)를 쓰고 있어, 목록에 진행중이 아닌 체험학습이 앞에 있으면 학생탭·미션탭이 그 체험학습을 보여주는 버그가 있었다. 홈 탭은 이미 `currentTrip`(`status === 'ACTIVE'`)로 판별하고 있었는데 학생탭/미션탭만 다른 기준을 썼다.
+- `activeTripId`를 `currentTrip` 기준으로 통일했다(`String(currentTrip.id)`). 백엔드가 ACTIVE 체험학습을 항상 최대 1개로 보장하므로(#129) 배열 순서와 무관하게 동일한 trip을 가리킨다.
+- `TeacherLocationMap.tsx`의 `trips[0]` 초기값은 탭 내부 드롭다운의 기본 선택값(사용자가 다른 trip으로 바꿀 수 있음)이라 이번 수정 범위에서 제외했다.
+
+검증: `npx vitest run`(44 files, 314 passed), `npm run lint`(에러 0, 기존 경고 3건 유지), `npm run build` 통과.

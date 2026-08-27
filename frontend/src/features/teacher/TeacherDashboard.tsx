@@ -48,8 +48,8 @@ export function TeacherDashboard({ user, onLogout }: { user: CurrentUser; onLogo
   const [tripError, setTripError] = useState('')
   const [showNotifications, setShowNotifications] = useState(false)
   const { toast, hasUnread, dismissToast, markRead } = useForegroundNotifications()
-  const activeTripId = trips && trips.length > 0 ? String(trips[0].id) : null
   const currentTrip = trips?.find((candidate) => candidate.status === 'ACTIVE') ?? null
+  const activeTripId = currentTrip ? String(currentTrip.id) : null
   // 진행 중인 체험학습이 있으면 홈은 진행 현황을 보여주므로(Figma T-02 진행중) 다가오는 카드는 계산하지 않는다.
   const upcomingTrips = currentTrip ? [] : (trips ?? []).filter((candidate) => candidate.status === 'READY').sort(byStartAtAscending)
 
