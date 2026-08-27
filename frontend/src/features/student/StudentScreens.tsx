@@ -23,7 +23,7 @@ export function InviteCodeScreen({ onSubmit, onLogout }: { onSubmit: (code: stri
     <AppHeader showAvatar onLogout={onLogout} />
     <p className="greeting">반에 입장해 주세요</p>
     <img src={mascotInvite} alt="" className="pin-mascot" style={{ margin: '0 auto 24px' }} />
-    <p className="hint sub-copy" style={{ textAlign: 'center', margin: '0 0 16px' }}>교사가 공유한 6자리 초대 코드를 입력해 주세요.</p>
+    <p className="hint sub-copy invite-hint" style={{ textAlign: 'center', margin: '0 0 16px' }}>교사가 공유한 6자리 초대 코드를 입력해 주세요.</p>
     {error && <p className="error" role="alert">{error}</p>}
     <form className="auth-form" onSubmit={submit}>
       <Field label="초대 코드" id="invite-code"><CodeBoxes id="invite-code" length={6} value={code} onChange={(value) => setCode(value.toUpperCase())} required /></Field>

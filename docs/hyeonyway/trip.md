@@ -92,3 +92,20 @@
 - 실제 로그인 렌더링은 백엔드 계정 없이는 확인이 어려워, `frontend/src/index.css`를 그대로 불러와 실제 마크업 구조(`날짜`/`장소`/`담당자`/`참여 학생` 행, 긴 주소로 줄바꿈 유도)를 재현한 정적 HTML로 전/후를 비교해 레이아웃 깨짐이 없고 줄바꿈된 `장소` 값의 가독성이 개선됨을 스크린샷으로 확인했다.
 
 검증: `npx vitest run`(42 files, 279 passed), `npm run lint`, `npm run build` 통과.
+
+## 학생탭/미션탭 진행중 체험학습 판별 수정 (#246)
+
+- `TeacherDashboard.tsx`의 `activeTripId`가 `trips[0].id`(배열 순서 기준)를 쓰고 있어, 목록에 진행중이 아닌 체험학습이 앞에 있으면 학생탭·미션탭이 그 체험학습을 보여주는 버그가 있었다. 홈 탭은 이미 `currentTrip`(`status === 'ACTIVE'`)로 판별하고 있었는데 학생탭/미션탭만 다른 기준을 썼다.
+- `activeTripId`를 `currentTrip` 기준으로 통일했다(`String(currentTrip.id)`). 백엔드가 ACTIVE 체험학습을 항상 최대 1개로 보장하므로(#129) 배열 순서와 무관하게 동일한 trip을 가리킨다.
+- `TeacherLocationMap.tsx`의 `trips[0]` 초기값은 탭 내부 드롭다운의 기본 선택값(사용자가 다른 trip으로 바꿀 수 있음)이라 이번 수정 범위에서 제외했다.
+
+검증: `npx vitest run`(44 files, 314 passed), `npm run lint`(에러 0, 기존 경고 3건 유지), `npm run build` 통과.
+
+## 교사 화면 기본 선택 trip 우선순위 통일 (#248)
+
+- 위치(지도) 탭은 `trips[0]` 고정, 학생탭/미션탭(#246에서 ACTIVE 기준으로 고침)은 예정(READY) trip에 대한 fallback이 없어 예정 단계에서 미리 하는 미션 등록·학생 초대 화면을 못 보여줬다.
+- `findActiveTrip`/`findSoonestReadyTrip`/`findLatestFinishedTrip`(신규 `tripSelection.ts`)로 판별 로직을 통일했다. 화면별 조합은 다르게 뒀다: 위치 탭은 ACTIVE → 임박한 예정 → 최근 종료(사후 리뷰 목적이라 종료도 유의미), 학생탭/미션탭은 ACTIVE → 임박한 예정까지만(종료된 trip은 더 이상 관리 대상이 아님).
+- `TeacherDashboard.tsx`에 있던 로컬 `byStartAtAscending`도 `tripSelection.ts`로 옮겨 위치 탭 정렬과 공유한다.
+- 홈 탭의 "진행 현황 vs 다가오는 카드" 분기(ACTIVE만 판별)는 이번 변경과 무관해 그대로 뒀다.
+
+검증: `npx vitest run`(45 files, 326 passed), `npm run lint`(에러 0, 기존 경고 3건 유지), `npm run build` 통과.

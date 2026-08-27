@@ -4,6 +4,7 @@ import { teacherTripApi } from '../../api/teacherTripApi'
 import { pollEverySecond } from '../../shared/pollEverySecond'
 import type { TeacherTrip, TeacherTripStatus } from '../../types/teacherTrip'
 import { loadKakaoMaps, type KakaoCustomOverlay, type KakaoMap, type KakaoMapsApi, type KakaoPolygon } from './kakaoMaps'
+import { findActiveTrip, findLatestFinishedTrip, findSoonestReadyTrip } from './tripSelection'
 
 type LocationStatus = 'NORMAL' | 'OUTSIDE' | 'UNAVAILABLE'
 
@@ -28,8 +29,14 @@ const tripStatusLabels: Record<TeacherTripStatus, string> = {
   FINISHED: '완료',
 }
 
+/** 진행중 > 가장 임박한 예정 > 가장 최근 종료 순으로 기본 선택 trip을 정한다(사후 리뷰 목적이라 종료도 fallback 대상). */
+function pickDefaultTripId(trips: TeacherTrip[]): number | null {
+  const trip = findActiveTrip(trips) ?? findSoonestReadyTrip(trips) ?? findLatestFinishedTrip(trips)
+  return trip?.id ?? null
+}
+
 export function TeacherLocationMap({ trips }: { trips: TeacherTrip[] }) {
-  const [selectedTripId, setSelectedTripId] = useState<number | null>(trips[0]?.id ?? null)
+  const [selectedTripId, setSelectedTripId] = useState<number | null>(pickDefaultTripId(trips))
   const [context, setContext] = useState<TeacherLocationContext | null>(null)
   const [liveLocations, setLiveLocations] = useState<TeacherLocation[]>([])
   const [filter, setFilter] = useState<LocationStatus | null>(null)

@@ -24,7 +24,13 @@ vi.mock('./TeacherLocationMap', () => ({
     <div>{trips.map((trip) => <span key={trip.id}>{trip.title}</span>)}</div>,
 }))
 
-vi.mock('../../components/TeacherMissions', () => ({ default: () => <div>미션</div> }))
+vi.mock('../../components/TeacherMissions', () => ({
+  default: ({ tripId }: { tripId: string }) => <div>미션(Trip {tripId})</div>,
+}))
+
+vi.mock('../../components/TeacherStudents', () => ({
+  default: ({ tripId }: { tripId: string }) => <div>학생 목록(Trip {tripId})</div>,
+}))
 
 vi.mock('./TeacherNotifications', () => ({
   TeacherNotifications: ({ onBack }: { onBack: () => void }) =>
@@ -162,6 +168,57 @@ describe('TeacherDashboard', () => {
     fireEvent.click(screen.getByRole('button', { name: '학생 탭으로' }))
 
     expect(screen.getByRole('button', { name: '학생' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('Given_배열_첫_번째가_진행중이_아닐_때_When_학생_탭과_미션_탭을_열면_Then_진행중인_체험학습을_보여준다', async () => {
+    // given
+    vi.mocked(teacherTripApi.getTrips).mockResolvedValue([readyTrip(5, '예정 체험학습', 3), trip(9, '진행중 체험학습')])
+    render(<TeacherDashboard user={user} />)
+    await screen.findByText('진행 현황(Trip 9)')
+
+    // when
+    fireEvent.click(screen.getByRole('button', { name: '학생' }))
+
+    // then
+    expect(await screen.findByText('학생 목록(Trip 9)')).toBeInTheDocument()
+
+    // when
+    fireEvent.click(screen.getByRole('button', { name: '미션' }))
+
+    // then
+    expect(await screen.findByText('미션(Trip 9)')).toBeInTheDocument()
+  })
+
+  it('Given_진행중은_없고_예정만_있을_때_When_학생_탭과_미션_탭을_열면_Then_예정_체험학습을_보여준다', async () => {
+    // given
+    vi.mocked(teacherTripApi.getTrips).mockResolvedValue([readyTrip(11, '예정 체험학습', 5)])
+    render(<TeacherDashboard user={user} />)
+    await screen.findByRole('heading', { name: '다가오는 현장체험학습' })
+
+    // when
+    fireEvent.click(screen.getByRole('button', { name: '학생' }))
+
+    // then
+    expect(await screen.findByText('학생 목록(Trip 11)')).toBeInTheDocument()
+
+    // when
+    fireEvent.click(screen.getByRole('button', { name: '미션' }))
+
+    // then
+    expect(await screen.findByText('미션(Trip 11)')).toBeInTheDocument()
+  })
+
+  it('Given_진행중도_예정도_없이_종료된_체험학습만_있을_때_When_학생_탭을_열면_Then_생성_안내를_보여준다', async () => {
+    // given
+    vi.mocked(teacherTripApi.getTrips).mockResolvedValue([trip(12, '종료된 체험학습')].map((finished) => ({ ...finished, status: 'FINISHED' as const })))
+    render(<TeacherDashboard user={user} />)
+    await screen.findByText('진행 중인 현장체험학습이 없습니다. 예정된 체험학습의 시작을 기다리는 중이에요.')
+
+    // when
+    fireEvent.click(screen.getByRole('button', { name: '학생' }))
+
+    // then
+    expect(await screen.findByText('체험학습을 먼저 만들어 주세요.')).toBeInTheDocument()
   })
 
   describe('예정(READY) 체험학습 홈 카드', () => {
