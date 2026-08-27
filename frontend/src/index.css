@@ -236,7 +236,7 @@ h2 { font-size: 17px; margin: 0; }
 .teacher-location-callout-badge { border-radius: 7px; font-size: 11px; padding: 3px 7px; }
 .teacher-location-callout-badge--normal { background: var(--color-success-soft); color: var(--color-success); }
 .teacher-location-callout-badge--outside { background: var(--color-danger-soft); color: var(--color-danger); }
-.teacher-location-callout-badge--unavailable { background: rgb(152 162 179 / 16%); color: #7c879a; }
+.teacher-location-callout-badge--unavailable { background: rgb(152 162 179 / 13%); color: #98a2b3; }
 .teacher-location-recenter { background: #fff; border: 1px solid #e7decb; border-radius: 999px; bottom: 18px; box-shadow: 0 4px 14px rgb(39 48 58 / 20%); font-size: 13px; left: 50%; min-height: 42px; padding: 0 18px; position: absolute; transform: translateX(-50%); z-index: 5; }
 
 /* Segmented code / PIN boxes */
@@ -280,11 +280,11 @@ h2 { font-size: 17px; margin: 0; }
 .mission-list-card-title { color: #172033; font-size: 16px; font-weight: 700; margin: 0; }
 .badge { border-radius: 999px; font-size: 12px; font-weight: 700; padding: 2px 10px; }
 .badge-type { background: #eef1f7; color: #556; }
-.badge-type--activity { background: var(--color-accent-soft); color: #a16207; }
-.badge-type--check { background: rgb(59 130 246 / 12%); color: #3b5bdb; }
-.badge-status { background: #f4f7fb; color: #6b778c; }
-.badge-status-active { background: #eef7f0; color: #1b6d34; }
-.badge-status-done { background: #eceef1; color: #4b5563; }
+.badge-type--activity { background: rgb(168 61 255 / 18%); color: #6307a1; }
+.badge-type--check { background: rgb(53 94 255 / 13%); color: #3d4295; }
+.badge-status { background: rgb(255 201 61 / 18%); color: #a16207; }
+.badge-status-active { background: var(--color-success-soft); color: var(--color-success); }
+.badge-status-done { background: rgb(152 162 179 / 13%); color: #98a2b3; }
 .badge-late { background: var(--color-warning-soft); color: var(--color-warning); margin-left: 6px; }
 .progress-bar { background: #eef1f7; border-radius: 999px; height: 8px; overflow: hidden; }
 .progress-bar-fill { background: #276ef1; height: 100%; }
@@ -355,7 +355,8 @@ h2 { font-size: 17px; margin: 0; }
 .management-card p { color: #65728b; font-size: 12px; font-weight: 500; line-height: normal; margin: 4px 0 0; }
 .trip-status { border-radius: 8px; flex: 0 0 auto; font-size: 11px; font-weight: 700; margin-left: 12px; padding: 3px 8px; }
 .trip-status-active { background: var(--color-success-soft); color: var(--color-success); }
-.trip-status-ready, .trip-status-finished { background: rgb(152 162 179 / 13%); color: #98a2b3; }
+.trip-status-ready { background: rgb(255 201 61 / 18%); color: #a16207; }
+.trip-status-finished { background: rgb(152 162 179 / 13%); color: #98a2b3; }
 .management-state { background: #fff; border-radius: 20px; color: #65728b; margin: 0; padding: 28px 20px; text-align: center; }
 .management-state.error { color: #b4232a; }
 .add-notice { color: #65728b; font-size: 14px; margin: auto 0 12px; text-align: center; }
@@ -394,10 +395,10 @@ h2 { font-size: 17px; margin: 0; }
 .noti-badge { border-radius: 8px; font-size: 11px; font-weight: 700; justify-self: start; padding: 3px 8px; }
 .noti-badge-incomplete { background: var(--color-warning-soft); color: var(--color-warning); }
 .noti-badge-exit { background: var(--color-danger-soft); color: var(--color-danger); }
-.noti-badge-unreachable { background: rgb(102 112 133 / 12%); color: var(--color-text-muted); }
+.noti-badge-unreachable { background: rgb(152 162 179 / 13%); color: #98a2b3; }
 .noti-badge-info { background: var(--color-accent-soft); color: #6b4f0d; }
 .noti-badge-new { background: var(--color-success-soft); color: var(--color-success); }
-.noti-badge-deadline { background: var(--color-warning-soft); color: var(--color-warning); }
+.noti-badge-deadline { background: rgb(255 201 61 / 18%); color: #a16207; }
 .noti-badge-redo { background: var(--color-warning-soft); color: var(--color-warning); }
 
 /* Trip detail (T-03-1 / T-03-2) */

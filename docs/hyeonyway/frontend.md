@@ -43,3 +43,14 @@
 - `capacitor.config.ts`의 `appName: '8LISADE'`(팀명)는 이번 범위 밖으로 남겨뒀다.
 
 검증: `npx vitest run`(42파일 289개), `npm run lint`, `npm run build` 모두 통과. 빌드 산출물 `dist/index.html`에서 `<title>두리번</title>` 직접 확인.
+
+## 태그/배지 색상을 Figma 태그 정리 시안에 맞춰 정리 (#237)
+
+- Figma "태그 정리" 시안(node 211:1247)에서 학생 위치/제출 상태, 체험학습 상태, 미션 상태/종류, 알림 태그의 정확한 배경·텍스트 색상(rgba + hex)을 받아와, 코드의 9개 배지 클래스를 대조했다.
+- `.badge-type--activity`(미션 종류 "활동")는 호박색을 쓰고 있었는데 Figma는 보라(`rgba(168,61,255,.18)`/`#6307a1`) — 교체. `.badge-type--check`(출석 체크)는 톤이 다른 파랑을 남색(`rgba(53,94,255,.13)`/`#3d4295`)으로 교체.
+- 미션 리스트 상태 배지 3종(`.badge-status`/`-active`/`-done`)을 Figma의 예정(호박색)/진행중(초록)/종료(회색) 3색 체계에 맞췄다 — 이전엔 각각 무채색/톤이 다른 초록/톤이 다른 회색이었다.
+- `.trip-status-ready`가 `.trip-status-finished`와 같은 회색을 공유하고 있어 예정 상태가 종료 상태와 시각적으로 구분되지 않았다 — 호박색으로 분리했다.
+- `.noti-badge-deadline`(학생 알림 "마감 임박")을 경고 주황에서 Figma의 호박색으로, `.noti-badge-unreachable`/`.teacher-location-callout-badge--unavailable`(확인 불가류)을 톤이 다른 회색에서 Figma 회색(`rgba(152,162,179,.13)`/`#98a2b3`)으로 통일했다.
+- 이미 정확히 일치하던 클래스(`student-tag--*`, `mission-status--*`, `noti-badge-exit/new/redo`, `status-pill--success`, `upcoming-trip-badge`)는 손대지 않았다. `status-pill--neutral`은 `currentTrip`이 항상 `ACTIVE`이거나 `null`이라 실제로 도달 불가능한 분기라 건드리지 않았다.
+
+검증: `npm test`(41파일 255개), `npm run lint` 모두 통과. 로컬 dev 서버(Browser 도구)에 9개 클래스를 각각 적용한 요소를 직접 주입해 렌더링된 색을 스크린샷으로 확인 — 보라/남색/호박색/초록/회색이 Figma와 일치.
