@@ -54,6 +54,7 @@
 - 이미 정확히 일치하던 클래스(`student-tag--*`, `mission-status--*`, `noti-badge-exit/new/redo`, `status-pill--success`, `upcoming-trip-badge`)는 손대지 않았다. `status-pill--neutral`은 `currentTrip`이 항상 `ACTIVE`이거나 `null`이라 실제로 도달 불가능한 분기라 건드리지 않았다.
 
 검증: `npm test`(41파일 255개), `npm run lint` 모두 통과. 로컬 dev 서버(Browser 도구)에 9개 클래스를 각각 적용한 요소를 직접 주입해 렌더링된 색을 스크린샷으로 확인 — 보라/남색/호박색/초록/회색이 Figma와 일치.
+
 ## 학생 홈/미션 진행률/전화 걸기 버튼 Figma 반영 (#238)
 
 - 학생 홈(`StudentHome`)에 로그인한 학생 이름을 새 `studentName` prop으로 받아 인사말 상단에 노출("OO 님, 즐거운 여행 하세요!")했다. `App.tsx`에서 `currentUser.name`을 그대로 넘긴다.
