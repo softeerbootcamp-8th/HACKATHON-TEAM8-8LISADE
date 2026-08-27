@@ -18,6 +18,7 @@ import { TripCreationFlow } from './TripCreationFlow'
 import { AddStudentForm, TripDetail } from './TripDetail'
 import { TeacherLocationMap } from './TeacherLocationMap'
 import { TeacherHomeProgress } from './TeacherHomeProgress'
+import { byStartAtAscending, findActiveTrip, findSoonestReadyTrip } from './tripSelection'
 
 type TeacherTab = 'HOME' | 'STUDENTS' | 'MISSIONS' | 'LOCATION' | 'MANAGE'
 type ManageView = { name: 'LIST' } | { name: 'CREATE' } | { name: 'DETAIL'; tripId: number } | { name: 'ADD_STUDENT'; tripId: number }
@@ -48,8 +49,10 @@ export function TeacherDashboard({ user, onLogout }: { user: CurrentUser; onLogo
   const [tripError, setTripError] = useState('')
   const [showNotifications, setShowNotifications] = useState(false)
   const { toast, hasUnread, dismissToast, markRead } = useForegroundNotifications()
-  const currentTrip = trips?.find((candidate) => candidate.status === 'ACTIVE') ?? null
-  const activeTripId = currentTrip ? String(currentTrip.id) : null
+  const currentTrip = findActiveTrip(trips ?? [])
+  // 학생탭/미션탭은 예정(READY) trip에도 미리 미션 등록·학생 초대가 가능하므로 진행중이 없으면 가장 임박한 예정 trip을 기준으로 삼는다.
+  const displayTrip = currentTrip ?? findSoonestReadyTrip(trips ?? [])
+  const activeTripId = displayTrip ? String(displayTrip.id) : null
   // 진행 중인 체험학습이 있으면 홈은 진행 현황을 보여주므로(Figma T-02 진행중) 다가오는 카드는 계산하지 않는다.
   const upcomingTrips = currentTrip ? [] : (trips ?? []).filter((candidate) => candidate.status === 'READY').sort(byStartAtAscending)
 
@@ -231,12 +234,6 @@ function UpcomingTrips({ trips, teacherName, onStarted, onSelect }: {
       </button>
     </article>)}
   </section>
-}
-
-function byStartAtAscending(left: TeacherTrip, right: TeacherTrip) {
-  if (!left.startAt) return 1
-  if (!right.startAt) return -1
-  return left.startAt.localeCompare(right.startAt)
 }
 
 /** 오늘 자정 기준 남은 일수. 시각이 아니라 날짜 차이로 세야 "오늘 09:00 시작"이 D-DAY가 된다. */
