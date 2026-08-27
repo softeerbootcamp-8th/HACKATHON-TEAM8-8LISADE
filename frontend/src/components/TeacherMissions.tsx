@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { teacherMissionApi } from '../api/missionApi'
 import { formatKoreanClock, parseServerDate } from '../shared/dateTime'
+import { ListSkeleton } from '../shared/ui/ListSkeleton'
+import { pollEverySecond } from '../shared/pollEverySecond'
 import type { MissionStatusBoard, MissionType, NotSubmittedStudent, TeacherMission } from '../types/mission'
 
 type View = { name: 'LIST' } | { name: 'REGISTER' } | { name: 'STATUS'; missionId: number }
@@ -63,15 +65,17 @@ export default function TeacherMissions({ tripId }: { tripId: string }) {
     const { missions: loaded, progress } = await fetchMissionsWithProgress()
     setMissions(loaded)
     setProgressByMissionId(progress)
+    setLoadError('')
   }, [fetchMissionsWithProgress])
 
   useEffect(() => {
-    let active = true
-    fetchMissionsWithProgress()
-      .then(({ missions: loaded, progress }) => { if (active) { setMissions(loaded); setProgressByMissionId(progress) } })
-      .catch((caught) => { if (active) setLoadError(caught instanceof Error ? caught.message : '미션 목록을 불러오지 못했습니다.') })
-    return () => { active = false }
-  }, [fetchMissionsWithProgress])
+    if (view.name !== 'LIST') return
+    return pollEverySecond(
+      fetchMissionsWithProgress,
+      ({ missions: loaded, progress }) => { setMissions(loaded); setProgressByMissionId(progress); setLoadError('') },
+      (caught) => setLoadError(caught instanceof Error ? caught.message : '미션 목록을 불러오지 못했습니다.'),
+    )
+  }, [fetchMissionsWithProgress, view.name])
 
   if (view.name === 'REGISTER') return <MissionRegisterForm tripId={tripId} onCancel={() => setView({ name: 'LIST' })} onCreated={async (mission) => {
     await loadMissions()
@@ -81,11 +85,12 @@ export default function TeacherMissions({ tripId }: { tripId: string }) {
 
   if (view.name === 'STATUS') return <MissionStatusScreen missionId={view.missionId} onBack={() => setView({ name: 'LIST' })} onDeleted={async () => { await loadMissions(); setView({ name: 'LIST' }) }} />
 
-  if (loadError) return <section aria-label="미션 관리"><h2>미션 리스트</h2><p className="error" role="alert">{loadError}</p></section>
-  if (missions === null) return <section aria-label="미션 관리"><h2>미션 리스트</h2><p className="hint" role="status">미션 목록을 불러오는 중입니다.</p></section>
+  if (loadError && missions === null) return <section aria-label="미션 관리"><h2>미션 리스트</h2><p className="error" role="alert">{loadError}</p></section>
+  if (missions === null) return <section aria-label="미션 관리"><h2>미션 리스트</h2><ListSkeleton label="미션 목록을 불러오는 중입니다." /></section>
 
   return <section aria-label="미션 관리">
     {notice && <p className="notice" role="status">{notice}</p>}
+    {loadError && <p className="error" role="alert">{loadError}</p>}
     <h2>미션 리스트</h2>
     {missions.length === 0 ? <p className="hint">등록된 미션이 없습니다.</p> : <ul className="mission-list">
       {missions.map((mission) => {
@@ -104,7 +109,7 @@ export default function TeacherMissions({ tripId }: { tripId: string }) {
         </li>
       })}
     </ul>}
-    <button onClick={() => setView({ name: 'REGISTER' })}>+ 미션 추가하기</button>
+    <button className="trip-primary-button" onClick={() => setView({ name: 'REGISTER' })}>+ 미션 추가하기</button>
   </section>
 }
 
@@ -161,13 +166,11 @@ function MissionStatusScreen({ missionId, onBack, onDeleted }: { missionId: numb
   const fetchBoard = useCallback(() => teacherMissionApi.getStatusBoard(missionId), [missionId])
   const reload = useCallback(async () => setBoard(await fetchBoard()), [fetchBoard])
 
-  useEffect(() => {
-    let active = true
-    fetchBoard()
-      .then((loaded) => { if (active) setBoard(loaded) })
-      .catch((caught) => { if (active) setLoadError(caught instanceof Error ? caught.message : '현황판을 불러오지 못했습니다.') })
-    return () => { active = false }
-  }, [fetchBoard])
+  useEffect(() => pollEverySecond(
+    fetchBoard,
+    (loaded) => { setBoard(loaded); setLoadError('') },
+    (caught) => setLoadError(caught instanceof Error ? caught.message : '현황판을 불러오지 못했습니다.'),
+  ), [fetchBoard])
 
   const completeOnBehalf = async (student: NotSubmittedStudent) => {
     await teacherMissionApi.completeOnBehalf(missionId, student.studentId)
@@ -208,7 +211,7 @@ function MissionStatusScreen({ missionId, onBack, onDeleted }: { missionId: numb
     }
   }
 
-  if (loadError) return <section aria-label="미션 현황판"><button className="text-button back-button" onClick={onBack}>‹ 목록으로</button><p className="error" role="alert">{loadError}</p></section>
+  if (loadError && board === null) return <section aria-label="미션 현황판"><button className="text-button back-button" onClick={onBack}>‹ 목록으로</button><p className="error" role="alert">{loadError}</p></section>
   if (board === null) return <section aria-label="미션 현황판"><p className="hint" role="status">현황판을 불러오는 중입니다.</p></section>
 
   const { mission } = board
@@ -218,6 +221,7 @@ function MissionStatusScreen({ missionId, onBack, onDeleted }: { missionId: numb
   return <section aria-label="미션 현황판">
     <button className="text-button back-button" onClick={onBack}>‹ {mission.title}</button>
     <span className={`badge badge-status ${missionStatusBadgeClass(missionDispatchStatus(mission))}`}>{missionDispatchStatus(mission)}</span>
+    {loadError && <p className="error" role="alert">{loadError}</p>}
     {error && <p className="error" role="alert">{error}</p>}
 
     {mission.type === 'ACTIVITY' ? <div className="status-stat-row">

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { studentNotificationApi } from '../../api/studentNotificationApi'
 import type { StudentNotification } from '../../types/notification'
@@ -13,9 +13,24 @@ const sample: StudentNotification[] = [
   { id: 1, type: 'RANGE_EXIT', title: '안전 구역 이탈 알림', message: '안전 구역을 벗어났어요. 안전한 곳으로 돌아와 주세요.', createdAt: now },
 ]
 
-afterEach(() => { vi.restoreAllMocks() })
+afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers() })
 
 describe('StudentNotifications', () => {
+  it('Given_알림이_없는_학생_When_일초_뒤_교사가_미션을_만들면_Then_목록에_반영한다', async () => {
+    // given
+    vi.useFakeTimers()
+    vi.spyOn(studentNotificationApi, 'list').mockResolvedValueOnce([]).mockResolvedValue(sample)
+    render(<StudentNotifications onBack={() => {}} onSelect={() => {}} />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(screen.getByText('새로운 알림이 없어요.')).toBeInTheDocument()
+
+    // when
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000) })
+
+    // then
+    expect(screen.getByText("'어디서 사진 찍기' 미션이 등록됐어요.")).toBeInTheDocument()
+  })
+
   it('fetches and lists notifications with type badges', async () => {
     vi.spyOn(studentNotificationApi, 'list').mockResolvedValue(sample)
     render(<StudentNotifications onBack={() => {}} onSelect={() => {}} />)

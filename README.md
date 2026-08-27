@@ -16,22 +16,42 @@
 ## Tech Stack
 
 ### Frontend
-- React 19 + TypeScript, Vite
-- Capacitor (Android 앱 빌드, 카메라/푸시알림/위치 네이티브 연동)
-- Kakao Maps JS SDK (안전 구역 지도, 실시간 위치 지도)
-- Firebase (FCM 웹/앱 푸시 수신)
-- Vitest + Testing Library (테스트)
+
+![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
+![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white)
+![Capacitor](https://img.shields.io/badge/capacitor-119EFF.svg?style=for-the-badge&logo=capacitor&logoColor=white)
+![Kakao](https://img.shields.io/badge/kakao%20maps-ffcd00.svg?style=for-the-badge&logo=kakao&logoColor=000000)
+![Firebase](https://img.shields.io/badge/firebase-%23DD2C00.svg?style=for-the-badge&logo=firebase&logoColor=white)
+![Vitest](https://img.shields.io/badge/vitest-%23252529.svg?style=for-the-badge&logo=vitest&logoColor=FCC72B)
+![Testing Library](https://img.shields.io/badge/testinglibrary-%23E33332.svg?style=for-the-badge&logo=testing-library&logoColor=white)
+
+- Capacitor: Android 앱 빌드, 카메라/푸시알림/위치 네이티브 연동
+- Kakao Maps JS SDK: 안전 구역 지도, 실시간 위치 지도
+- Firebase: FCM 웹/앱 푸시 수신
 
 ### Backend
+
+![Spring Boot](https://img.shields.io/badge/spring%20boot-%236DB33F.svg?style=for-the-badge&logo=springboot&logoColor=white)
+![Spring Security](https://img.shields.io/badge/spring%20security-%236DB33F.svg?style=for-the-badge&logo=springsecurity&logoColor=white)
+![Java](https://img.shields.io/badge/java-%23ED8B00.svg?style=for-the-badge&logo=openjdk&logoColor=white)
+![MySQL](https://img.shields.io/badge/mysql-%234479A1.svg?style=for-the-badge&logo=mysql&logoColor=white)
+![Firebase](https://img.shields.io/badge/firebase-%23DD2C00.svg?style=for-the-badge&logo=firebase&logoColor=white)
+
 - Spring Boot 4 (Java 21)
-- Spring Security (세션 기반 인증)
+- Spring Security: 세션 기반 인증
 - Spring Data JPA + MySQL 8
-- AWS S3 (미션 제출 사진 저장)
-- Firebase Admin SDK (FCM 푸시 발송)
+- AWS S3: 미션 제출 사진 저장 (simple-icons에 AWS 로고가 없어 배지 생략)
+- Firebase Admin SDK: FCM 푸시 발송
 
 ### Infra / CI-CD
+
+![Vercel](https://img.shields.io/badge/vercel-%23000000.svg?style=for-the-badge&logo=vercel&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)
+![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
+
 - Frontend: Vercel (자동 배포, `/api/*` 요청은 Backend로 rewrite)
-- Backend: GitHub Actions → GHCR(Docker 이미지 push) → EC2 SSH 배포 (`docker compose`)
+- Backend: GitHub Actions → GHCR(Docker 이미지 push) → EC2 SSH 배포 (`docker compose`, Amazon EC2는 simple-icons에 로고가 없어 배지 생략)
 - GitHub Actions: Frontend CI / Backend CI / Android CI / iOS CI
 
 ## 서비스 아키텍처
@@ -166,6 +186,10 @@ erDiagram
 
 - **iOS 미지원**: Capacitor iOS 앱 빌드·배포에는 Apple Developer Program(유료) 가입이 필요해 이번 해커톤 범위에서는 지원하지 않는다. Android/Web만 지원한다.
 - **웹 브라우저에서의 GPS 정확도 한계**: 웹은 Capacitor 네이티브 위치 API 대신 브라우저 Geolocation API를 쓰는데, 백그라운드(탭 비활성/화면 꺼짐) 상태에서 위치 수집이 제한되고 정확도도 기기·브라우저별로 편차가 커서 안전 구역 이탈 판정이 앱 대비 불안정할 수 있다.
+- **학생/학부모 전화 걸기 버튼 비활성**: 교사용 학생 상세 화면에 전화 걸기 UI는 있지만, 참가자 조회 API 계약에 전화번호 필드 자체가 없어 실제 `tel:` 연결이나 번호 표시는 되지 않는다.
+- **위치 이력 전체 조회 불가**: 위치 로그는 안전 구역 이탈 좌표만 적재하며, 학생의 전체 이동 경로(트랙) 조회 기능은 없다.
+- **진행중/종료 상태 Trip 삭제 불가**: Trip 삭제는 `READY`(시작 전) 상태에서만 가능하다. 참가자·위치·미션 데이터가 쌓인 진행중/종료 Trip을 삭제하려면 해당 데이터까지 함께 정리하는 별도 구현이 필요해 지원하지 않는다.
+- **Trip 종료 결과보고서/내보내기 기능 없음**: 체험학습 종료 후 참여 기록·미션 결과를 파일로 내보내거나 요약 리포트로 보는 기능은 구현하지 않았다.
 
 ## 개발자 조 구성원 정보
 
@@ -176,4 +200,4 @@ erDiagram
 | 김현문 | [@hyeonyway](https://github.com/hyeonyway) | Frontend 리드 · 인증/세션 · Trip 참여 및 미션 제출 플로우 · 배포 관리 |
 | 김근성 | [@rootachieve](https://github.com/rootachieve) | 위치 추적(GPS/안전 구역 이탈 판정) · Android 백그라운드 위치 파이프라인 · 인프라 |
 | 박민서 | [@minseo6753](https://github.com/minseo6753) | Backend 도메인 모델링(JPA) · 알림(Notification) · 실시간 위치 SSE |
-| 임하민 | [@haimin13](https://github.com/haimin13) | FCM Push 연동 · 미션 관리 화면/API · CI/CD |
+| 임하민 | [@haimin13](https://github.com/haimin13) | FCM Push/SSE 연동 · 미션 관리 화면/API · CI/CD |

@@ -47,11 +47,11 @@ const locationStatusCopy: Record<LocationTrackingState['sendStatus'], { label: s
   NO_PERMISSION: { label: '위치 권한이 없어요', tone: 'neutral' },
 }
 
-export function StudentHome({ trip, location, notice, currentMission, onCurrentMission, onBellClick, onLogout }: { trip: StudentTrip; location: LocationTrackingState; notice: string; currentMission: CurrentMission | null; onCurrentMission: () => void; onBellClick?: () => void; onLogout?: () => void }) {
+export function StudentHome({ trip, location, notice, currentMission, studentName, onCurrentMission, onBellClick, onLogout }: { trip: StudentTrip; location: LocationTrackingState; notice: string; currentMission: CurrentMission | null; studentName: string; onCurrentMission: () => void; onBellClick?: () => void; onLogout?: () => void }) {
   const status = locationStatusCopy[location.sendStatus]
   return <ScreenCard title="학생 홈">
     <AppHeader showAvatar onBellClick={onBellClick} onLogout={onLogout} />
-    <p className="greeting" style={{ marginBottom: 8 }}>즐거운 여행 하세요!</p>
+    <p className="greeting" style={{ marginBottom: 8 }}>{studentName} 님, 즐거운 여행 하세요!</p>
     <p className="hint screen-pad" style={{ marginBottom: 12 }}><span className="brand" style={{ display: 'inline' }}>{trip.status === 'ACTIVE' ? '진행 중' : '예정'}</span> · {trip.title} · {trip.place} · {trip.period}</p>
     <div className="screen-pad" style={{ marginBottom: 16 }}>
       <span className={`status-pill status-pill--${status.tone}`}>{status.label}{location.lastSentAt && <span className="hint"> · {location.lastSentAt}</span>}</span>
@@ -60,8 +60,8 @@ export function StudentHome({ trip, location, notice, currentMission, onCurrentM
     {notice && <p className="notice sub-copy" role="status">{notice}</p>}
     <div className="home-body">
       {currentMission ? <><section className="mission-card"><p className="mission-eyebrow">새 미션이 도착했어요!</p><h2>{currentMission.title}</h2><p>{currentMission.description ?? (currentMission.type === 'CHECK' ? '교사가 공유한 4자리 PIN을 입력해 주세요.' : '카메라로 촬영한 사진만 제출할 수 있습니다.')}</p><button onClick={onCurrentMission}>현재 미션 수행</button></section><section className="locked-mission"><p>미완료 미션을 먼저 진행해 주세요.</p></section></> : <section className="locked-mission"><p className="hint">현재 진행할 미션이 없습니다.</p></section>}
-      <dl className="trip-summary"><div><dt>미션 진행률</dt><dd>{trip.missionCompleted} / {trip.missionTotal}</dd></div></dl>
       {trip.hasSafetyWarning && <p className="error" role="alert">안전 구역 이탈이 감지되었습니다.</p>}
+      <button type="button" className="call-teacher-button" disabled aria-label="선생님께 전화 걸기, 준비 중">선생님께 전화 걸기</button>
     </div>
   </ScreenCard>
 }

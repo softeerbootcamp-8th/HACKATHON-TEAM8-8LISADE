@@ -4,7 +4,10 @@ import { teacherMissionApi } from '../api/missionApi'
 import { computeStudentStatus, formatClockTime, formatMinutesAgo, type StudentLocationStatus } from '../features/teacher/studentStatus'
 import { summarizeStudentMissionStatuses, type StudentMissionStatus, type StudentMissionStatusItem } from '../features/teacher/studentMissionSummary'
 import { BackHeader } from '../shared/ui/BackHeader'
+import { ListSkeleton } from '../shared/ui/ListSkeleton'
 import { collectIncompleteStudentIds } from '../features/teacher/teacherHomeAttention'
+import { pollEverySecond } from '../shared/pollEverySecond'
+import phoneIcon from '../assets/icons/phone.svg'
 
 type View = { name: 'LIST' } | { name: 'DETAIL'; participantId: number }
 type DisplayStatus = StudentLocationStatus | 'MANUAL'
@@ -42,23 +45,21 @@ function StudentListScreen({ tripId, onSelect }: { tripId: string; onSelect: (pa
   const [incompleteUserIds, setIncompleteUserIds] = useState<Set<number>>(new Set())
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    let cancelled = false
-    Promise.all([
+  useEffect(() => pollEverySecond(
+    () => Promise.all([
       teacherStudentApi.listStudents(tripId),
       teacherMissionApi.listMissions(tripId).then((missions) => Promise.all(missions.map((mission) => teacherMissionApi.getStatusBoard(mission.id)))),
-    ])
-      .then(([result, boards]) => {
-        if (cancelled) return
-        setStudents(result)
-        setIncompleteUserIds(collectIncompleteStudentIds(boards))
-      })
-      .catch((caught) => { if (!cancelled) setError(caught instanceof Error ? caught.message : '학생 목록을 불러오지 못했습니다.') })
-    return () => { cancelled = true }
-  }, [tripId])
+    ]),
+    ([result, boards]) => {
+      setStudents(result)
+      setIncompleteUserIds(collectIncompleteStudentIds(boards))
+      setError('')
+    },
+    (caught) => setError(caught instanceof Error ? caught.message : '학생 목록을 불러오지 못했습니다.'),
+  ), [tripId])
 
-  if (error) return <p className="error" role="alert">{error}</p>
-  if (!students) return <p className="hint">불러오는 중...</p>
+  if (error && !students) return <p className="error" role="alert">{error}</p>
+  if (!students) return <ListSkeleton label="학생 목록을 불러오는 중입니다." />
 
   const withTags = students.map((student) => ({
     ...student,
@@ -68,6 +69,7 @@ function StudentListScreen({ tripId, onSelect }: { tripId: string; onSelect: (pa
   const rest = withTags.filter((student) => !student.tags.some(isAttentionTag))
 
   return <>
+    {error && <p className="error" role="alert">{error}</p>}
     {needsCheck.length > 0 && <>
       <p className="teacher-section-title">확인이 필요한 학생 {needsCheck.length}</p>
       {needsCheck.map((student) => <StudentRow key={student.participantId} student={student} onSelect={onSelect} />)}
@@ -89,25 +91,23 @@ function StudentDetailScreen({ tripId, participantId, onBack }: { tripId: string
   const [missionStatuses, setMissionStatuses] = useState<StudentMissionStatusItem[] | null>(null)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    let cancelled = false
-    teacherStudentApi.getStudentDetail(tripId, participantId)
-      .then((result) => { if (!cancelled) setStudent(result) })
-      .catch((caught) => { if (!cancelled) setError(caught instanceof Error ? caught.message : '학생 정보를 불러오지 못했습니다.') })
-    return () => { cancelled = true }
-  }, [tripId, participantId])
+  useEffect(() => pollEverySecond(
+    () => teacherStudentApi.getStudentDetail(tripId, participantId),
+    (result) => { setStudent(result); setError('') },
+    (caught) => setError(caught instanceof Error ? caught.message : '학생 정보를 불러오지 못했습니다.'),
+  ), [tripId, participantId])
 
   useEffect(() => {
-    if (!student || student.type === 'MANUAL') return
-    let cancelled = false
-    teacherMissionApi.listMissions(tripId)
-      .then((missions) => Promise.all(missions.map((mission) => teacherMissionApi.getStatusBoard(mission.id))))
-      .then((boards) => { if (!cancelled) setMissionStatuses(summarizeStudentMissionStatuses(student.userId, boards)) })
-      .catch(() => { if (!cancelled) setMissionStatuses(null) })
-    return () => { cancelled = true }
-  }, [tripId, student])
+    const userId = student?.userId
+    if (userId === null || userId === undefined || student?.type === 'MANUAL') return
+    return pollEverySecond(
+      () => teacherMissionApi.listMissions(tripId)
+        .then((missions) => Promise.all(missions.map((mission) => teacherMissionApi.getStatusBoard(mission.id)))),
+      (boards) => setMissionStatuses(summarizeStudentMissionStatuses(userId, boards)),
+    )
+  }, [tripId, student?.type, student?.userId])
 
-  if (error) return <p className="error" role="alert">{error}</p>
+  if (error && !student) return <p className="error" role="alert">{error}</p>
   if (!student) return <p className="hint">불러오는 중...</p>
 
   const status = resolveStatus(student.type, student.outside, student.lastSentAt)
@@ -116,15 +116,16 @@ function StudentDetailScreen({ tripId, participantId, onBack }: { tripId: string
   return <section className="student-detail-screen" aria-label="학생 상세">
     <BackHeader title={student.name} onBack={onBack} />
     <div className="student-detail-content">
+      {error && <p className="error" role="alert">{error}</p>}
       <section className="info-card" aria-label="학생 정보">
         <p className="info-card-title">학생 정보</p>
         <div className="info-card-row">
           <p className="label">학생 전화번호</p>
-          <button type="button" className="call-button" disabled aria-label="학생 전화 걸기, 준비 중">전화 걸기</button>
+          <button type="button" className="call-button" disabled aria-label="학생 전화 걸기, 준비 중"><img src={phoneIcon} alt="" aria-hidden="true" />전화 걸기</button>
         </div>
         <div className="info-card-row">
           <p className="label">학부모 전화번호</p>
-          <button type="button" className="call-button" disabled aria-label="학부모 전화 걸기, 준비 중">전화 걸기</button>
+          <button type="button" className="call-button" disabled aria-label="학부모 전화 걸기, 준비 중"><img src={phoneIcon} alt="" aria-hidden="true" />전화 걸기</button>
         </div>
       </section>
 

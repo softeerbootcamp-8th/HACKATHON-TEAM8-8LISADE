@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { teacherNotificationApi } from '../../api/teacherNotificationApi'
 import type { TeacherNotification } from '../../types/notification'
@@ -12,9 +12,40 @@ const sample: TeacherNotification[] = [
   { id: 1, type: 'MISSION_INCOMPLETED', title: '미션 미완료 알림', message: "'어디서 사진 찍기' 미션을 3명이 완료하지 못했어요.", createdAt: now },
 ]
 
-afterEach(() => { vi.restoreAllMocks() })
+afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers() })
 
 describe('TeacherNotifications', () => {
+  it('Given_알림이_없는_교사_When_일초_뒤_학생_이탈_알림이_생기면_Then_목록에_반영한다', async () => {
+    // given
+    vi.useFakeTimers()
+    vi.spyOn(teacherNotificationApi, 'list').mockResolvedValueOnce([]).mockResolvedValue(sample)
+    render(<TeacherNotifications onBack={() => {}} onSelect={() => {}} />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(screen.getByText('새로운 알림이 없어요.')).toBeInTheDocument()
+
+    // when
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000) })
+
+    // then
+    expect(screen.getByText('김하늘이 안전 구역을 벗어났어요.')).toBeInTheDocument()
+  })
+
+  it('Given_불러온_알림이_있을_때_When_다음_폴링이_실패하면_Then_기존_알림을_유지한다', async () => {
+    // given
+    vi.useFakeTimers()
+    vi.spyOn(teacherNotificationApi, 'list').mockResolvedValueOnce(sample).mockRejectedValue(new Error('일시적인 오류입니다.'))
+    render(<TeacherNotifications onBack={() => {}} onSelect={() => {}} />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(screen.getByText('김하늘이 안전 구역을 벗어났어요.')).toBeInTheDocument()
+
+    // when
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000) })
+
+    // then
+    expect(screen.getByText('김하늘이 안전 구역을 벗어났어요.')).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('일시적인 오류입니다.')
+  })
+
   it('fetches and lists notifications with type badges', async () => {
     vi.spyOn(teacherNotificationApi, 'list').mockResolvedValue(sample)
     render(<TeacherNotifications onBack={() => {}} onSelect={() => {}} />)

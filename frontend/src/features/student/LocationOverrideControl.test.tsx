@@ -29,10 +29,11 @@ const sdk = vi.hoisted(() => {
     constructor(public readonly options: Record<string, unknown>) {}
   }
 
+  const keywordSearch = vi.fn((_keyword: string, callback: (places: unknown[], status: string) => void) => {
+    callback([{ y: '37.5796', x: '126.9770' }], 'OK')
+  })
   class FakePlaces {
-    keywordSearch(_keyword: string, callback: (places: unknown[], status: string) => void) {
-      callback([{ y: '37.5796', x: '126.9770' }], 'OK')
-    }
+    keywordSearch = keywordSearch
   }
 
   const maps = {
@@ -54,7 +55,7 @@ const sdk = vi.hoisted(() => {
     },
   }
 
-  return { maps, mapInstances, listeners, FakeLatLng }
+  return { maps, mapInstances, listeners, FakeLatLng, keywordSearch }
 })
 
 type FakeMouseEvent = { latLng: InstanceType<typeof sdk.FakeLatLng> }
@@ -69,10 +70,11 @@ describe('학생 시연용 위치 조정', () => {
   beforeEach(() => {
     sdk.mapInstances.length = 0
     sdk.listeners.clear()
-    locationOverrideApi.get.mockReset().mockResolvedValue({ enabled: false, latitude: null, longitude: null })
-    locationOverrideApi.enable.mockReset().mockImplementation(async (point) => ({ enabled: true, ...point }))
-    locationOverrideApi.disable.mockReset().mockResolvedValue({ enabled: false, latitude: null, longitude: null })
+    locationOverrideApi.get.mockReset().mockResolvedValue({ enabled: false, latitude: null, longitude: null, defaultCenter: null })
+    locationOverrideApi.enable.mockReset().mockImplementation(async (point) => ({ enabled: true, defaultCenter: null, ...point }))
+    locationOverrideApi.disable.mockReset().mockResolvedValue({ enabled: false, latitude: null, longitude: null, defaultCenter: null })
     vi.mocked(loadKakaoMaps).mockReset().mockResolvedValue(sdk.maps as never)
+    sdk.keywordSearch.mockClear()
     HTMLDialogElement.prototype.showModal = function showModal() { this.setAttribute('open', '') }
     HTMLDialogElement.prototype.close = function close() { this.removeAttribute('open') }
   })
@@ -107,6 +109,36 @@ describe('학생 시연용 위치 조정', () => {
     // then
     await waitFor(() => expect(locationOverrideApi.disable).toHaveBeenCalledOnce())
     expect(screen.queryByText('수동 위치 사용 중')).not.toBeInTheDocument()
+  })
+
+  it('Given 마지막 위치도 없는 자동 위치 모드 When 조정 다이얼로그를 열면 Then 기존처럼 장소 검색으로 지도를 띄운다', async () => {
+    // given
+    render(<LocationOverrideControl place="경복궁" />)
+    await waitFor(() => expect(locationOverrideApi.get).toHaveBeenCalledOnce())
+
+    // when
+    fireEvent.click(screen.getByRole('button', { name: '시연용 위치 조정' }))
+    await waitFor(() => expect(sdk.mapInstances).toHaveLength(1))
+
+    // then
+    await waitFor(() => expect(sdk.keywordSearch).toHaveBeenCalledWith('경복궁', expect.any(Function), expect.anything()))
+  })
+
+  it('Given 마지막 위치가 있는 자동 위치 모드 When 조정 다이얼로그를 열면 Then 장소 검색 대신 그 위치로 지도를 띄운다', async () => {
+    // given
+    locationOverrideApi.get.mockResolvedValue({
+      enabled: false, latitude: null, longitude: null,
+      defaultCenter: { latitude: 37.5796, longitude: 126.977 },
+    })
+    render(<LocationOverrideControl place="경복궁" />)
+    await waitFor(() => expect(locationOverrideApi.get).toHaveBeenCalledOnce())
+
+    // when
+    fireEvent.click(screen.getByRole('button', { name: '시연용 위치 조정' }))
+    await waitFor(() => expect(sdk.mapInstances).toHaveLength(1))
+
+    // then
+    expect(sdk.keywordSearch).not.toHaveBeenCalled()
   })
 
   it('Given 카카오 지도 설정 오류 When 조정 다이얼로그를 열면 Then 오류를 다이얼로그 안에서 안내한다', async () => {

@@ -1,11 +1,15 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { TeacherLocation, TeacherLocationContext } from '../../api/teacherLocationApi'
 import type { TeacherTrip } from '../../types/teacherTrip'
 
 const locationApi = vi.hoisted(() => ({
   getContext: vi.fn(),
   subscribe: vi.fn(),
+}))
+
+const tripApi = vi.hoisted(() => ({
+  getParticipants: vi.fn(),
 }))
 
 const sdk = vi.hoisted(() => {
@@ -75,6 +79,7 @@ const sdk = vi.hoisted(() => {
 })
 
 vi.mock('../../api/teacherLocationApi', () => ({ teacherLocationApi: locationApi }))
+vi.mock('../../api/teacherTripApi', () => ({ teacherTripApi: tripApi }))
 vi.mock('./kakaoMaps', () => ({ loadKakaoMaps: vi.fn(async () => sdk.maps) }))
 
 import { TeacherLocationMap } from './TeacherLocationMap'
@@ -94,11 +99,32 @@ describe('TeacherLocationMap', () => {
     sdk.overlayInstances.length = 0
     sdk.listeners.clear()
     locationApi.getContext.mockReset().mockResolvedValue(context())
+    tripApi.getParticipants.mockReset().mockResolvedValue(context().participants)
     locationApi.subscribe.mockReset().mockImplementation((listener) => {
       sseListener = listener
       return vi.fn()
     })
     vi.mocked(loadKakaoMaps).mockReset().mockResolvedValue(sdk.maps as never)
+  })
+
+  afterEach(() => vi.useRealTimers())
+
+  it('Given_지도에_없는_학생_When_일초_뒤_Trip에_참여하면_Then_학생_상태_집계에_반영한다', async () => {
+    // given
+    vi.useFakeTimers()
+    const initial = context()
+    const participant = { id: 5, userId: 14, name: '최가람', type: 'APP' as const, createdAt: new Date().toISOString() }
+    locationApi.getContext.mockResolvedValue(initial)
+    tripApi.getParticipants.mockResolvedValue([...initial.participants, participant])
+    render(<TeacherLocationMap trips={trips} />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(screen.getByRole('button', { name: '정상 1' })).toBeInTheDocument()
+
+    // when
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000) })
+
+    // then
+    expect(screen.getByRole('button', { name: '정상 2' })).toBeInTheDocument()
   })
 
   it('학생 위치가 있어도 지오펜스 기준으로 중심을 맞춘다', async () => {
@@ -151,6 +177,7 @@ describe('TeacherLocationMap', () => {
       participants: [{ id: 5, userId: 15, name: '최가람', type: 'APP', createdAt: new Date(Date.now() - 60_000).toISOString() }],
       locations: [],
     }))
+    tripApi.getParticipants.mockResolvedValue([{ id: 5, userId: 15, name: '최가람', type: 'APP', createdAt: new Date(Date.now() - 60_000).toISOString() }])
 
     // when
     render(<TeacherLocationMap trips={trips} />)
