@@ -324,6 +324,50 @@ describe('TeacherLocationMap', () => {
     // then
     expect(await screen.findByRole('alert')).toHaveTextContent('카카오 지도 키가 설정되지 않았습니다.')
   })
+
+  describe('기본 선택 Trip 우선순위', () => {
+    it('배열 첫 번째가 진행중이 아니어도 진행중 Trip을 기본 선택한다', async () => {
+      // given
+      const mixedTrips: TeacherTrip[] = [
+        { id: 20, title: '예정 체험학습', place: '서울숲', startAt: '2026-09-01T09:00:00', status: 'READY' },
+        { id: 21, title: '진행중 체험학습', place: '경복궁', startAt: '2026-08-01T09:00:00', status: 'ACTIVE' },
+      ]
+
+      // when
+      render(<TeacherLocationMap trips={mixedTrips} />)
+
+      // then
+      await waitFor(() => expect(locationApi.getContext).toHaveBeenCalledWith(21))
+    })
+
+    it('진행중이 없으면 가장 임박한 예정 Trip을 기본 선택한다', async () => {
+      // given
+      const readyTrips: TeacherTrip[] = [
+        { id: 30, title: '늦은 예정', place: '서울숲', startAt: '2026-10-01T09:00:00', status: 'READY' },
+        { id: 31, title: '이른 예정', place: '경복궁', startAt: '2026-09-01T09:00:00', status: 'READY' },
+      ]
+
+      // when
+      render(<TeacherLocationMap trips={readyTrips} />)
+
+      // then
+      await waitFor(() => expect(locationApi.getContext).toHaveBeenCalledWith(31))
+    })
+
+    it('진행중·예정이 없으면 가장 최근 종료 Trip을 기본 선택한다', async () => {
+      // given
+      const finishedTrips: TeacherTrip[] = [
+        { id: 40, title: '오래된 종료', place: '서울숲', startAt: '2026-01-01T09:00:00', status: 'FINISHED' },
+        { id: 41, title: '최근 종료', place: '경복궁', startAt: '2026-06-01T09:00:00', status: 'FINISHED' },
+      ]
+
+      // when
+      render(<TeacherLocationMap trips={finishedTrips} />)
+
+      // then
+      await waitFor(() => expect(locationApi.getContext).toHaveBeenCalledWith(41))
+    })
+  })
 })
 
 async function readyMap() {
