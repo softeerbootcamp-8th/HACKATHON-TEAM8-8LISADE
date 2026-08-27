@@ -109,7 +109,7 @@ export default function TeacherMissions({ tripId }: { tripId: string }) {
         </li>
       })}
     </ul>}
-    <button onClick={() => setView({ name: 'REGISTER' })}>+ 미션 추가하기</button>
+    <button className="trip-primary-button" onClick={() => setView({ name: 'REGISTER' })}>+ 미션 추가하기</button>
   </section>
 }
 
