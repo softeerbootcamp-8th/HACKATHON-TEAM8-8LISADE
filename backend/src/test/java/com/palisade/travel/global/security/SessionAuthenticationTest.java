@@ -64,12 +64,12 @@ class SessionAuthenticationTest {
     }
 
     @Test
-    void Given_로그인_세션_When_쿠키를_발급하면_Then_앱_종료_후에도_30분간_보관한다() {
+    void Given_로그인_세션_When_쿠키를_발급하면_Then_앱_종료_후에도_12시간_보관한다() {
         // given & when
         Duration maxAge = serverProperties.getServlet().getSession().getCookie().getMaxAge();
 
         // then
-        assertThat(maxAge).isEqualTo(Duration.ofMinutes(30));
+        assertThat(maxAge).isEqualTo(Duration.ofHours(12));
     }
 
     @Test

@@ -59,3 +59,12 @@
 - MockMvc OPTIONS preflight 테스트로 배포 도메인의 `Access-Control-Allow-Origin`과 credentials 응답을 검증한다.
 
 검증: `./gradlew test`
+
+## 세션 쿠키 만료 연장 (#244)
+
+- `server.servlet.session.cookie.max-age`를 `30m`에서 `12h`로 늘렸다. 기존 값은 로그인 시점 기준 고정 만료라서 활동 중에도 정확히 30분 뒤 클라이언트 쿠키가 죽어 로그인이 풀리는 문제가 있었다.
+- 서버 `session.timeout`(30분 유휴 만료)은 그대로 둔다. 무활동 상태의 보안성은 바뀌지 않는다.
+- 요청마다 Set-Cookie를 재발급하는 sliding 갱신 필터도 검토했으나, 이 앱의 실제 사용 패턴(수학여행/현장학습 등 하루 단위 연속 사용)에는 과한 엔지니어링이라 판단해 채택하지 않았다.
+- Issue #104(Android 앱 재실행 후 세션 복원)와 충돌 없음 — 복원 가능 window가 30분에서 12시간으로 늘어났을 뿐이다.
+
+검증: `./gradlew test build`
