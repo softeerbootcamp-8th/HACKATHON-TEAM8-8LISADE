@@ -24,7 +24,13 @@ vi.mock('./TeacherLocationMap', () => ({
     <div>{trips.map((trip) => <span key={trip.id}>{trip.title}</span>)}</div>,
 }))
 
-vi.mock('../../components/TeacherMissions', () => ({ default: () => <div>미션</div> }))
+vi.mock('../../components/TeacherMissions', () => ({
+  default: ({ tripId }: { tripId: string }) => <div>미션(Trip {tripId})</div>,
+}))
+
+vi.mock('../../components/TeacherStudents', () => ({
+  default: ({ tripId }: { tripId: string }) => <div>학생 목록(Trip {tripId})</div>,
+}))
 
 vi.mock('./TeacherNotifications', () => ({
   TeacherNotifications: ({ onBack }: { onBack: () => void }) =>
@@ -162,6 +168,25 @@ describe('TeacherDashboard', () => {
     fireEvent.click(screen.getByRole('button', { name: '학생 탭으로' }))
 
     expect(screen.getByRole('button', { name: '학생' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('Given_배열_첫_번째가_진행중이_아닐_때_When_학생_탭과_미션_탭을_열면_Then_진행중인_체험학습을_보여준다', async () => {
+    // given
+    vi.mocked(teacherTripApi.getTrips).mockResolvedValue([readyTrip(5, '예정 체험학습', 3), trip(9, '진행중 체험학습')])
+    render(<TeacherDashboard user={user} />)
+    await screen.findByText('진행 현황(Trip 9)')
+
+    // when
+    fireEvent.click(screen.getByRole('button', { name: '학생' }))
+
+    // then
+    expect(await screen.findByText('학생 목록(Trip 9)')).toBeInTheDocument()
+
+    // when
+    fireEvent.click(screen.getByRole('button', { name: '미션' }))
+
+    // then
+    expect(await screen.findByText('미션(Trip 9)')).toBeInTheDocument()
   })
 
   describe('예정(READY) 체험학습 홈 카드', () => {
