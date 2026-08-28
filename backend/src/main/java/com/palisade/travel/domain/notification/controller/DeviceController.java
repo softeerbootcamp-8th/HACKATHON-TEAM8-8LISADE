@@ -22,6 +22,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class DeviceController {
 
+    // 세션이 자연 만료될 때 SseSessionListener가 이 세션에 연결된 fcmToken만 정리할 수 있도록
+    // 세션 attribute에 등록된 토큰을 보관해둔다 (LocationController의 override 좌표 저장 패턴과 동일).
+    public static final String FCM_TOKEN_ATTRIBUTE = DeviceController.class.getName() + ".fcmToken";
+
     private final DeviceService deviceService;
 
     @PostMapping
@@ -29,7 +33,8 @@ public class DeviceController {
     public void register(@AuthenticationPrincipal UserPrincipal user,
                           @Valid @RequestBody DeviceRegisterRequest request,
                           HttpSession session) {
-        deviceService.register(user.userId(), request.token(), request.platform(), session.getId());
+        deviceService.register(user.userId(), request.token(), request.platform());
+        session.setAttribute(FCM_TOKEN_ATTRIBUTE, request.token());
     }
 
     @DeleteMapping

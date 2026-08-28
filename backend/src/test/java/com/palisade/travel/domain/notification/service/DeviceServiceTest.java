@@ -30,39 +30,39 @@ class DeviceServiceTest {
     private DeviceService deviceService;
 
     @Test
-    void 새_기기_등록시_세션_ID가_함께_저장된다() {
+    void 새_기기_등록시_저장된다() {
         // given
         given(deviceRepository.findByFcmToken("token-1")).willReturn(Optional.empty());
 
         // when
-        deviceService.register(USER_ID, "token-1", DevicePlatform.WEB, "session-1");
+        deviceService.register(USER_ID, "token-1", DevicePlatform.WEB);
 
         // then
         ArgumentCaptor<Device> captor = ArgumentCaptor.forClass(Device.class);
         then(deviceRepository).should().save(captor.capture());
-        assertThat(captor.getValue().getSessionId()).isEqualTo("session-1");
+        assertThat(captor.getValue().getFcmToken()).isEqualTo("token-1");
     }
 
     @Test
-    void 이미_등록된_토큰을_다른_세션에서_등록하면_세션_ID가_갱신된다() {
+    void 이미_등록된_토큰을_다시_등록하면_유저에게_재할당된다() {
         // given
-        Device existing = Device.create(USER_ID, "token-1", DevicePlatform.WEB, "old-session");
+        Device existing = Device.create(USER_ID, "token-1", DevicePlatform.WEB);
         given(deviceRepository.findByFcmToken("token-1")).willReturn(Optional.of(existing));
 
         // when
-        deviceService.register(USER_ID, "token-1", DevicePlatform.WEB, "new-session");
+        deviceService.register(2L, "token-1", DevicePlatform.WEB);
 
         // then
-        assertThat(existing.getSessionId()).isEqualTo("new-session");
+        assertThat(existing.getUserId()).isEqualTo(2L);
         then(deviceRepository).should(never()).save(any());
     }
 
     @Test
-    void 세션_만료시_해당_세션의_기기_토큰만_삭제한다() {
+    void 세션_만료시_해당_세션에_저장된_fcmToken과_userId로만_삭제한다() {
         // when
-        deviceService.deleteBySessionId("session-1");
+        deviceService.unregister(USER_ID, "token-1");
 
         // then
-        then(deviceRepository).should().deleteBySessionId("session-1");
+        then(deviceRepository).should().deleteByFcmTokenAndUserId("token-1", USER_ID);
     }
 }

@@ -65,7 +65,7 @@ class DeviceControllerTest {
     }
 
     @Test
-    void registrationRecordsTheCurrentSessionIdOnTheDevice() throws Exception {
+    void registrationStoresTheFcmTokenOnTheSessionForCleanupOnExpiry() throws Exception {
         MockHttpSession session = (MockHttpSession) loginAs("student1").andReturn().getRequest().getSession(false);
 
         mockMvc.perform(post("/api/notifications/devices")
@@ -75,9 +75,8 @@ class DeviceControllerTest {
                         .content("{\"token\":\"token-1\",\"platform\":\"WEB\"}"))
                 .andExpect(status().isNoContent());
 
-        String sessionId = jdbcTemplate.queryForObject(
-                "SELECT session_id FROM device WHERE fcm_token = ?", String.class, "token-1");
-        org.junit.jupiter.api.Assertions.assertEquals(session.getId(), sessionId);
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "token-1", session.getAttribute(DeviceController.FCM_TOKEN_ATTRIBUTE));
     }
 
     @Test
