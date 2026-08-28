@@ -31,6 +31,7 @@ class AdminSessionControllerTest {
 
     @BeforeEach
     void setUpUsers() {
+        jdbcTemplate.update("DELETE FROM device");
         jdbcTemplate.update("DELETE FROM users");
         String passwordHash = new BCryptPasswordEncoder().encode("password123");
         jdbcTemplate.update(
@@ -60,11 +61,37 @@ class AdminSessionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.userId").value(studentId))
-                .andExpect(jsonPath("$.data.expiredSessionCount").value(1));
+                .andExpect(jsonPath("$.data.expiredSessionCount").value(1))
+                .andExpect(jsonPath("$.data.revokedDeviceCount").value(0));
 
         mockMvc.perform(get("/api/auth/me").session(studentSession))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
+    @Test
+    void forceExpiringSessionsAlsoDeletesAllFcmDeviceTokensOfTheTargetUser() throws Exception {
+        MockHttpSession studentSession = (MockHttpSession) login("student1").andReturn().getRequest().getSession(false);
+        MockHttpSession adminSession = (MockHttpSession) login("admin1").andReturn().getRequest().getSession(false);
+
+        Long studentId = jdbcTemplate.queryForObject(
+                "SELECT id FROM users WHERE login_id = ?", Long.class, "student1");
+        jdbcTemplate.update(
+                "INSERT INTO device (user_id, fcm_token, platform, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+                studentId, "fcm-token-1", "ANDROID");
+        jdbcTemplate.update(
+                "INSERT INTO device (user_id, fcm_token, platform, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+                studentId, "fcm-token-2", "IOS");
+
+        mockMvc.perform(post("/api/admin/users/{userId}/sessions/expire", studentId)
+                        .session(adminSession)
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.revokedDeviceCount").value(2));
+
+        Integer remainingDeviceCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM device WHERE user_id = ?", Integer.class, studentId);
+        org.junit.jupiter.api.Assertions.assertEquals(0, remainingDeviceCount);
     }
 
     @Test

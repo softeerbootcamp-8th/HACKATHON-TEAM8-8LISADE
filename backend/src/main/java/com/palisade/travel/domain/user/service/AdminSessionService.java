@@ -1,5 +1,7 @@
 package com.palisade.travel.domain.user.service;
 
+import com.palisade.travel.domain.notification.service.DeviceService;
+import com.palisade.travel.domain.user.dto.AdminSessionExpireResponse;
 import com.palisade.travel.domain.user.exception.UserErrorCode;
 import com.palisade.travel.domain.user.exception.UserException;
 import com.palisade.travel.domain.user.repository.UserRepository;
@@ -16,16 +18,20 @@ public class AdminSessionService {
 
     private final SessionRegistry sessionRegistry;
     private final UserRepository userRepository;
+    private final DeviceService deviceService;
 
     /**
-     * 특정 유저와 연결된 모든 활성 세션을 강제로 만료시킨다.
+     * 특정 유저와 연결된 모든 활성 세션을 강제로 만료시키고, 해당 유저에게 등록된 모든 FCM 디바이스 토큰을 삭제한다.
+     * <p>
      * {@link SessionInformation#expireNow()}는 만료 플래그만 세우며, 실제로 요청이 거부되는 시점은
-     * 다음 요청에서 {@code ConcurrentSessionFilter}가 이 플래그를 확인할 때다.
+     * 다음 요청에서 {@code ConcurrentSessionFilter}가 이 플래그를 확인할 때다. 관리자에 의한 강제 종료는
+     * 유저의 모든 세션을 끊는 것이 목적이므로, 자연 만료(#252)와 달리 세션 단위가 아니라 유저 단위로
+     * 디바이스 토큰을 전부 정리한다.
      *
-     * @return 강제 만료된 세션 개수
+     * @return 강제 만료된 세션 개수와 삭제된 디바이스 토큰 개수를 담은 결과
      */
-    @Transactional(readOnly = true)
-    public int expireAllSessions(Long userId) {
+    @Transactional
+    public AdminSessionExpireResponse expireAllSessions(Long userId) {
         if (!userRepository.existsById(userId)) {
             throw new UserException(UserErrorCode.USER_NOT_FOUND);
         }
@@ -40,6 +46,9 @@ public class AdminSessionService {
                 expiredSessionCount++;
             }
         }
-        return expiredSessionCount;
+
+        long revokedDeviceCount = deviceService.deleteAllByUserId(userId);
+
+        return new AdminSessionExpireResponse(userId, expiredSessionCount, revokedDeviceCount);
     }
 }

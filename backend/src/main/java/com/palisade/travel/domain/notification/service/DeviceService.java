@@ -26,4 +26,14 @@ public class DeviceService {
     public void unregister(Long userId, String fcmToken) {
         deviceRepository.deleteByFcmTokenAndUserId(fcmToken, userId);
     }
+
+    /**
+     * 특정 유저에게 연결된 모든 FCM 디바이스 토큰을 삭제한다.
+     *
+     * @return 삭제된 디바이스 토큰 개수
+     */
+    @Transactional
+    public long deleteAllByUserId(Long userId) {
+        return deviceRepository.deleteAllByUserId(userId);
+    }
 }

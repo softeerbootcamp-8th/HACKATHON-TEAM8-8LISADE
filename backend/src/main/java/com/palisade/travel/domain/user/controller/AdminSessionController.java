@@ -18,7 +18,6 @@ public class AdminSessionController {
 
     @PostMapping("/{userId}/sessions/expire")
     public ApiResponse<AdminSessionExpireResponse> expireSessions(@PathVariable Long userId) {
-        int expiredSessionCount = adminSessionService.expireAllSessions(userId);
-        return ApiResponse.success(new AdminSessionExpireResponse(userId, expiredSessionCount));
+        return ApiResponse.success(adminSessionService.expireAllSessions(userId));
     }
 }
