@@ -58,3 +58,32 @@
 - 화면 범위는 교사 화면이다. 학생에게 가는 push가 아직 없어 검증할 대상이 없다.
 
 검증: `npm test -- --run`(신규 15개 포함 전체 171개), `npm run lint`, `npm run build` 통과. 토스트 렌더·종 배지 접근성 이름·배지 해제 흐름은 `TeacherDashboard.test.tsx`에서 실제 DOM으로 확인했다. 실제 FCM push로 뜨는 end-to-end 확인은 로그인 세션과 실서버 push가 필요해 배포 후 진행하고, Android는 실기기 확인이 함께 필요하다.
+
+## 세션 자연 만료 시 FCM device token 정리 (#252)
+
+명시적 로그아웃(`POST /api/auth/logout`)은 세션만 invalidate하고 FCM 토큰 삭제는 클라이언트가 별도로 `DeviceController.unregister()`를 호출해야만 일어나는데, 세션이 30분 타임아웃으로 자연 만료되는 경로(앱 강제 종료, 네트워크 단절 등)에는 그 호출이 없어 `Device` row가 그대로 남아 로그아웃된 기기가 push를 계속 받는 문제를 고쳤다.
+
+- `Device`에 `sessionId`(nullable) 컬럼을 추가했다. Flyway/Liquibase 없이 `ddl-auto: update`(local/prod)를 쓰는 프로젝트라 별도 마이그레이션 스크립트 없이 엔티티 필드 추가만으로 스키마가 반영된다.
+- `DeviceController.register()`가 `HttpSession`을 파라미터로 받아 `session.getId()`를 `DeviceService.register(...)`에 함께 넘긴다. 토큰이 이미 있으면 `reassignTo()`가, 새로 만들면 `Device.create()`가 sessionId를 같이 저장/갱신한다.
+- `DeviceRepository.deleteBySessionId(String)` / `DeviceService.deleteBySessionId(String)`을 추가했다. `deleteByFcmTokenAndUserId`(명시적 unregister 경로)와는 별도 경로다.
+- 세션 만료 감지는 기존 `SseSessionListener.sessionDestroyed()` 하나뿐이라 별도 리스너를 새로 만들지 않고 여기에 `deviceService.deleteBySessionId(event.getSession().getId())` 호출을 추가했다. SSE 연결 해제(`sseConnectionService.disconnect(userId)`, SecurityContext 필요)와 달리 device 정리는 SecurityContext 유무와 무관하게 항상 실행한다 — sessionId 자체가 device를 특정하는 키이므로 인증 정보가 없어도 안전하게 그 세션의 row만 지울 수 있다.
+- 핵심 제약(같은 유저의 다른 세션/디바이스 토큰은 건드리지 않음)은 `sessionId`가 세션마다 고유하다는 점으로 자동 만족된다 — `userId` 기준이 아니라 `sessionId` 기준으로만 삭제하기 때문에 다중 세션 로그인 시나리오에서도 안전하다.
+
+검증: `./gradlew build`(전체 테스트 포함) 통과. `DeviceServiceTest`(신규, 등록 시 sessionId 저장/갱신 + `deleteBySessionId` 위임 3케이스), `SseSessionListenerTest`(신규 케이스로 세션 만료 시 `deviceService.deleteBySessionId(session.getId())` 호출 검증 추가), `DeviceControllerTest`(신규 케이스로 등록 응답 후 DB의 `device.session_id`가 실제 `HttpSession` id와 일치하는지 확인)까지 모두 통과.
+
+### 설계 변경: `sessionId` 컬럼 → 세션 attribute 방식 (PR 리뷰 후)
+
+위 구현(`Device.sessionId` 컬럼 + `deleteBySessionId`)을 PR #258 리뷰 단계에서 아래 방식으로 교체했다. **DB 스키마는 그대로 두고(컬럼 추가 없음), `GPS override` 기능이 이미 쓰고 있던 `HttpSession.setAttribute()` 패턴(`LocationController`의 `OVERRIDE_LATITUDE`/`OVERRIDE_LONGITUDE`)을 그대로 재사용한다.**
+
+- `Device` 엔티티의 `sessionId` 컬럼, `Device.create()`/`reassignTo()`의 sessionId 파라미터, `DeviceRepository.deleteBySessionId()`, `DeviceService.deleteBySessionId()`를 모두 되돌렸다 — 원래 있던 `deviceRepository.findByFcmToken`/`deleteByFcmTokenAndUserId` 시그니처로 복귀.
+- `DeviceController`에 `FCM_TOKEN_ATTRIBUTE` 상수(`DeviceController.class.getName() + ".fcmToken"`)를 추가하고, `register()`가 토큰 등록에 성공하면 `session.setAttribute(FCM_TOKEN_ATTRIBUTE, request.token())`으로 그 세션에 fcmToken을 기록해둔다.
+- `SseSessionListener.sessionDestroyed()`는 세션 attribute에서 `FCM_TOKEN_ATTRIBUTE` 값을 꺼내, 기존처럼 `SecurityContext`에서 얻은 `userId`와 함께 있으면 (둘 다 있을 때만) 기존 명시적 unregister 경로가 쓰던 `deviceService.unregister(userId, fcmToken)`(`deleteByFcmTokenAndUserId`)을 그대로 호출한다. 세션에 attribute가 없으면(한 번도 register 안 한 세션 등) 아무것도 하지 않는다.
+
+바꾼 이유:
+
+1. **스키마 변경 회피** — `Device`에 컬럼을 추가하지 않고도 세션-토큰 매핑을 표현할 수 있다. `ddl-auto: update`라 당장은 위험하지 않지만, 굳이 영구 컬럼을 늘리지 않아도 되는 문제였다.
+2. **기존 패턴과의 일관성** — 이 코드베이스는 이미 `LocationController`에서 "세션별로 달라지는, 로그인 기간에만 유효한 값"을 `HttpSession` attribute에 저장하는 패턴을 쓰고 있다. fcmToken도 정확히 같은 성격(세션 생존 기간에만 의미 있는 값)이라 별도 영속 컬럼보다 이 패턴이 더 적합하다.
+3. **삭제 경로 재사용** — 새 삭제 메서드(`deleteBySessionId`)를 따로 만들지 않고, 명시적 `DELETE /api/notifications/devices` API가 이미 쓰던 `deleteByFcmTokenAndUserId` 한 경로로 통합했다. 삭제 기준(`fcmToken` + `userId`)이 하나로 유지된다.
+4. **다중 세션 격리는 그대로 유지** — 각 세션은 자신만의 `HttpSession` attribute 저장소를 가지므로, 한 세션이 만료돼도 그 세션에 저장된 fcmToken 하나만 꺼내 지운다. 같은 유저가 폰 앱 + 웹탭처럼 여러 세션에 로그인해 있어도 다른 세션의 attribute/토큰은 전혀 건드리지 않는다 — 원래 이슈의 핵심 제약을 그대로 만족한다.
+
+검증: `./gradlew build`(전체 테스트 포함) 통과. `DeviceServiceTest`/`DeviceControllerTest`/`SseSessionListenerTest`를 세션 attribute 흐름에 맞춰 갱신(등록 시 세션에 토큰 저장 확인, 세션 만료 시 `deviceService.unregister(userId, token)` 호출 검증, attribute 없을 때는 아무 것도 안 하는 케이스 포함).

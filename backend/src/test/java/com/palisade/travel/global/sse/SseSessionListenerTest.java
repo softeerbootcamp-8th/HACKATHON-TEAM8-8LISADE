@@ -1,5 +1,7 @@
 package com.palisade.travel.global.sse;
 
+import com.palisade.travel.domain.notification.controller.DeviceController;
+import com.palisade.travel.domain.notification.service.DeviceService;
 import com.palisade.travel.global.security.UserPrincipal;
 import com.palisade.travel.domain.user.entity.UserRole;
 import jakarta.servlet.http.HttpSessionEvent;
@@ -17,7 +19,8 @@ import static org.mockito.Mockito.verify;
 class SseSessionListenerTest {
 
     private final SseConnectionService sseConnectionService = mock(SseConnectionService.class);
-    private final SseSessionListener listener = new SseSessionListener(sseConnectionService);
+    private final DeviceService deviceService = mock(DeviceService.class);
+    private final SseSessionListener listener = new SseSessionListener(sseConnectionService, deviceService);
 
     @Test
     void sessionDestroyedDisconnectsTheAuthenticatedUsersEmitters() {
@@ -39,5 +42,33 @@ class SseSessionListenerTest {
         listener.sessionDestroyed(new HttpSessionEvent(session));
 
         verify(sseConnectionService, never()).disconnect(org.mockito.ArgumentMatchers.anyLong());
+        verify(deviceService, never()).unregister(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    void sessionDestroyedUnregistersOnlyTheDeviceTokenStoredOnThatSession() {
+        UserPrincipal user = new UserPrincipal(1L, "teacher1", "교사1", UserRole.TEACHER, "01012345678", "hash", true);
+        SecurityContext context = new SecurityContextImpl(
+                UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities()));
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
+        session.setAttribute(DeviceController.FCM_TOKEN_ATTRIBUTE, "token-1");
+
+        listener.sessionDestroyed(new HttpSessionEvent(session));
+
+        verify(deviceService).unregister(1L, "token-1");
+    }
+
+    @Test
+    void sessionDestroyedDoesNothingToDeviceWhenTheSessionNeverRegisteredAToken() {
+        UserPrincipal user = new UserPrincipal(1L, "teacher1", "교사1", UserRole.TEACHER, "01012345678", "hash", true);
+        SecurityContext context = new SecurityContextImpl(
+                UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities()));
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
+
+        listener.sessionDestroyed(new HttpSessionEvent(session));
+
+        verify(deviceService, never()).unregister(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyString());
     }
 }
