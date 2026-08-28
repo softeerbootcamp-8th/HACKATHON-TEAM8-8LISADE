@@ -172,7 +172,7 @@ jobs:
             set -euo pipefail
             cd ~/app
             LOG_FILE=logs/travel.log
-            for i in $(seq 1 15); do
+            for i in $(seq 1 30); do
               LOGS=$(cat "$LOG_FILE" 2>/dev/null || true)
               if echo "$LOGS" | grep -q "Firebase Admin initialized"; then
                 echo "Firebase Admin 초기화 확인됨."
@@ -185,6 +185,6 @@ jobs:
               fi
               sleep 2
             done
-            echo "15회 시도 후에도 Firebase 초기화 로그를 찾지 못했다."
+            echo "30회 시도 후에도 Firebase 초기화 로그를 찾지 못했다."
             echo "$LOGS" | tail -n 50
             exit 1
