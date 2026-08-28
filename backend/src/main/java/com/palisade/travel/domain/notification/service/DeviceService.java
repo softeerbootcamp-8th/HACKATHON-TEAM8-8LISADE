@@ -15,15 +15,20 @@ public class DeviceService {
     private final DeviceRepository deviceRepository;
 
     @Transactional
-    public void register(Long userId, String fcmToken, DevicePlatform platform) {
+    public void register(Long userId, String fcmToken, DevicePlatform platform, String sessionId) {
         deviceRepository.findByFcmToken(fcmToken)
                 .ifPresentOrElse(
-                        device -> device.reassignTo(userId, platform),
-                        () -> deviceRepository.save(Device.create(userId, fcmToken, platform)));
+                        device -> device.reassignTo(userId, platform, sessionId),
+                        () -> deviceRepository.save(Device.create(userId, fcmToken, platform, sessionId)));
     }
 
     @Transactional
     public void unregister(Long userId, String fcmToken) {
         deviceRepository.deleteByFcmTokenAndUserId(fcmToken, userId);
+    }
+
+    @Transactional
+    public void deleteBySessionId(String sessionId) {
+        deviceRepository.deleteBySessionId(sessionId);
     }
 }

@@ -37,16 +37,20 @@ public class Device {
     @Column(name = "platform", nullable = false, length = 20)
     private DevicePlatform platform;
 
+    @Column(name = "session_id", length = 100)
+    private String sessionId;
+
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    public static Device create(Long userId, String fcmToken, DevicePlatform platform) {
-        return new Device(null, userId, fcmToken, platform, LocalDateTime.now());
+    public static Device create(Long userId, String fcmToken, DevicePlatform platform, String sessionId) {
+        return new Device(null, userId, fcmToken, platform, sessionId, LocalDateTime.now());
     }
 
-    public void reassignTo(Long userId, DevicePlatform platform) {
+    public void reassignTo(Long userId, DevicePlatform platform, String sessionId) {
         this.userId = userId;
         this.platform = platform;
+        this.sessionId = sessionId;
         this.updatedAt = LocalDateTime.now();
     }
 

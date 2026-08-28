@@ -1,5 +1,6 @@
 package com.palisade.travel.global.sse;
 
+import com.palisade.travel.domain.notification.service.DeviceService;
 import com.palisade.travel.global.security.UserPrincipal;
 import com.palisade.travel.domain.user.entity.UserRole;
 import jakarta.servlet.http.HttpSessionEvent;
@@ -17,7 +18,8 @@ import static org.mockito.Mockito.verify;
 class SseSessionListenerTest {
 
     private final SseConnectionService sseConnectionService = mock(SseConnectionService.class);
-    private final SseSessionListener listener = new SseSessionListener(sseConnectionService);
+    private final DeviceService deviceService = mock(DeviceService.class);
+    private final SseSessionListener listener = new SseSessionListener(sseConnectionService, deviceService);
 
     @Test
     void sessionDestroyedDisconnectsTheAuthenticatedUsersEmitters() {
@@ -39,5 +41,14 @@ class SseSessionListenerTest {
         listener.sessionDestroyed(new HttpSessionEvent(session));
 
         verify(sseConnectionService, never()).disconnect(org.mockito.ArgumentMatchers.anyLong());
+    }
+
+    @Test
+    void sessionDestroyedDeletesOnlyTheDeviceLinkedToThatSession() {
+        MockHttpSession session = new MockHttpSession();
+
+        listener.sessionDestroyed(new HttpSessionEvent(session));
+
+        verify(deviceService).deleteBySessionId(session.getId());
     }
 }

@@ -1,5 +1,6 @@
 package com.palisade.travel.global.sse;
 
+import com.palisade.travel.domain.notification.service.DeviceService;
 import com.palisade.travel.global.security.UserPrincipal;
 import jakarta.servlet.http.HttpSessionEvent;
 import jakarta.servlet.http.HttpSessionListener;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Component;
 public class SseSessionListener implements HttpSessionListener {
 
     private final SseConnectionService sseConnectionService;
+    private final DeviceService deviceService;
 
     @Override
     public void sessionDestroyed(HttpSessionEvent event) {
@@ -23,5 +25,6 @@ public class SseSessionListener implements HttpSessionListener {
                 && context.getAuthentication().getPrincipal() instanceof UserPrincipal user) {
             sseConnectionService.disconnect(user.userId());
         }
+        deviceService.deleteBySessionId(event.getSession().getId());
     }
 }
