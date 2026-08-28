@@ -7,6 +7,7 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -28,7 +29,9 @@ public class SecurityConfig {
                                             RestAuthenticationEntryPoint authenticationEntryPoint,
                                             RestAccessDeniedHandler accessDeniedHandler,
                                             SecurityContextRepository securityContextRepository,
-                                            CookieCsrfTokenRepository csrfTokenRepository) throws Exception {
+                                            CookieCsrfTokenRepository csrfTokenRepository,
+                                            SessionRegistry sessionRegistry,
+                                            RestSessionInformationExpiredStrategy sessionInformationExpiredStrategy) throws Exception {
         return http
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokenRepository)
@@ -42,8 +45,17 @@ public class SecurityConfig {
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler))
+                // 동시 세션 개수 제한은 두지 않되(maximumSessions(-1)), SessionRegistry로 세션을 추적하고
+                // ConcurrentSessionFilter를 필터 체인에 등록해 관리자가 강제 만료(expireNow())시킨 세션은
+                // 다음 요청부터 즉시 거부되도록 한다.
+                .sessionManagement(session -> session
+                        .sessionConcurrency(concurrency -> concurrency
+                                .sessionRegistry(sessionRegistry)
+                                .maximumSessions(-1)
+                                .expiredSessionStrategy(sessionInformationExpiredStrategy)))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/health", "/api/auth/login", "/api/auth/signup", "/api/auth/csrf", "/mock-storage/**").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/student/**").hasRole("STUDENT")
                         .requestMatchers("/api/teacher/**").hasRole("TEACHER")
                         .anyRequest().authenticated())

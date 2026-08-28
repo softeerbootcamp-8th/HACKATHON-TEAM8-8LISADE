@@ -22,6 +22,9 @@ public class UserSignUpService {
 
     @Transactional
     public void signUp(SignUpRequest request) {
+        if (request.role() == UserRole.ADMIN) {
+            throw new UserException(UserErrorCode.ADMIN_ROLE_SIGNUP_NOT_ALLOWED);
+        }
         validatePassword(request.password());
         String phoneNumber = normalizePhoneNumber(request.phoneNumber());
         String parentNumber = request.role() == UserRole.STUDENT ? normalizePhoneNumber(request.parentNumber()) : null;

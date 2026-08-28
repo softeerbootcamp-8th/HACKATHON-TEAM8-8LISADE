@@ -20,6 +20,16 @@ public enum UserErrorCode implements ErrorCode {
             HttpStatus.UNAUTHORIZED,
             "ACCOUNT_DISABLED",
             "비활성화된 계정입니다. 관리자에게 문의해주세요."
+    ),
+    ADMIN_ROLE_SIGNUP_NOT_ALLOWED(
+            HttpStatus.FORBIDDEN,
+            "ADMIN_ROLE_SIGNUP_NOT_ALLOWED",
+            "관리자 계정은 회원가입으로 생성할 수 없습니다."
+    ),
+    USER_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "USER_NOT_FOUND",
+            "존재하지 않는 사용자입니다."
     );
 
     private final HttpStatus status;
